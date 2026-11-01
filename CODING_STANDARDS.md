@@ -19,7 +19,8 @@ Read by the reviewer. Mechanical rules live in the checks (`scripts/check`, `car
 - Permissions are checked on the server against the calling user (spec section 2), never only
   hidden in the card. That covers every write path: websocket commands, actions, and entity
   services such as `number.set_value` or `switch.turn_on` (read the user from the entity's
-  context). A new write path without a test that a non-admin is refused is a finding.
+  context). `tests/ha/test_permissions.py` refuses a stranger on every websocket command it
+  finds registered; entity services and actions still need their own refusal test.
 - Current APIs only: `runtime_data`, `ConfigEntry*` exceptions, `step_id` on every flow step,
   `Store` validated on load, `DeviceInfo` with keyword arguments.
 - "Validated on load" means every field read from storage, nested shapes included, goes through
@@ -47,3 +48,9 @@ Read by the reviewer. Mechanical rules live in the checks (`scripts/check`, `car
 - Logic that decides what to show lives in plain modules with vitest tests; the Lit element
   only renders and wires events.
 - Theme variables only; no `ha-*` elements except `ha-card`.
+
+## Tests
+
+- An assertion must be able to fail: `assert x is not None` after `x = a or b`, or a check on
+  something the test itself just set, proves nothing. When a test passes on the first run,
+  break the code it guards once and watch it fail.

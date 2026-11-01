@@ -13,4 +13,6 @@
   load the dashboard twice: on 2026.10 the first load can come from a cached `index.html`.
 - Portuguese on-screen text: `python scripts/lint-pt-strings.py` runs the owner's PT-PT lint over
   `translations/pt.json` and the card's `pt` strings (the lint lives outside the repo, not in CI).
+- Commits run `.githooks/pre-commit` (lint, card bundle): `git config core.hooksPath .githooks`
+  once per clone. Never commit past it.
 - Review rules: `CODING_STANDARDS.md`.

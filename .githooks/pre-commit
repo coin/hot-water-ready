@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Fast checks before every commit: lint and the committed card bundle. The full suite runs in
+# CI and with scripts/check. Enable once per clone: git config core.hooksPath .githooks
+set -euo pipefail
+root="$(git rev-parse --show-toplevel)"
+if command -v wsl.exe >/dev/null 2>&1; then
+  powershell.exe -NoProfile -File "$root/scripts/wsl-check.ps1" lint
+else
+  "$root/scripts/check" lint
+fi
+(cd "$root/card" && npm run --silent check-built)
