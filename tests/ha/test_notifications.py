@@ -1,15 +1,20 @@
 """Scheduled notifications and restarts (ticket 05, spec 4.9 and 4.10)."""
 
+from datetime import timedelta
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
+from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigSubentry
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.util import dt as dt_util
 import pytest
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     MockUser,
+    async_fire_time_changed,
     async_mock_service,
 )
 from pytest_homeassistant_custom_component.typing import WebSocketGenerator
@@ -219,3 +224,94 @@ async def test_rich_option_replaces_the_heating_message_on_mobile_app_phones(
     tags = {call.kwargs["data"]["tag"] for call in action.await_args_list}
     assert len(tags) == 1  # "Duche pronto" replaces "a aquecer" on the phone
     assert action.await_count == 2
+
+
+async def test_after_a_real_stop_it_resumes_and_repeats_nothing(
+    hass: HomeAssistant,
+    heater_entry: MockConfigEntry,
+    maria_user: MockUser,
+    hass_admin_user: MockUser,
+    hass_storage: dict[str, Any],
+) -> None:
+    """Home Assistant stops without unloading: start from what was on disk mid-heating."""
+    sent = async_mock_service(hass, "notify", "send_message")
+    tiago_phone = _phone(hass, "pixel_tiago", TIAGO_PERSON, hass_admin_user.id)
+    hass_storage[f"hot_water_ready.{heater_entry.entry_id}"] = {
+        "version": 1,
+        "minor_version": 1,
+        "key": f"hot_water_ready.{heater_entry.entry_id}",
+        "data": {
+            "settings": {"target": 42.0, "margin": 1.0},
+            "members": {
+                TIAGO: {
+                    "ready_times": [
+                        {"id": "r1", "time": "05:20", "weekdays": [0], "enabled": True}
+                    ],
+                    "away": {"on": False, "until": None},
+                }
+            },
+            "controller": {
+                "heating": True,
+                "told": [],
+                "told_heating": [[TIAGO, "2026-11-02T05:20:00+00:00"]],
+                "window": {
+                    "ready_at": "2026-11-02T05:20:00+00:00",
+                    "last_ready_at": "2026-11-02T05:20:00+00:00",
+                    "end": "2026-11-02T05:35:00+00:00",
+                    "members": [TIAGO],
+                    "target": 42.0,
+                    "wants_heat": True,
+                },
+            },
+        },
+    }
+    hass.states.async_set(SWITCH, "off")  # the relay came back off after the power cut
+    _water(hass, 40.5)
+    assert await hass.config_entries.async_setup(heater_entry.entry_id)
+    await hass.async_block_till_done()
+    # Setting up loaded the switch component, which owns switch.turn_on from now on.
+    on = async_mock_service(hass, "switch", "turn_on")
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=31))
+    await hass.async_block_till_done()
+
+    assert heater_entry.runtime_data.heating
+    assert len(on) == 1  # resumed heating
+    assert sent == []  # "a aquecer" was already sent before the stop
+    _water(hass, 42.0)
+    await hass.async_block_till_done()
+    assert [c.data["entity_id"] for c in sent] == [tiago_phone]  # "Duche pronto", once
+
+
+async def test_a_window_member_with_no_phone_gets_one_note_and_one_warning(
+    hass: HomeAssistant,
+    heater: MockConfigEntry,
+    hass_ws_client: WebSocketGenerator,
+    sent: list[ServiceCall],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    _water(hass, 40.0)
+    await _ready_time(hass, hass_ws_client, heater, TIAGO, "05:20")  # Tiago has no phone
+    _water(hass, 42.0)
+    await hass.async_block_till_done()
+
+    notes = persistent_notification._async_get_or_create_notifications(hass)
+    mine = [n for n in notes.values() if n["notification_id"].startswith("hot_water_ready")]
+    assert len(mine) == 1  # replaced by the latest message, not one per message
+    assert caplog.text.count("Nobody to notify for Tiago") == 1
+
+
+async def test_a_phone_that_refuses_the_rich_action_still_gets_the_plain_message(
+    hass: HomeAssistant,
+    heater: MockConfigEntry,
+    hass_ws_client: WebSocketGenerator,
+    phones: dict[str, str],
+    sent: list[ServiceCall],
+) -> None:
+    hass.config_entries.async_update_entry(heater, options={"rich_notifications": True})
+    await hass.async_block_till_done()
+    refuse = AsyncMock(side_effect=HomeAssistantError("no push for this phone"))
+    with patch("custom_components.hot_water_ready.messages.async_call_mobile_app_action", refuse):
+        _water(hass, 40.0)
+        await _ready_time(hass, hass_ws_client, heater, TIAGO, "05:20")
+
+    assert [c.data["entity_id"] for c in sent] == [phones[TIAGO]]

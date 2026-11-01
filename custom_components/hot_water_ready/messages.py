@@ -98,19 +98,27 @@ async def async_send(
     sent: list[str] = []
     for target in targets:
         entry = registry.async_get(target)
-        rich = tag and entry is not None and entry.platform == "mobile_app" and entry.device_id
-        try:
-            if rich and entry is not None and entry.device_id and tag:
+        device_id = (
+            entry.device_id if entry is not None and entry.platform == "mobile_app" else None
+        )
+        if tag and device_id:
+            try:
                 await async_call_mobile_app_action(
-                    hass, device_id=entry.device_id, title=title, message=message, data={"tag": tag}
+                    hass, device_id=device_id, title=title, message=message, data={"tag": tag}
                 )
+            except Exception:
+                # A phone without push, for one; the plain message below still reaches it.
+                _LOGGER.debug("Rich message refused by %s; sending it plain", target)
             else:
-                await hass.services.async_call(
-                    "notify",
-                    "send_message",
-                    {"entity_id": target, "title": title, "message": message},
-                    blocking=True,
-                )
+                sent.append(target)
+                continue
+        try:
+            await hass.services.async_call(
+                "notify",
+                "send_message",
+                {"entity_id": target, "title": title, "message": message},
+                blocking=True,
+            )
         except Exception:
             _LOGGER.warning("Could not notify %s", target, exc_info=True)
         else:

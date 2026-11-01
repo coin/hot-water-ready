@@ -156,7 +156,7 @@
         "data_description": {
           "keep_heating_gap_minutes": "Horários assim próximos partilham uma janela e o aquecedor continua a aquecer, em vez de deixar a água arrefecer entre eles.",
           "cancel_people": "Usado quando a regra é \"quem pediu, administradores e estas pessoas\".",
-          "rich_notifications": "Nos telemóveis com a aplicação Home Assistant, \"pronta\" substitui \"a aquecer\" em vez de chegar como segunda mensagem."
+          "rich_notifications": "Nos telemóveis com a aplicação Home Assistant, \"Duche pronto\" substitui \"a aquecer\" em vez de chegar como segunda mensagem."
         }
       }
     }

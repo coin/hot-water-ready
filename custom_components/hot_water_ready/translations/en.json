@@ -156,7 +156,7 @@
         "data_description": {
           "keep_heating_gap_minutes": "Ready times this close share one window and the heater keeps heating through, instead of letting the water cool in between.",
           "cancel_people": "Used when the rule is \"those who asked, admins and these people\".",
-          "rich_notifications": "On phones with the Home Assistant app, \"ready\" replaces \"heating\" instead of arriving as a second message."
+          "rich_notifications": "On phones with the Home Assistant app, \"Hot water ready\" replaces \"heating\" instead of arriving as a second message."
         }
       }
     }

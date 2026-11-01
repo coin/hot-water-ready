@@ -418,6 +418,11 @@ class Heater:
         )
         return member.name, targets
 
+    async def _async_save_then_tell(self, events: tuple[ControllerEvent, ...]) -> None:
+        """Who was told is on disk before the messages go, so a restart never repeats one."""
+        await self._async_save()
+        await self._async_tell(events)
+
     async def _async_tell(self, events: tuple[ControllerEvent, ...]) -> None:
         """Turn what happened into messages for the people it concerns (spec 4.9)."""
         for event in events:
@@ -429,14 +434,13 @@ class Heater:
                 await self._async_tell_one(who, message, tag)
 
     def _message_for(self, event: ControllerEvent) -> tuple[str, dict[str, str]]:
-        temperature = (
-            "" if event.temperature is None else format_temperature(self.hass, event.temperature)
-        )
         match event.kind:
             case "heating":
                 return "window_heating", {"heater": self.name, "minutes": str(event.minutes)}
             case "ready" | "heat_now_ready":
-                return "ready", {"temperature": temperature}
+                # A ready event always carries the reading that made it ready.
+                assert event.temperature is not None  # noqa: S101
+                return "ready", {"temperature": format_temperature(self.hass, event.temperature)}
             case "heat_now_timeout":
                 return "heat_now_timeout", {}
 
@@ -508,9 +512,7 @@ class Heater:
         )
         self._apply(decision.relay_on)
         if decision.events:
-            # Who was told is on disk before the messages go, so a restart never repeats one.
-            self.entry.async_create_task(self.hass, self._async_save())
-            self.entry.async_create_task(self.hass, self._async_tell(decision.events))
+            self.entry.async_create_task(self.hass, self._async_save_then_tell(decision.events))
         elif self._controller.state.to_dict() != before:
             self._data.controller = self._controller.state
             self._store.async_delay_save(self._data)

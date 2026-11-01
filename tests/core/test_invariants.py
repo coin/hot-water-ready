@@ -49,6 +49,7 @@ def test_random_households_keep_the_rules(seed: int) -> None:
     restart_at = rng.randrange(30, 7 * 60)
     withdraw_at = rng.randrange(30, 7 * 60)
 
+    pending: list[tuple[int, Occurrence]] = []
     for minute in range(8 * 60):
         draw = 0.4 if rng.random() < 0.03 else 0.0
         cylinder.run(1, draw_per_minute=draw)
@@ -56,6 +57,15 @@ def test_random_households_keep_the_rules(seed: int) -> None:
             cylinder.restart()
         if minute == withdraw_at and cylinder.occurrences:
             cylinder.occurrences = cylinder.occurrences[1:]
+        if rng.random() < 0.02 and cylinder.occurrences:
+            # A ready time switched off, and back on a few minutes later.
+            switched_off = rng.choice(cylinder.occurrences)
+            back_on_at = minute + rng.randint(1, 10)
+            cylinder.occurrences = [o for o in cylinder.occurrences if o is not switched_off]
+            pending.append((back_on_at, switched_off))
+        for item in [p for p in pending if p[0] == minute]:
+            pending.remove(item)
+            cylinder.occurrences = sorted([*cylinder.occurrences, item[1]], key=lambda o: o.at)
         if rng.random() < 0.01:
             cylinder.heat_now(rng.choice("abc"))
         if rng.random() < 0.003:

@@ -352,3 +352,24 @@ def test_a_window_that_closes_and_reopens_does_not_say_heating_twice() -> None:
 
     assert cylinder.relay
     assert len(cylinder.heating_events()) == 1
+
+
+def test_told_heating_from_corrupt_data_is_refused() -> None:
+    import pytest  # noqa: PLC0415
+
+    for bad in (["tiago"], [["tiago"]], [["tiago", "2026-11-02T07:00:00"]], [[1, "x"]]):
+        with pytest.raises(ValueError, match="controller state"):
+            ControllerState.from_dict({"heating": False, "told_heating": bad})
+
+
+def test_told_heating_survives_a_restart() -> None:
+    seven = _at(2026, 11, 2, 7, 0)
+    cylinder = _cylinder(38.0, _at(2026, 11, 2, 6, 20), [Occurrence(seven, frozenset({"t"}))])
+    cylinder.run(2)
+    cylinder.restart()
+    cylinder.occurrences = []
+    cylinder.run(2)
+    cylinder.occurrences = [Occurrence(seven, frozenset({"t"}))]
+    cylinder.run(2)
+
+    assert len(cylinder.heating_events()) == 1
