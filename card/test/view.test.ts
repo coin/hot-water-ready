@@ -383,7 +383,7 @@ describe("heatNowActions during a fault", () => {
 describe("adminNotes", () => {
   it("tells an administrator when not rising cannot be checked", () => {
     expect(adminNotes({ ...cold, not_rising_checked: false }, "pt")).toEqual([
-      "O termóstato não indica quando está a aquecer, por isso a verificação de \"a água não aquece\" não é feita.",
+      "O termóstato não indica quando está a aquecer, por isso as verificações \"a água não aquece\" e \"o aquecedor não consome energia\" não são feitas.",
     ]);
   });
 

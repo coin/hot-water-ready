@@ -304,3 +304,33 @@ def test_the_dead_heater_check_can_fail() -> None:
             if _dead_or_healthy(seed)[0] and not _dead_or_healthy(seed)[1]
         ]
     assert missed
+
+
+def test_relay_stuck_is_judged_by_the_element_being_told_off() -> None:
+    # A thermostat without a heating indication: whether it heats is unknown, but in mode off it
+    # must not draw power, so a stuck relay behind it is still reported.
+    run = Run(power_sensor=True)
+    for _ in range(11):
+        run.now += timedelta(seconds=30)
+        report = run.guard.step(
+            now=run.now,
+            temperature=45.0,
+            relay_on=None,
+            element_off=True,
+            power=2700.0,
+            target=42.0,
+        )
+        run.raised += report.raised
+
+    assert run.raised == [Fault.RELAY_STUCK]
+
+
+def test_no_consumption_needs_to_know_the_element_heats() -> None:
+    run = Run(power_sensor=True)
+    for _ in range(20):
+        run.now += timedelta(seconds=30)
+        run.guard.step(
+            now=run.now, temperature=35.0, relay_on=None, element_off=False, power=0.0, target=42.0
+        )
+
+    assert run.active == set()

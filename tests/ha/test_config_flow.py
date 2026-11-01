@@ -79,3 +79,18 @@ async def test_same_switch_cannot_be_added_twice(
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
+
+
+async def test_same_thermostat_cannot_be_added_twice(hass: HomeAssistant) -> None:
+    MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_HEATER_TYPE: "climate", CONF_CLIMATE: "climate.boiler"},
+    ).add_to_hass(hass)
+    flow_id = await _start(hass, "climate")
+    result = await hass.config_entries.flow.async_configure(
+        flow_id,
+        {CONF_NAME: "Again", CONF_CLIMATE: "climate.boiler", CONF_TEMPERATURE_SENSOR: SENSOR},
+    )
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"

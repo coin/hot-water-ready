@@ -1,5 +1,6 @@
 """A heater at runtime: reads its entities, runs the core controller and switches the relay."""
 
+import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import date, datetime, time, timedelta
@@ -9,7 +10,7 @@ import uuid
 
 from homeassistant.auth.models import User
 from homeassistant.config_entries import ConfigEntry, ConfigSubentry
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, UnitOfTemperature
 from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import issue_registry as ir
@@ -19,6 +20,7 @@ from homeassistant.helpers.event import (
     async_track_time_interval,
 )
 from homeassistant.util import dt as dt_util
+from homeassistant.util.unit_conversion import TemperatureConverter
 
 from .actuator import Actuator, ClimateActuator, SwitchActuator
 from .const import (
@@ -52,6 +54,7 @@ from .core.controller import (
     Occurrence,
     Settings,
     minutes_to_ready,
+    stop_point,
 )
 from .core.faults import BLOCKING, RESOLVABLE, Fault, FaultGuard, FaultSettings
 from .core.household import Away, MemberPlan, household_occurrences
@@ -145,6 +148,9 @@ class Heater:
         self._listeners: list[Listener] = []
         self.device_id = ""  # set once the heater's device is registered
         self._unreachable: set[str] = set()  # warned about once, until a message gets through
+        self._command_lock = asyncio.Lock()  # one batch of commands to the element at a time
+        self._command_failing = False  # a refused command is warned about once
+        self._heating_indication = True  # whether the element says when it heats; kept in outages
         self._controller = Controller(self._settings(), data.controller)
         self._guard = FaultGuard(self._fault_settings(), data.faults)
 
@@ -174,8 +180,15 @@ class Heater:
 
     @property
     def not_rising_checked(self) -> bool:
-        """False for a thermostat that reports no heating indication: the check is skipped."""
-        return self.actuator.has_heating_indication(self.hass)
+        """False for a thermostat that reports no heating indication: the check is skipped.
+
+        A property of the device, not of the moment: while the element is unavailable the last
+        answer stands, so an outage does not make the note come and go.
+        """
+        indication = self.actuator.has_heating_indication(self.hass)
+        if indication is not None:
+            self._heating_indication = indication
+        return self._heating_indication
 
     @property
     def members(self) -> list[Member]:
@@ -238,8 +251,11 @@ class Heater:
             return None
 
     @property
-    def relay_on(self) -> bool | None:
-        """Whether the element is heating, as Home Assistant sees it; None when unknown."""
+    def element_heating(self) -> bool | None:
+        """Whether the element is heating, as Home Assistant sees it; None when unknown.
+
+        `heating` is what the controller wants; this is what the relay or thermostat reports.
+        """
         return self.actuator.heating(self.hass)
 
     @property
@@ -630,12 +646,8 @@ class Heater:
         unload entries, so a restart does not pass through here.)
         """
         if self.automatic and self.heating:
-            for domain, service, data in self.actuator.calls_for(self.hass, False, self.target):
-                try:
-                    await self.hass.services.async_call(domain, service, data, blocking=True)
-                except HomeAssistantError as err:
-                    # Unloading must not fail because the element is gone or refuses.
-                    _LOGGER.warning("Could not switch %s off: %s", self.actuator.entity_id, err)
+            # Unloading must not fail because the element is gone or refuses: errors are logged.
+            await self._async_bring_to(on=False)
         await self._async_save()
 
     @callback
@@ -663,7 +675,8 @@ class Heater:
         report = self._guard.step(
             now=now,
             temperature=self.temperature,
-            relay_on=self.relay_on,
+            relay_on=self.element_heating,
+            element_off=self.actuator.told_off(self.hass),
             power=self._number(self._power_sensor),
             target=self.target,
         )
@@ -691,21 +704,34 @@ class Heater:
 
     @callback
     def _apply(self, on: bool) -> None:
-        """Bring the element to on or off when it differs; an unavailable one is set when back.
+        """Bring the element to on or off when it differs; an unavailable one is set when back."""
+        if self.actuator.calls_for(self.hass, on, self._setpoint()):
+            self.entry.async_create_task(self.hass, self._async_bring_to(on=on))
 
-        A thermostat heating is given the stop point (target + margin) as its setpoint.
+    def _setpoint(self) -> float:
+        """What a heating thermostat is set to: the stop point, in Home Assistant's unit."""
+        stop = stop_point(self._controller.settings)
+        unit = self.hass.config.units.temperature_unit
+        return TemperatureConverter.convert(stop, UnitOfTemperature.CELSIUS, unit)
+
+    async def _async_bring_to(self, *, on: bool) -> None:
+        """Send the element its commands, one batch at a time.
+
+        The calls are worked out again inside the lock, so a second step that started while the
+        first batch was still going sends nothing already sent. A refusal is logged once, until a
+        whole batch gets through, and the next step tries again.
         """
-        calls = self.actuator.calls_for(self.hass, on, self.target + self.margin)
-        if calls:
-            self.entry.async_create_task(self.hass, self._async_call(calls))
-
-    async def _async_call(self, calls: list[tuple[str, str, dict[str, Any]]]) -> None:
-        """Send the element its commands; a refusal is logged, and the next step tries again."""
-        for domain, service, data in calls:
-            try:
-                await self.hass.services.async_call(domain, service, data, blocking=True)
-            except HomeAssistantError as err:
-                _LOGGER.warning("%s.%s on %s failed: %s", domain, service, data["entity_id"], err)
+        async with self._command_lock:
+            failed = False
+            for domain, service, data in self.actuator.calls_for(self.hass, on, self._setpoint()):
+                try:
+                    await self.hass.services.async_call(domain, service, data, blocking=True)
+                except HomeAssistantError as err:
+                    log = _LOGGER.debug if self._command_failing else _LOGGER.warning
+                    log("%s.%s on %s failed: %s", domain, service, data["entity_id"], err)
+                    self._command_failing = failed = True
+            if not failed:
+                self._command_failing = False
 
     @callback
     def async_add_listener(self, listener: Listener) -> Callable[[], None]:

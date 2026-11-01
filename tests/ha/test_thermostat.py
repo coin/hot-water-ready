@@ -127,3 +127,104 @@ async def test_unloading_turns_a_heating_thermostat_off(
 
     assert await hass.config_entries.async_unload(boiler.entry_id)
     assert [c.data["hvac_mode"] for c in mode] == ["off"]
+
+
+async def test_the_thermostat_restarts_at_target_minus_margin(
+    hass: HomeAssistant, boiler: MockConfigEntry, climate_calls: dict[str, list[ServiceCall]]
+) -> None:
+    await boiler.runtime_data.async_add_ready_time(TIAGO, time(5, 20), frozenset({0}), True)
+    _thermostat(hass, "heat", hvac_action="heating", temperature=43.0)
+    hass.states.async_set(SENSOR, "43.0", {"unit_of_measurement": "°C"})
+    await hass.async_block_till_done()
+    _thermostat(hass, "off", hvac_action="off", temperature=43.0)
+    climate_calls["mode"].clear()
+    hass.states.async_set(SENSOR, "41.1", {"unit_of_measurement": "°C"})
+    await hass.async_block_till_done()
+    assert climate_calls["mode"] == []
+    hass.states.async_set(SENSOR, "41.0", {"unit_of_measurement": "°C"})
+    await hass.async_block_till_done()
+
+    assert [c.data["hvac_mode"] for c in climate_calls["mode"]] == ["heat"]
+
+
+async def test_a_thermostat_that_rounds_its_setpoint_is_not_sent_it_again(
+    hass: HomeAssistant, boiler: MockConfigEntry, freezer: FrozenDateTimeFactory
+) -> None:
+    await boiler.runtime_data.async_set_band(target=42.5)
+    setpoint = async_mock_service(hass, "climate", "set_temperature")
+    async_mock_service(hass, "climate", "set_hvac_mode")
+    # It keeps whole degrees: asked for 43.5, it shows 43 (or 44).
+    _thermostat(hass, "heat", hvac_action="heating", temperature=43.0, target_temp_step=1)
+    await boiler.runtime_data.async_add_ready_time(TIAGO, time(5, 20), frozenset({0}), True)
+    for _ in range(10):
+        freezer.tick(timedelta(seconds=30))
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done()
+
+    assert setpoint == []
+
+
+async def test_a_refused_command_is_logged_once(
+    hass: HomeAssistant,
+    boiler: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from homeassistant.exceptions import HomeAssistantError  # noqa: PLC0415
+
+    async def refuse(call: ServiceCall) -> None:
+        raise HomeAssistantError("thermostat offline")
+
+    hass.services.async_register("climate", "set_hvac_mode", refuse)
+    async_mock_service(hass, "climate", "set_temperature")
+    await boiler.runtime_data.async_add_ready_time(TIAGO, time(5, 20), frozenset({0}), True)
+    for _ in range(10):
+        freezer.tick(timedelta(seconds=30))
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done()
+
+    warnings = [
+        r for r in caplog.records if r.levelname == "WARNING" and "set_hvac_mode" in r.getMessage()
+    ]
+    assert len(warnings) == 1  # later failures go to the debug log
+
+
+async def test_a_thermostat_without_heat_and_off_is_refused(hass: HomeAssistant) -> None:
+    from homeassistant.config_entries import SOURCE_USER  # noqa: PLC0415
+    from homeassistant.data_entry_flow import FlowResultType  # noqa: PLC0415
+
+    hass.states.async_set("climate.cooler", "cool", {"hvac_modes": ["off", "cool"]})
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"next_step_id": "climate"}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {"name": "Cooler", "climate": "climate.cooler", "temperature_sensor": SENSOR},
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"climate": "unsupported_thermostat"}
+
+
+async def test_the_heater_setup_is_changed_later(
+    hass: HomeAssistant, heater: MockConfigEntry
+) -> None:
+    from homeassistant.data_entry_flow import FlowResultType  # noqa: PLC0415
+
+    _thermostat(hass, "off", hvac_action="off")
+    result = await heater.start_reconfigure_flow(hass)
+    assert result["type"] is FlowResultType.MENU
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"next_step_id": "climate"}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {"name": "Cylinder", "climate": CLIMATE, "temperature_sensor": SENSOR},
+    )
+    await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+    assert heater.data["heater_type"] == "climate"
+    assert heater.runtime_data.actuator.entity_id == CLIMATE

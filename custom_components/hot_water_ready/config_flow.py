@@ -4,6 +4,7 @@ from typing import Any, override
 
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.config_entries import (
+    SOURCE_RECONFIGURE,
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
@@ -17,6 +18,7 @@ from homeassistant.data_entry_flow import section
 from homeassistant.helpers import selector
 import probatio
 
+from .actuator import thermostat_supported
 from .const import (
     CANCEL_EVERYONE,
     CANCEL_PEOPLE,
@@ -119,6 +121,14 @@ class HotWaterReadyConfigFlow(ConfigFlow, domain=DOMAIN):
         """An existing thermostat and a water sensor."""
         return self._create_or_ask(HEATER_CLIMATE, CONF_CLIMATE, CLIMATE_SCHEMA, user_input)
 
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Change the heater setup later (spec 3.1): the same choice, then the same fields."""
+        return self.async_show_menu(
+            step_id="reconfigure", menu_options=[HEATER_SWITCH, HEATER_CLIMATE]
+        )
+
     def _create_or_ask(
         self,
         heater_type: str,
@@ -126,18 +136,48 @@ class HotWaterReadyConfigFlow(ConfigFlow, domain=DOMAIN):
         schema: probatio.Schema,
         user_input: dict[str, Any] | None,
     ) -> ConfigFlowResult:
-        if user_input is None:
-            return self.async_show_form(step_id=heater_type, data_schema=schema)
-        self._async_abort_entries_match({element: user_input[element]})
-        return self.async_create_entry(
-            title=user_input[CONF_NAME],
-            data={
-                CONF_HEATER_TYPE: heater_type,
-                element: user_input[element],
-                CONF_TEMPERATURE_SENSOR: user_input[CONF_TEMPERATURE_SENSOR],
-            },
-            options={CONF_POWER_SENSOR: user_input.get(CONF_POWER_SENSOR)},
-        )
+        reconfiguring = self.source == SOURCE_RECONFIGURE
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            if heater_type == HEATER_CLIMATE and not thermostat_supported(
+                self.hass.states.get(user_input[CONF_CLIMATE])
+            ):
+                errors[CONF_CLIMATE] = "unsupported_thermostat"
+            else:
+                data = {
+                    CONF_HEATER_TYPE: heater_type,
+                    element: user_input[element],
+                    CONF_TEMPERATURE_SENSOR: user_input[CONF_TEMPERATURE_SENSOR],
+                }
+                power = user_input.get(CONF_POWER_SENSOR)
+                if not reconfiguring:
+                    self._async_abort_entries_match({element: user_input[element]})
+                    return self.async_create_entry(
+                        title=user_input[CONF_NAME],
+                        data=data,
+                        options={CONF_POWER_SENSOR: power},
+                    )
+                entry = self._get_reconfigure_entry()
+                taken = [
+                    other
+                    for other in self._async_current_entries(include_ignore=False)
+                    if other.entry_id != entry.entry_id
+                    and other.data.get(element) == user_input[element]
+                ]
+                if taken:
+                    return self.async_abort(reason="already_configured")
+                # The entry's update listener reloads it; no second reload here.
+                return self.async_update_and_abort(
+                    entry,
+                    title=user_input[CONF_NAME],
+                    data=data,
+                    options={**entry.options, CONF_POWER_SENSOR: power},
+                )
+        if reconfiguring and user_input is None:
+            entry = self._get_reconfigure_entry()
+            current = {CONF_NAME: entry.title, **entry.data, **entry.options}
+            schema = self.add_suggested_values_to_schema(schema, current)
+        return self.async_show_form(step_id=heater_type, data_schema=schema, errors=errors)
 
 
 def _member_schema(

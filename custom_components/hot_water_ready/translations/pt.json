@@ -37,13 +37,25 @@
         "data_description": {
           "name": "Aparece no cartão e no dispositivo do aquecedor, por exemplo Cilindro.",
           "temperature_sensor": "Um sensor que mede a temperatura da água acumulada.",
-          "power_sensor": "Com um sensor de potência, também se detectam um aquecedor que não consome e um relé preso ligado.",
+          "power_sensor": "Com um sensor de potência, nota-se um aquecedor que consome com o termóstato desligado e, se o termóstato indicar quando aquece, um que não consome nada.",
           "climate": "O Hot Water Ready põe-no a aquecer até à temperatura de paragem, ou desliga-o."
+        }
+      },
+      "reconfigure": {
+        "title": "Alterar o aquecedor de água",
+        "description": "Como é que o Home Assistant liga a resistência.",
+        "menu_options": {
+          "switch": "Um interruptor (relé ou tomada inteligente)",
+          "climate": "Um termóstato existente"
         }
       }
     },
     "abort": {
-      "already_configured": "Este interruptor já pertence a um aquecedor."
+      "already_configured": "Este interruptor já pertence a um aquecedor.",
+      "reconfigure_successful": "O aquecedor de água foi alterado."
+    },
+    "error": {
+      "unsupported_thermostat": "Este termóstato não aceita os modos aquecer e desligado; escolha outro, ou um interruptor."
     }
   },
   "config_subentries": {

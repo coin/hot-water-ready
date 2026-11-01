@@ -232,6 +232,11 @@ def lead_minutes(settings: Settings, temperature: float) -> float:
     return min(settings.lead_cap_minutes, max(0.0, lead + settings.lead_margin_minutes))
 
 
+def stop_point(settings: Settings) -> float:
+    """Where heating stops: target + margin (spec 4.4). A thermostat is set to this."""
+    return settings.target + settings.margin
+
+
 def minutes_to_ready(settings: Settings, temperature: float | None) -> int | None:
     """About how long heating from `temperature` to the target takes, by the rate."""
     if temperature is None:

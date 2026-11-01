@@ -37,13 +37,25 @@
         "data_description": {
           "name": "Shown on the card and on the heater's device, for example Cylinder.",
           "temperature_sensor": "A sensor measuring the stored water's temperature.",
-          "power_sensor": "With a power sensor, a heater that draws nothing and a relay stuck on are noticed too.",
+          "power_sensor": "With a power sensor, a heater that draws power while the thermostat is off is noticed, and, if the thermostat says when it heats, one that draws nothing.",
           "climate": "Hot Water Ready sets it to heat at the stop temperature, or off."
+        }
+      },
+      "reconfigure": {
+        "title": "Change the water heater",
+        "description": "How Home Assistant turns the heating element on.",
+        "menu_options": {
+          "switch": "A switch (relay or smart plug)",
+          "climate": "An existing thermostat"
         }
       }
     },
     "abort": {
-      "already_configured": "This switch already belongs to a heater."
+      "already_configured": "This switch already belongs to a heater.",
+      "reconfigure_successful": "The water heater was changed."
+    },
+    "error": {
+      "unsupported_thermostat": "This thermostat cannot be set to heat and off; choose another, or a switch."
     }
   },
   "config_subentries": {

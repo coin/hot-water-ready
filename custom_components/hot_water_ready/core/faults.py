@@ -174,15 +174,25 @@ class FaultGuard:
         relay_on: bool | None,
         power: float | None,
         target: float,
+        element_off: bool | None = None,
     ) -> FaultReport:
-        """Look at the readings now. `power` is None without a power sensor or a reading."""
+        """Look at the readings now.
+
+        `relay_on` is whether the element is heating (a relay on, a thermostat saying it heats);
+        None when that cannot be known, which skips not rising and no consumption. `element_off`
+        is whether the element was told to stay off (a relay off, a thermostat in mode off); it
+        is what a stuck relay is judged by, and defaults to `not relay_on`. `power` is None
+        without a power sensor or a reading.
+        """
         now = now.astimezone(UTC)
         before = self.state.active
         if self.state.started is None:
             self.state.started = now
+        if element_off is None and relay_on is not None:
+            element_off = not relay_on
         self._sensor(now, temperature)
         self._rising(now, temperature, relay_on, target)
-        self._power(now, relay_on, power)
+        self._power(now, relay_on, element_off, power)
         after = self.state.active
         return FaultReport(
             raised=tuple(sorted(after - before)), cleared=tuple(sorted(before - after))
@@ -243,10 +253,12 @@ class FaultGuard:
         state.run_start, state.run_lowest = now, temperature
         state.run_peak, state.run_peak_at = temperature, now
 
-    def _power(self, now: datetime, relay_on: bool | None, power: float | None) -> None:
+    def _power(
+        self, now: datetime, relay_on: bool | None, element_off: bool | None, power: float | None
+    ) -> None:
         state, settings = self.state, self.settings
-        if power is None or relay_on is None:
-            # No power reading (or the sensor was removed): nothing to judge a stuck relay by.
+        if power is None:
+            # No power reading (or the sensor was removed): nothing to judge by.
             state.low_power_since = state.high_power_since = state.stuck_clear_since = None
             self._set(Fault.RELAY_STUCK, False)
             return
@@ -260,6 +272,10 @@ class FaultGuard:
             state.low_power_since = None
             if relay_on and drawing:
                 self._set(Fault.NO_CONSUMPTION, False)
+        if element_off is None:
+            state.high_power_since = state.stuck_clear_since = None
+            return
+        relay_on = not element_off
         if not relay_on and drawing:
             state.stuck_clear_since = None
             state.high_power_since = state.high_power_since or now
