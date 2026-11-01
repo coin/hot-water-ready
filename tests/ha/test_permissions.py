@@ -27,6 +27,7 @@ MESSAGES: dict[str, dict[str, Any]] = {
     f"{DOMAIN}/away/set": {"member_id": TIAGO, "away": True},
     f"{DOMAIN}/heat_now/start": {},
     f"{DOMAIN}/heat_now/cancel": {},
+    f"{DOMAIN}/settings/set": {"target": 45},
 }
 
 

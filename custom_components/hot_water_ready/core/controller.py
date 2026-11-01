@@ -10,6 +10,8 @@ from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
+from .parsing import aware_datetime, flag, name_list, number
+
 # The probe reads in 0.1 C steps; compare with a little slack so 43.0 counts as reaching 43.
 _EPSILON = 1e-6
 
@@ -25,6 +27,7 @@ class Settings:
     lead_cap_minutes: float = 240.0
     grace_minutes: float = 15.0
     keep_heating_gap_minutes: float = 40.0
+    solar_aware: bool = False  # apply the solar-aware lead (spec 4.3); off, it is only recorded
 
 
 @dataclass(frozen=True)
@@ -146,49 +149,40 @@ class ControllerState:
         raw = data.get("window")
         window = None
         if raw is not None:
-            ready_at = _parse_aware_datetime(raw["ready_at"])
-            members = _parse_name_list(raw["members"])
+            ready_at = aware_datetime(raw["ready_at"])
+            members = name_list(raw["members"])
             # Saved by earlier versions, before "told" was kept apart from the window.
             if "reported" in raw:
-                told |= {(member, ready_at) for member in _parse_name_list(raw["reported"])}
+                told |= {(member, ready_at) for member in name_list(raw["reported"])}
             elif raw.get("ready_reported") is True:
                 told |= {(member, ready_at) for member in members}
             last = raw.get("last_ready_at")
             window = Window(
                 ready_at=ready_at,
-                last_ready_at=ready_at if last is None else _parse_aware_datetime(last),
-                end=_parse_aware_datetime(raw["end"]),
+                last_ready_at=ready_at if last is None else aware_datetime(last),
+                end=aware_datetime(raw["end"]),
                 members=members,
-                target=float(raw["target"]),
-                wants_heat=_parse_bool(raw.get("wants_heat", data.get("heating", False))),
+                target=number(raw["target"]),
+                wants_heat=flag(raw.get("wants_heat", data.get("heating", False))),
             )
         raw_now = data.get("heat_now")
         heat_now = None
         if raw_now is not None:
             heat_now = HeatNow(
-                started_at=_parse_aware_datetime(raw_now["started_at"]),
-                deadline=_parse_aware_datetime(raw_now["deadline"]),
-                target=float(raw_now["target"]),
-                requesters=_parse_name_list(raw_now["requesters"]),
-                told=_parse_name_list(raw_now["told"]),
-                starting=_parse_bool(raw_now["starting"]),
+                started_at=aware_datetime(raw_now["started_at"]),
+                deadline=aware_datetime(raw_now["deadline"]),
+                target=number(raw_now["target"]),
+                requesters=name_list(raw_now["requesters"]),
+                told=name_list(raw_now["told"]),
+                starting=flag(raw_now["starting"]),
             )
         return cls(
             window=window,
-            heating=bool(data.get("heating", False)),
+            heating=flag(data.get("heating", False)),
             heat_now=heat_now,
             told=frozenset(told),
             told_heating=frozenset(told_heating),
         )
-
-
-def _parse_aware_datetime(raw: object) -> datetime:
-    if not isinstance(raw, str):
-        raise TypeError("datetime")
-    moment = datetime.fromisoformat(raw)
-    if moment.tzinfo is None:
-        raise ValueError("naive datetime")
-    return moment
 
 
 def _parse_pairs(raw: object) -> set[tuple[str, datetime]]:
@@ -198,20 +192,8 @@ def _parse_pairs(raw: object) -> set[tuple[str, datetime]]:
     for pair in raw:
         if not isinstance(pair, list) or len(pair) != 2 or not isinstance(pair[0], str):
             raise TypeError("pair")
-        pairs.add((pair[0], _parse_aware_datetime(pair[1])))
+        pairs.add((pair[0], aware_datetime(pair[1])))
     return pairs
-
-
-def _parse_bool(raw: object) -> bool:
-    if not isinstance(raw, bool):
-        raise TypeError("bool")
-    return raw
-
-
-def _parse_name_list(raw: object) -> frozenset[str]:
-    if not isinstance(raw, list) or not all(isinstance(item, str) for item in raw):
-        raise TypeError("list of names")
-    return frozenset(raw)
 
 
 @dataclass(frozen=True)
@@ -230,6 +212,24 @@ def lead_minutes(settings: Settings, temperature: float) -> float:
     """
     lead = (settings.target - temperature) * settings.rate_minutes_per_degree
     return min(settings.lead_cap_minutes, max(0.0, lead + settings.lead_margin_minutes))
+
+
+def solar_lead_minutes(
+    settings: Settings, temperature: float, rise: float | None, minutes_to_ready: float
+) -> float:
+    """The lead with the sun's help counted (spec 4.3).
+
+    Nothing when the sun alone gets the water to the target in time, with the lead margin to
+    spare; otherwise the lead by the combined rate, heater plus sun; the heater's lead alone when
+    the trend (`rise`, degrees per minute) is flat, falling or unknown.
+    """
+    if rise is None or rise <= 0:
+        return lead_minutes(settings, temperature)
+    to_go = settings.target - temperature
+    if to_go / rise + settings.lead_margin_minutes <= minutes_to_ready:
+        return 0.0
+    combined = 1 / settings.rate_minutes_per_degree + rise  # degrees per minute
+    return lead_minutes(replace(settings, rate_minutes_per_degree=1 / combined), temperature)
 
 
 def stop_point(settings: Settings) -> float:
@@ -279,13 +279,19 @@ class Controller:
         self.state.heating = window is not None and window.wants_heat
 
     def step(
-        self, *, now: datetime, temperature: float | None, occurrences: Iterable[Occurrence]
+        self,
+        *,
+        now: datetime,
+        temperature: float | None,
+        occurrences: Iterable[Occurrence],
+        solar_rise: float | None = None,
     ) -> Decision:
         """Look at the house now and decide.
 
-        `occurrences` must reach back to the open window's first ready time. Everything is worked
-        in UTC: adding minutes to a local time is wall-clock arithmetic in Python, which is an
-        hour out across a daylight-saving change.
+        `occurrences` must reach back to the open window's first ready time. `solar_rise` is the
+        water's trend with the heater off, used only when the solar-aware rule is on. Everything
+        is worked in UTC: adding minutes to a local time is wall-clock arithmetic in Python, which
+        is an hour out across a daylight-saving change.
         """
         now = now.astimezone(UTC)
         ready_times = sorted(
@@ -305,9 +311,9 @@ class Controller:
 
         before = None if state.window is None else state.window.members
         if state.window is not None:
-            self._follow_ready_times(state.window, now, temperature, ready_times)
+            self._follow_ready_times(state.window, now, temperature, ready_times, solar_rise)
         if state.window is None:
-            self._open_window(now, temperature, ready_times, events)
+            self._open_window(now, temperature, ready_times, events, solar_rise)
             before = None if state.window is None else state.window.members
         if state.window is not None:
             self._join_close_ones(state.window, ready_times)
@@ -338,6 +344,15 @@ class Controller:
             if members:
                 kept.append(replace(event, members=members))
         return tuple(kept)
+
+    def _lead(
+        self, temperature: float, ready_at: datetime, now: datetime, rise: float | None
+    ) -> float:
+        """The lead the rule in use gives: version 1's, or the solar-aware one (spec 4.2, 4.3)."""
+        if not self.settings.solar_aware:
+            return lead_minutes(self.settings, temperature)
+        until = (ready_at - now).total_seconds() / 60
+        return solar_lead_minutes(self.settings, temperature, rise, until)
 
     def _requested(self) -> bool:
         """Whether anything asks for hot water now: an open window or a heat-now request."""
@@ -400,12 +415,13 @@ class Controller:
         temperature: float,
         ready_times: list[Occurrence],
         events: list[ControllerEvent],
+        rise: float | None,
     ) -> None:
         settings = self.settings
         first = next((o for o in ready_times if o.at + self._grace() > now), None)
         if first is None:
             return
-        lead = lead_minutes(settings, temperature)
+        lead = self._lead(temperature, first.at, now, rise)
         if now < first.at - timedelta(minutes=lead):
             return
         self.state.window = Window(
@@ -418,10 +434,10 @@ class Controller:
         )
         if temperature < settings.target - _EPSILON:
             self.state.heating = self.state.window.wants_heat = True
+            # The sun was to do it and did not: the estimate is the heater's own lead.
+            minutes = round(lead or lead_minutes(settings, temperature))
             events.append(
-                ControllerEvent(
-                    "heating", first.at, first.members, temperature, minutes=round(lead)
-                )
+                ControllerEvent("heating", first.at, first.members, temperature, minutes=minutes)
             )
 
     def _tell_joiners(
@@ -445,7 +461,12 @@ class Controller:
             )
 
     def _follow_ready_times(
-        self, window: Window, now: datetime, temperature: float, ready_times: list[Occurrence]
+        self,
+        window: Window,
+        now: datetime,
+        temperature: float,
+        ready_times: list[Occurrence],
+        rise: float | None,
     ) -> None:
         """Bring the window in line with the ready times as they are now.
 
@@ -471,7 +492,7 @@ class Controller:
         first, last = wanted[0].at, wanted[-1].at
         later_start = first > window.ready_at
         window.ready_at, window.last_ready_at, window.end = first, last, last + grace
-        not_due_yet = now < first - timedelta(minutes=lead_minutes(self.settings, temperature))
+        not_due_yet = now < first - timedelta(minutes=self._lead(temperature, first, now, rise))
         if later_start and not self.state.heating and not_due_yet:
             self._close()
 

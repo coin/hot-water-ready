@@ -14,6 +14,7 @@ from custom_components.hot_water_ready.core.controller import (
     Occurrence,
     Settings,
 )
+from custom_components.hot_water_ready.core.solar import SolarTrend
 
 
 @dataclass
@@ -35,12 +36,14 @@ class Cylinder:
     settings: Settings = field(default_factory=Settings)
     heat_per_minute: float = 0.17  # Tiago's cylinder: about 5.9 min per degree
     cool_per_minute: float = 0.0
+    sun_per_minute: float = 0.0  # solar gain, whether the relay is on or not
     probe_online: bool = True
     relay: bool = False
     occurrences: list[Occurrence] = field(default_factory=list)
     toggles: list[Toggle] = field(default_factory=list)
     events: list[tuple[datetime, ControllerEvent]] = field(default_factory=list)
     controller: Controller = field(init=False)
+    trend: SolarTrend = field(init=False, default_factory=SolarTrend)
 
     def __post_init__(self) -> None:
         self.controller = Controller(self.settings)
@@ -52,8 +55,12 @@ class Cylinder:
 
     def step(self) -> None:
         """Let the controller look at the house now and act on its decision."""
+        self.trend.step(now=self.now, temperature=self.probe, heating=self.relay)
         decision = self.controller.step(
-            now=self.now, temperature=self.probe, occurrences=self.occurrences
+            now=self.now,
+            temperature=self.probe,
+            occurrences=self.occurrences,
+            solar_rise=self.trend.rise_per_minute(self.now),
         )
         self.events.extend((self.now, event) for event in decision.events)
         if decision.relay_on is not None and decision.relay_on != self.relay:
@@ -84,8 +91,8 @@ class Cylinder:
             self.now = (self.now.astimezone(UTC) + timedelta(minutes=0.1)).astimezone(
                 self.now.tzinfo
             )
-            change = (self.heat_per_minute if self.relay else -self.cool_per_minute) - (
-                draw_per_minute
+            change = (self.heat_per_minute if self.relay else -self.cool_per_minute) + (
+                self.sun_per_minute - draw_per_minute
             )
             self.water += change / 10
             if self.probe != last_probe or tick % 10 == 0:

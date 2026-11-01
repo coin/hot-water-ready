@@ -5,7 +5,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import date, datetime, time, timedelta
 import logging
-from typing import Any
+from typing import Any, NamedTuple
 import uuid
 
 from homeassistant.auth.models import User
@@ -19,6 +19,7 @@ from homeassistant.helpers.event import (
     async_track_state_change_event,
     async_track_time_interval,
 )
+from homeassistant.helpers.sun import is_up
 from homeassistant.util import dt as dt_util
 from homeassistant.util.unit_conversion import TemperatureConverter
 
@@ -26,6 +27,7 @@ from .actuator import Actuator, ClimateActuator, SwitchActuator
 from .const import (
     CANCEL_EVERYONE,
     CANCEL_PEOPLE,
+    CANCEL_REQUESTERS,
     COLOURS,
     CONF_ADVANCED,
     CONF_CANCEL_PEOPLE,
@@ -34,12 +36,14 @@ from .const import (
     CONF_COLOUR,
     CONF_FAULT_RECIPIENTS,
     CONF_HEATER_TYPE,
+    CONF_HEATING_RATE,
     CONF_KEEP_HEATING_GAP,
     CONF_NOTIFY_TARGETS,
     CONF_PERSON,
     CONF_POWER_SENSOR,
     CONF_RECIPIENTS,
     CONF_RICH_NOTIFICATIONS,
+    CONF_SOLAR_AWARE,
     CONF_SWITCH,
     CONF_TEMPERATURE_SENSOR,
     DOMAIN,
@@ -47,18 +51,23 @@ from .const import (
     SUBENTRY_MEMBER,
     signal_heater_updated,
 )
+from .core.comparison import Recorder, Verdict, verdict
 from .core.controller import (
     Controller,
     ControllerEvent,
     Decision,
     Occurrence,
     Settings,
+    lead_minutes,
     minutes_to_ready,
+    solar_lead_minutes,
     stop_point,
 )
 from .core.faults import BLOCKING, RESOLVABLE, Fault, FaultGuard, FaultSettings
 from .core.household import Away, MemberPlan, household_occurrences
+from .core.rate import RateLearner, rate_in_use
 from .core.ready_times import ReadyTime
+from .core.solar import SolarTrend
 from .core.status import Status, heater_status
 from .messages import (
     async_message,
@@ -134,6 +143,19 @@ class Member:
         )
 
 
+class Leads(NamedTuple):
+    """How long before the next ready time each rule would start heating (spec 4.2, 4.3)."""
+
+    version_1: float
+    solar: float
+    solar_applied: bool
+
+    @property
+    def used(self) -> float:
+        """The lead of the rule applied."""
+        return self.solar if self.solar_applied else self.version_1
+
+
 class Heater:
     """The Home Assistant side of one heater."""
 
@@ -151,6 +173,10 @@ class Heater:
         self._command_lock = asyncio.Lock()  # one batch of commands to the element at a time
         self._command_failing = False  # a refused command is warned about once
         self._heating_indication = True  # whether the element says when it heats; kept in outages
+        self._learner = RateLearner(data.rate)
+        self._trend = SolarTrend()
+        self._rise: float | None = None  # the solar rise at the last step
+        self._recorder = Recorder(data.comparison)
         self._controller = Controller(self._settings(), data.controller)
         self._guard = FaultGuard(self._fault_settings(), data.faults)
 
@@ -216,16 +242,64 @@ class Heater:
         """Stop at target plus this; restart at target minus it."""
         return self._data.margin
 
+    @property
+    def learned_rate(self) -> float | None:
+        """Minutes per degree learned from the last week's clean runs; None until three."""
+        return self._learner.learned(dt_util.now())
+
+    @property
+    def rate(self) -> float:
+        """The rate the lead is worked out with: set by hand, else learned, else version 1's."""
+        manual = self.entry.options.get(CONF_HEATING_RATE)
+        return rate_in_use(
+            manual=None if manual is None else float(manual),
+            learned=self.learned_rate,
+            default=Settings().rate_minutes_per_degree,
+        )
+
+    @property
+    def solar_aware(self) -> bool:
+        """Whether the solar-aware lead is applied; off, it is only recorded (spec 4.3)."""
+        return bool(self.entry.options.get(CONF_SOLAR_AWARE, False))
+
     def _settings(self) -> Settings:
         options = self.entry.options
         return replace(
             Settings(),
             target=self._data.target,
             margin=self._data.margin,
+            rate_minutes_per_degree=self.rate,
             keep_heating_gap_minutes=float(
                 options.get(CONF_KEEP_HEATING_GAP, Settings().keep_heating_gap_minutes)
             ),
+            solar_aware=self.solar_aware,
         )
+
+    def leads(self) -> Leads | None:
+        """For the next ready time, from the water now: both rules' leads.
+
+        None without a reading or a ready time. Both are worked out whichever rule is applied.
+        """
+        temperature, coming = self.temperature, self.next_ready()
+        if temperature is None or coming is None:
+            return None
+        settings = self._controller.settings
+        # In UTC: both times share the house's zone, where subtraction is wall-clock time.
+        until = (dt_util.as_utc(coming.at) - dt_util.utcnow()).total_seconds() / 60
+        return Leads(
+            version_1=lead_minutes(settings, temperature),
+            solar=solar_lead_minutes(settings, temperature, self._rise, until),
+            solar_applied=settings.solar_aware,
+        )
+
+    def solar_verdict(self) -> Verdict:
+        """The solar comparison over the last 30 days (spec 7)."""
+        # Ticket 10 brings the element power option; until then kWh need a power sensor.
+        return verdict(self._recorder.state.records, now=dt_util.now(), element_power_w=None)
+
+    def comparison_records(self) -> list[dict[str, Any]]:
+        """The per-window record of the last year, as plain data, for the diagnostics."""
+        return [record.to_dict() for record in self._recorder.state.records]
 
     def _fault_settings(self) -> FaultSettings:
         advanced = self.entry.options.get(CONF_ADVANCED, {})
@@ -434,9 +508,15 @@ class Heater:
         await self._async_save()
         self._step()
 
-    async def _async_save(self) -> None:
+    def _collect_states(self) -> None:
+        """Put the core states into the data the store saves."""
         self._data.controller = self._controller.state
         self._data.faults = self._guard.state
+        self._data.rate = self._learner.state
+        self._data.comparison = self._recorder.state
+
+    async def _async_save(self) -> None:
+        self._collect_states()
         await self._store.async_save(self._data)
 
     # ------------------------------------------------------------------ permissions
@@ -663,19 +743,24 @@ class Heater:
         self._end_expired_aways()
         now = dt_util.now()
         before = self._controller.state.to_dict()
+        temperature, element = self.temperature, self.element_heating
+        self._trend.step(now=now, temperature=temperature, heating=element)
+        self._rise = self._trend.rise_per_minute(now)
+        self._controller.settings = self._settings()  # the learned rate moves with new runs
         if self.automatic:
             decision = self._controller.step(
                 now=now,
-                temperature=self.temperature,
+                temperature=temperature,
                 # From a day back, so the open window's own ready times are always in the list.
                 occurrences=self.occurrences(now - timedelta(days=1), now + HORIZON),
+                solar_rise=self._rise,
             )
         else:
             decision = Decision(relay_on=False)  # run by hand: no plans, nothing to tell
         report = self._guard.step(
             now=now,
-            temperature=self.temperature,
-            relay_on=self.element_heating,
+            temperature=temperature,
+            relay_on=element,
             element_off=self.actuator.told_off(self.hass),
             power=self._number(self._power_sensor),
             target=self.target,
@@ -688,8 +773,9 @@ class Heater:
             ir.async_delete_issue(self.hass, DOMAIN, self._issue_id(fault))
         if report.raised:
             self.entry.async_create_task(self.hass, self._async_tell_fault(report.raised))
-        if report.raised or report.cleared:
-            self._data.faults = self._guard.state
+        learned = self._learn_and_record(now, temperature, element)
+        if report.raised or report.cleared or learned:
+            self._collect_states()
             self._store.async_delay_save(self._data)
         events = decision.events
         if self._guard.blocks_heating:
@@ -702,11 +788,46 @@ class Heater:
             self._store.async_delay_save(self._data)
         self._notify()
 
+    def _learn_and_record(
+        self, now: datetime, temperature: float | None, element: bool | None
+    ) -> bool:
+        """Feed the rate learner and the solar record; True when either kept something new."""
+        runs, records = len(self._learner.state.runs), len(self._recorder.state.records)
+        # A thermostat with no heating indication: what the component asks of it stands in.
+        heating = self.heating if element is None else element
+        fault = bool(self.faults)
+        self._learner.step(
+            now=now,
+            temperature=temperature,
+            heating=heating,
+            sun_up=is_up(self.hass, dt_util.as_utc(now)),
+            fault=fault,
+        )
+        if self.automatic:
+            self._recorder.step(
+                now=now,
+                settings=self._controller.settings,
+                temperature=temperature,
+                rise=self._rise,
+                next_ready=self.next_ready(),
+                window_open=self._controller.state.window is not None,
+                element_on=heating,
+                power_w=self._number(self._power_sensor),
+                fault=fault,
+            )
+        else:
+            self._recorder.abandon()
+        return len(self._learner.state.runs) != runs or len(self._recorder.state.records) != records
+
     @callback
     def _apply(self, on: bool) -> None:
-        """Bring the element to on or off when it differs; an unavailable one is set when back."""
+        """Bring the element to on or off when it differs; an unavailable one is set when back.
+
+        The commands wait for this step to finish (no eager start): a switch that writes its new
+        state at once would otherwise run the next step inside this one, half done.
+        """
         if self.actuator.calls_for(self.hass, on, self._setpoint()):
-            self.entry.async_create_task(self.hass, self._async_bring_to(on=on))
+            self.entry.async_create_task(self.hass, self._async_bring_to(on=on), eager_start=False)
 
     def _setpoint(self) -> float:
         """What a heating thermostat is set to: the stop point, in Home Assistant's unit."""
@@ -756,6 +877,27 @@ class Heater:
 
     # ------------------------------------------------------------------ for the card
 
+    def _settings_snapshot(self) -> dict[str, Any]:
+        """The settings sheet an administrator sees on the card (spec 6, 7)."""
+        solar = self.solar_verdict()
+        return {
+            "cancel_rule": self.entry.options.get(CONF_CANCEL_RULE, CANCEL_REQUESTERS),
+            "solar_aware": self.solar_aware,
+            "solar": {
+                "windows": solar.windows,
+                "on_time": solar.on_time,
+                "minutes_saved": round(solar.minutes_saved),
+                "kwh": None if solar.kwh is None else round(solar.kwh, 1),
+                "solar_windows": solar.solar_windows,
+                "solar_on_time": solar.solar_on_time,
+            },
+        }
+
+    async def async_set_cancel_rule(self, rule: str) -> None:
+        """Who may cancel heat now; an option, so the entry reloads (spec 3.1)."""
+        options = {**self.entry.options, CONF_CANCEL_RULE: rule}
+        self.hass.config_entries.async_update_entry(self.entry, options=options)
+
     def snapshot(self, user: User) -> dict[str, Any]:
         """Everything the card needs, as plain data, for this viewer."""
         temperature = self.temperature
@@ -789,6 +931,7 @@ class Heater:
                 "asked": self.requester_key(user) in self.heat_now_requesters,
                 "can_cancel": self.can_cancel_heat_now(user),
             },
+            "settings": self._settings_snapshot() if user.is_admin else None,
             "today": [
                 {"member": member_id, "at": occurrence.at.isoformat()}
                 for occurrence in self.today()

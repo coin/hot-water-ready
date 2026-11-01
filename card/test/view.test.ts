@@ -4,7 +4,6 @@ import type { HeaterSnapshot, MemberSnapshot } from "../src/types";
 import {
   avatarViews,
   faultBanner,
-  adminNotes,
   heatNowActions,
   awayLine,
   greeting,
@@ -15,7 +14,9 @@ import {
   selectedMember,
   sheetIsComplete,
   showsAvatarRow,
+  settingsView,
   shownMember,
+  solarLine,
   todayInHouse,
   type ViewContext,
 } from "../src/view";
@@ -49,6 +50,11 @@ const cold: HeaterSnapshot = {
   not_rising_checked: true,
   automatic: true,
   heat_now: null,
+  settings: {
+    cancel_rule: "requesters",
+    solar_aware: false,
+    solar: { windows: 0, on_time: 0, minutes_saved: 0, kwh: null, solar_windows: 0, solar_on_time: 0 },
+  },
   today: [],
   members: [tiago, maria],
 };
@@ -67,8 +73,8 @@ describe("heaterView", () => {
   });
 
   it("names the target", () => {
-    expect(heaterView(cold, pt).target).toBe("alvo 42 °C");
-    expect(heaterView(cold, en).target).toBe("target 42 °C");
+    expect(heaterView(cold, pt).target).toBe("alvo 42°");
+    expect(heaterView(cold, en).target).toBe("target 42°");
   });
 
   it("says the water is waiting when nothing is coming", () => {
@@ -380,15 +386,80 @@ describe("heatNowActions during a fault", () => {
   });
 });
 
-describe("adminNotes", () => {
-  it("tells an administrator when not rising cannot be checked", () => {
-    expect(adminNotes({ ...cold, not_rising_checked: false }, "pt")).toEqual([
-      "O termóstato não indica quando está a aquecer, por isso as verificações \"a água não aquece\" e \"o aquecedor não consome energia\" não são feitas.",
-    ]);
+describe("settingsView", () => {
+  it("is for administrators only", () => {
+    expect(settingsView({ ...cold, is_admin: false, settings: null }, "pt")).toBeUndefined();
   });
 
-  it("keeps it from members and when the check runs", () => {
-    expect(adminNotes({ ...cold, not_rising_checked: false, is_admin: false }, "pt")).toEqual([]);
-    expect(adminNotes(cold, "pt")).toEqual([]);
+  it("shows the band as where heating stops and restarts", () => {
+    const view = settingsView({ ...cold, target: 42.5, margin: 1.5 }, "pt");
+    expect(view?.band).toBe("Pára a 44 °C, retoma a 41 °C");
+    expect(view?.target.shown).toBe("42,5");
+  });
+
+  it("steps the target by half a degree, back onto the step when set elsewhere", () => {
+    expect(settingsView(cold, "pt")?.target).toMatchObject({ down: 41.5, up: 42.5 });
+    expect(settingsView({ ...cold, target: 42.3 }, "pt")?.target).toMatchObject({ down: 42, up: 42.5 });
+  });
+
+  it("stops at the limits", () => {
+    expect(settingsView({ ...cold, target: 75 }, "pt")?.target.up).toBeNull();
+    expect(settingsView({ ...cold, margin: 0 }, "pt")?.margin.down).toBeNull();
+    expect(settingsView({ ...cold, margin: 0 }, "pt")?.margin.up).toBe(0.5);
+  });
+
+  it("marks the cancel rule in use", () => {
+    const rules = settingsView(cold, "pt")?.cancel.filter((option) => option.selected).map((o) => o.rule);
+    expect(rules).toEqual(["requesters"]);
+  });
+
+  it("carries the note when not rising cannot be checked", () => {
+    expect(settingsView({ ...cold, not_rising_checked: false }, "pt")?.notes).toEqual([
+      "O termóstato não indica quando está a aquecer, por isso as verificações \"a água não aquece\" e \"o aquecedor não consome energia\" não são feitas.",
+    ]);
+    expect(settingsView(cold, "pt")?.notes).toEqual([]);
+  });
+});
+
+describe("solarLine", () => {
+  const off = { cancel_rule: "requesters" as const, solar_aware: false };
+
+  it("says when nothing has been recorded yet", () => {
+    expect(solarLine({ ...off, solar: { windows: 0, on_time: 0, minutes_saved: 0, kwh: null, solar_windows: 0, solar_on_time: 0 } }, "pt")).toBe(
+      "Ainda não há janelas registadas nos últimos 30 dias.",
+    );
+  });
+
+  it("gives the verdict with minutes and kWh while the rule is off", () => {
+    expect(solarLine({ ...off, solar: { windows: 30, on_time: 27, minutes_saved: 412, kwh: 20.6, solar_windows: 0, solar_on_time: 0 } }, "pt")).toBe(
+      "Com a regra solar ligada, a água teria ficado pronta a tempo em 27 de 30 janelas, e o aquecedor teria trabalhado menos 412 minutos, cerca de 20,6 kWh.",
+    );
+  });
+
+  it("leaves kWh out without a measure of energy", () => {
+    expect(solarLine({ ...off, solar: { windows: 3, on_time: 3, minutes_saved: 40, kwh: null, solar_windows: 0, solar_on_time: 0 } }, "en")).toBe(
+      "With the solar-aware rule on, the water would have been ready on time in 3 of 3 windows, and the heater would have run 40 minutes less.",
+    );
+  });
+
+  it("speaks of what happened once the rule is on, and of more minutes when it ran longer", () => {
+    const on = { ...off, solar_aware: true };
+    expect(solarLine({ ...on, solar: { windows: 4, on_time: 3, minutes_saved: -12, kwh: -0.6, solar_windows: 0, solar_on_time: 0 } }, "pt")).toBe(
+      "Com a regra solar, a água ficou pronta a tempo em 3 de 4 janelas, e o aquecedor trabalhou mais 12 minutos, cerca de 0,6 kWh.",
+    );
+  });
+
+  it("says how the rule did in the windows it was applied to", () => {
+    const on = { ...off, solar_aware: true };
+    const solar = { windows: 5, on_time: 4, minutes_saved: 30, kwh: null, solar_windows: 3, solar_on_time: 2 };
+    expect(solarLine({ ...on, solar }, "pt")).toBe(
+      "Com a regra solar, a água ficou pronta a tempo em 4 de 5 janelas, e o aquecedor trabalhou menos 30 minutos. A regra foi aplicada em 3 delas: a tempo em 2.",
+    );
+  });
+
+  it("says nothing about minutes when none were saved", () => {
+    expect(solarLine({ ...off, solar: { windows: 2, on_time: 2, minutes_saved: 0, kwh: 0, solar_windows: 0, solar_on_time: 0 } }, "en")).toBe(
+      "With the solar-aware rule on, the water would have been ready on time in 2 of 2 windows.",
+    );
   });
 });

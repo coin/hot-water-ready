@@ -31,12 +31,14 @@ from .const import (
     CONF_COLOUR,
     CONF_FAULT_RECIPIENTS,
     CONF_HEATER_TYPE,
+    CONF_HEATING_RATE,
     CONF_KEEP_HEATING_GAP,
     CONF_NOTIFY_TARGETS,
     CONF_PERSON,
     CONF_POWER_SENSOR,
     CONF_RECIPIENTS,
     CONF_RICH_NOTIFICATIONS,
+    CONF_SOLAR_AWARE,
     CONF_SWITCH,
     CONF_TEMPERATURE_SENSOR,
     DOMAIN,
@@ -314,7 +316,7 @@ class HeaterOptionsFlow(OptionsFlow):
     """Settings that rarely change (spec 3.1)."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """The keep-heating-through gap and who may cancel heat now."""
+        """The keep-heating-through gap, the solar rule, the rate, who may cancel heat now..."""
         if user_input is not None:
             # A cleared field is left out of user_input; it means nobody listed, or no sensor.
             data = {
@@ -322,6 +324,7 @@ class HeaterOptionsFlow(OptionsFlow):
                 CONF_CANCEL_PEOPLE: [],
                 CONF_FAULT_RECIPIENTS: [],
                 CONF_POWER_SENSOR: None,
+                CONF_HEATING_RATE: None,
                 **user_input,
             }
             return self.async_create_entry(data=data)
@@ -335,6 +338,21 @@ class HeaterOptionsFlow(OptionsFlow):
                         max=180,
                         step=5,
                         unit_of_measurement="min",
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
+                ),
+                probatio.Required(
+                    CONF_SOLAR_AWARE, default=options.get(CONF_SOLAR_AWARE, False)
+                ): selector.BooleanSelector(),
+                probatio.Optional(
+                    CONF_HEATING_RATE,
+                    description={"suggested_value": options.get(CONF_HEATING_RATE)},
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0.5,
+                        max=60,
+                        step=0.1,
+                        unit_of_measurement="min/°C",
                         mode=selector.NumberSelectorMode.BOX,
                     )
                 ),

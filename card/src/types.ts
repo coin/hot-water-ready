@@ -26,6 +26,28 @@ export interface MemberSnapshot {
   ready_times: ReadyTimeSnapshot[];
 }
 
+/** Who may cancel a heat-now request besides whoever asked (spec 2). */
+export type CancelRule = "requesters" | "people" | "everyone";
+
+/** The settings sheet, sent to administrators only. */
+export interface AdminSettings {
+  cancel_rule: CancelRule;
+  /** Whether the solar-aware rule is applied; off, it is only recorded (spec 4.3). */
+  solar_aware: boolean;
+  /**
+   * The last 30 days (spec 7). `kwh` is null without a measure of energy; `solar_windows` are
+   * the windows the rule was applied to, and `solar_on_time` how many of them were on time.
+   */
+  solar: {
+    windows: number;
+    on_time: number;
+    minutes_saved: number;
+    kwh: number | null;
+    solar_windows: number;
+    solar_on_time: number;
+  };
+}
+
 /** What `hot_water_ready/subscribe` sends for one heater, as seen by the viewer. */
 export interface HeaterSnapshot {
   entry_id: string;
@@ -51,6 +73,8 @@ export interface HeaterSnapshot {
   can_ask_heat_now: boolean;
   /** The heat-now request, if one is running: who asked, and what this viewer may do. */
   heat_now: { requesters: string[]; asked: boolean; can_cancel: boolean } | null;
+  /** The settings sheet; null unless the viewer is an administrator. */
+  settings: AdminSettings | null;
   /** Everyone's ready times today, earliest first. */
   today: { member: string; at: string }[];
   members: MemberSnapshot[];

@@ -5,6 +5,7 @@ never reloads the integration. Everything read back is validated: a bad record i
 warning instead of breaking the heater.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date, time
 import logging
@@ -14,9 +15,11 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 
 from .const import DEFAULT_MARGIN, DEFAULT_TARGET, DOMAIN, MAX_MARGIN, MAX_TARGET, MIN_TARGET
+from .core.comparison import ComparisonState
 from .core.controller import ControllerState
 from .core.faults import FaultState
 from .core.household import Away
+from .core.rate import RateState
 from .core.ready_times import ReadyTime
 
 _LOGGER = logging.getLogger(__name__)
@@ -36,6 +39,8 @@ class HeaterData:
     controller: ControllerState | None = None
     faults: FaultState | None = None
     automatic: bool = True  # off: the heater is run by hand and left alone (spec 4.7)
+    rate: RateState | None = None  # the clean heating runs of the last week (spec 4.2)
+    comparison: ComparisonState | None = None  # a year of window records (spec 7)
 
 
 def ready_time_to_dict(ready: ReadyTime) -> dict[str, Any]:
@@ -105,23 +110,14 @@ def _mapping(raw: object, what: str) -> dict[str, Any]:
     return {}
 
 
-def _controller(raw: object) -> ControllerState | None:
+def _state[T](raw: object, parse: Callable[[object], T], what: str) -> T | None:
+    """A saved core state, or None (with a warning) when it cannot be read."""
     if not raw:
         return None
     try:
-        return ControllerState.from_dict(raw)
+        return parse(raw)
     except ValueError as err:
-        _LOGGER.warning("Ignored the saved heating state: %s", err)
-        return None
-
-
-def _faults(raw: object) -> FaultState | None:
-    if not raw:
-        return None
-    try:
-        return FaultState.from_dict(raw)
-    except ValueError as err:
-        _LOGGER.warning("Ignored the saved fault state: %s", err)
+        _LOGGER.warning("Ignored the saved %s: %s", what, err)
         return None
 
 
@@ -147,9 +143,11 @@ class HeaterStore:
         data = HeaterData(
             target=_number(settings.get("target"), DEFAULT_TARGET, MIN_TARGET, MAX_TARGET),
             margin=_number(settings.get("margin"), DEFAULT_MARGIN, 0.0, MAX_MARGIN),
-            controller=_controller(raw.get("controller")),
-            faults=_faults(raw.get("faults")),
+            controller=_state(raw.get("controller"), ControllerState.from_dict, "heating state"),
+            faults=_state(raw.get("faults"), FaultState.from_dict, "fault state"),
             automatic=_flag(raw.get("automatic"), default=True),
+            rate=_state(raw.get("rate"), RateState.from_dict, "heating runs"),
+            comparison=_state(raw.get("comparison"), ComparisonState.from_dict, "solar record"),
         )
         for member_id, member in _mapping(raw.get("members"), "members").items():
             stored = _mapping(member, "member")
@@ -186,6 +184,8 @@ class HeaterStore:
             "controller": None if data.controller is None else data.controller.to_dict(),
             "faults": None if data.faults is None else data.faults.to_dict(),
             "automatic": data.automatic,
+            "rate": None if data.rate is None else data.rate.to_dict(),
+            "comparison": None if data.comparison is None else data.comparison.to_dict(),
         }
 
     async def async_save(self, data: HeaterData) -> None:

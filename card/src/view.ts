@@ -1,7 +1,7 @@
 // What the card shows, worked out from a heater snapshot without touching the DOM.
 
 import { localeOf, localize, pickLanguage, weekdayLetters, type TextKey } from "./i18n";
-import type { HeaterSnapshot, MemberSnapshot, Status } from "./types";
+import type { AdminSettings, CancelRule, HeaterSnapshot, MemberSnapshot, Status } from "./types";
 
 export interface ViewContext {
   language: string;
@@ -228,8 +228,76 @@ export function faultBanner(heater: HeaterSnapshot, language: string): string[] 
   return heater.faults.map((fault) => localize(language, `fault.${fault}`));
 }
 
-/** Notes only an administrator needs, such as a check the heater cannot support. */
-export function adminNotes(heater: HeaterSnapshot, language: string): string[] {
-  if (!heater.is_admin) return [];
-  return heater.not_rising_checked ? [] : [localize(language, "note.not_rising_skipped")];
+export const SETTINGS_COMMAND = "hot_water_ready/settings/set";
+
+// The same limits and steps as the target and margin number entities; the margin moves in half
+// degrees here, which is fine enough on a phone.
+const TARGET = { min: 30, max: 75, step: 0.5 };
+const MARGIN = { min: 0, max: 5, step: 0.5 };
+const CANCEL_RULES: CancelRule[] = ["requesters", "people", "everyone"];
+
+/** The value one step down and one step up, or null past a limit. */
+export interface Stepper {
+  shown: string;
+  down: number | null;
+  up: number | null;
+}
+
+function stepper(value: number, limits: { min: number; max: number; step: number }, language: string): Stepper {
+  // Rounded to the step, so 42.3 set elsewhere moves to 42.0 or 42.5 rather than 41.8 or 42.8.
+  const down = Math.ceil(value / limits.step - 1e-9) * limits.step - limits.step;
+  const up = Math.floor(value / limits.step + 1e-9) * limits.step + limits.step;
+  return {
+    shown: formatNumber(value, language, 1),
+    down: down >= limits.min - 1e-9 ? down : null,
+    up: up <= limits.max + 1e-9 ? up : null,
+  };
+}
+
+export interface SettingsView {
+  target: Stepper;
+  margin: Stepper;
+  /** Where heating stops and restarts. */
+  band: string;
+  automatic: boolean;
+  cancel: { rule: CancelRule; label: TextKey; selected: boolean }[];
+  solar: string;
+  /** Checks this heater cannot have, such as "not rising" on a thermostat that never says. */
+  notes: string[];
+}
+
+/** The settings sheet (spec 6), for an administrator only. */
+export function settingsView(heater: HeaterSnapshot, language: string): SettingsView | undefined {
+  const settings = heater.settings;
+  if (!heater.is_admin || !settings) return undefined;
+  return {
+    target: stepper(heater.target, TARGET, language),
+    margin: stepper(heater.margin, MARGIN, language),
+    band: localize(language, "settings.band", {
+      stop: formatNumber(heater.target + heater.margin, language, 1),
+      restart: formatNumber(heater.target - heater.margin, language, 1),
+    }),
+    automatic: heater.automatic,
+    cancel: CANCEL_RULES.map((rule) => ({ rule, label: `cancel.${rule}`, selected: rule === settings.cancel_rule })),
+    solar: solarLine(settings, language),
+    notes: heater.not_rising_checked ? [] : [localize(language, "note.not_rising_skipped")],
+  };
+}
+
+/** The solar comparison sentence (spec 7), and how the rule did where it was applied. */
+export function solarLine(settings: AdminSettings, language: string): string {
+  const { windows, on_time: onTime, minutes_saved: saved, kwh } = settings.solar;
+  if (windows === 0) return localize(language, "solar.none");
+  const tense = settings.solar_aware ? "did" : "would";
+  let line = localize(language, `solar.${tense}`, { on_time: onTime, windows });
+  if (saved !== 0) {
+    line += localize(language, `solar.${tense}_${saved > 0 ? "less" : "more"}`, { minutes: Math.abs(saved) });
+    if (kwh !== null) line += localize(language, "solar.kwh", { kwh: formatNumber(Math.abs(kwh), language, 1) });
+  }
+  line += ".";
+  const { solar_windows: applied, solar_on_time: appliedOnTime } = settings.solar;
+  if (applied > 0) {
+    line += localize(language, "solar.applied", { applied, on_time: appliedOnTime });
+  }
+  return line;
 }

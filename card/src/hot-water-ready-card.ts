@@ -6,21 +6,24 @@ import { localize, weekdayLetters } from "./i18n";
 import { HeaterSubscription, fetchHeaters } from "./subscription";
 import type { CardConfig, Hass, HeaterSnapshot, MemberSnapshot } from "./types";
 import {
+  SETTINGS_COMMAND,
   avatarViews,
   awayLine,
-  adminNotes,
   faultBanner,
   greeting,
   heatNowActions,
   heaterView,
   houseToday,
   readyTimeRows,
+  settingsView,
   sheetIsComplete,
   showsAvatarRow,
   shownMember,
   todayInHouse,
   viewMode,
+  type SettingsView,
   type Sheet,
+  type Stepper,
   type ViewContext,
 } from "./view";
 
@@ -37,6 +40,7 @@ export class HotWaterReadyCard extends LitElement {
     _missing: { state: true },
     _selected: { state: true },
     _sheet: { state: true },
+    _settingsOpen: { state: true },
     _error: { state: true },
   };
 
@@ -46,6 +50,7 @@ export class HotWaterReadyCard extends LitElement {
   private _missing = false;
   private _selected: string | undefined;
   private _sheet: Sheet | undefined;
+  private _settingsOpen = false;
   private _error = "";
   private readonly _subscription = new HeaterSubscription(
     (snapshot) => {
@@ -143,8 +148,8 @@ export class HotWaterReadyCard extends LitElement {
       <ha-card>
         ${faultBanner(heater, language).map((line) => html`<div class="banner fault" role="alert">${line}</div>`)}
         ${heater.automatic ? nothing : html`<div class="banner manual">${localize(language, "manual")}</div>`}
-        ${adminNotes(heater, language).map((line) => html`<div class="banner manual">${line}</div>`)}
         ${this._renderTop(heater)}
+        ${this._renderSettings(heater)}
         ${mode === "member"
           ? html`<div class="greeting">${greeting(heater, language)}</div>`
           : this._renderAvatars(heater, member)}
@@ -200,8 +205,8 @@ export class HotWaterReadyCard extends LitElement {
     </div>`;
   }
 
-  private _openMembers(): void {
-    // Members are added in the integration's settings, where the member flow lives.
+  private _openIntegration(): void {
+    // Members and the rarer settings live in the integration's own pages.
     history.pushState(null, "", "/config/integrations/integration/hot_water_ready");
     window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
   }
@@ -221,7 +226,19 @@ export class HotWaterReadyCard extends LitElement {
           <text class="target" x="46" y="61">${view.target}</text>
         </svg>
         <div class="text">
-          <div class="name">${heater.name}</div>
+          <div class="name-row">
+            <div class="name">${heater.name}</div>
+            ${heater.settings
+              ? html`<button
+                  class="settings-button"
+                  aria-label=${localize(this._language, "settings.open")}
+                  aria-expanded=${this._settingsOpen}
+                  @click=${() => (this._settingsOpen = !this._settingsOpen)}
+                >
+                  ⚙
+                </button>`
+              : nothing}
+          </div>
           <div class="headline ${view.tone}">${view.headline}</div>
           ${view.subline ? html`<div class="subline">${view.subline}</div>` : nothing}
           <div class="heat-now">
@@ -239,6 +256,107 @@ export class HotWaterReadyCard extends LitElement {
         </div>
       </div>
     `;
+  }
+
+  private _renderSettings(heater: HeaterSnapshot): unknown {
+    const language = this._language;
+    const view = this._settingsOpen ? settingsView(heater, language) : undefined;
+    if (!view) return nothing;
+    const set = (changes: Record<string, unknown>) => this._call({ type: SETTINGS_COMMAND, ...changes });
+    return html`
+      <div class="sheet settings" role="dialog" aria-label=${localize(language, "settings.open")}>
+        <div class="sheet-head">
+          <div class="sheet-title">${localize(language, "settings.open")}</div>
+          <button class="secondary" @click=${() => (this._settingsOpen = false)}>
+            ${localize(language, "settings.close")}
+          </button>
+        </div>
+        ${this._renderStepper(
+          view.target,
+          `${view.target.shown} °C`,
+          localize(language, "settings.target"),
+          localize(language, "settings.target_hint"),
+          ["settings.target_down", "settings.target_up"],
+          (target) => set({ target }),
+        )}
+        ${this._renderStepper(
+          view.margin,
+          `± ${view.margin.shown}`,
+          localize(language, "settings.margin"),
+          view.band,
+          ["settings.margin_down", "settings.margin_up"],
+          (margin) => set({ margin }),
+        )}
+        <label class="setting">
+          <span class="setting-text">
+            <span>${localize(language, "settings.automatic")}</span>
+            <span class="hint">${localize(language, "settings.automatic_hint")}</span>
+          </span>
+          <input
+            type="checkbox"
+            class="switch"
+            .checked=${live(view.automatic)}
+            @change=${(event: Event) => set({ automatic: (event.target as HTMLInputElement).checked })}
+          />
+        </label>
+        <div class="setting column">
+          <span>${localize(language, "settings.cancel")}</span>
+          <div class="choices" role="radiogroup">
+            ${view.cancel.map(
+              (option) => html`<button
+                class="choice ${option.selected ? "on" : ""}"
+                role="radio"
+                aria-checked=${option.selected}
+                @click=${() => set({ cancel_rule: option.rule })}
+              >
+                ${localize(language, option.label)}
+              </button>`,
+            )}
+          </div>
+        </div>
+        ${this._renderSolar(view)}
+        <button
+          class="link"
+          @click=${() => {
+            this._openIntegration();
+          }}
+        >
+          ${localize(language, "settings.more")}</button>
+      </div>
+    `;
+  }
+
+  private _renderStepper(
+    stepper: Stepper,
+    shown: string,
+    label: string,
+    hint: string,
+    names: ["settings.target_down" | "settings.margin_down", "settings.target_up" | "settings.margin_up"],
+    change: (value: number) => Promise<boolean>,
+  ): unknown {
+    const button = (value: number | null, name: (typeof names)[number], sign: string) => html`<button
+      class="step"
+      aria-label=${localize(this._language, name)}
+      ?disabled=${value === null}
+      @click=${() => (value === null ? undefined : change(value))}
+    >
+      ${sign}
+    </button>`;
+    return html`<div class="setting">
+      <span class="setting-text"><span>${label}</span><span class="hint">${hint}</span></span>
+      ${button(stepper.down, names[0], "−")}
+      <span class="value">${shown}</span>
+      ${button(stepper.up, names[1], "+")}
+    </div>`;
+  }
+
+  private _renderSolar(view: SettingsView): unknown {
+    const language = this._language;
+    return html`<div class="setting column solar">
+      <span>${localize(language, "solar.title")}</span>
+      <span class="hint">${view.solar}</span>
+      ${view.notes.map((note) => html`<span class="hint">${note}</span>`)}
+    </div>`;
   }
 
   private _renderAvatars(heater: HeaterSnapshot, selected: MemberSnapshot | undefined): unknown {
@@ -268,7 +386,7 @@ export class HotWaterReadyCard extends LitElement {
           ? html`<button
               class="avatar add-member"
               @click=${() => {
-                this._openMembers();
+                this._openIntegration();
               }}
             >
               <span class="dot plus">+</span>
@@ -439,7 +557,7 @@ export class HotWaterReadyCard extends LitElement {
       font-weight: 700;
     }
     .target {
-      font-size: 11px;
+      font-size: 10px; /* "target 42.5 °C" must fit inside the ring */
       fill: var(--secondary-text-color);
     }
     .text {
@@ -447,6 +565,90 @@ export class HotWaterReadyCard extends LitElement {
       flex-direction: column;
       gap: 6px;
       min-width: 0;
+    }
+    .name-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .settings-button {
+      border: 0;
+      background: none;
+      font-size: 20px;
+      min-width: 40px;
+      min-height: 40px;
+      color: var(--secondary-text-color);
+    }
+    .sheet-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .sheet-head button,
+    .step,
+    .choice {
+      min-height: 40px;
+      padding: 0 14px;
+      border-radius: 10px;
+      border: 0;
+      font-weight: 700;
+    }
+    .setting {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+    }
+    .setting.column {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+    }
+    .setting-text {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .hint {
+      font-size: 12px;
+      color: var(--secondary-text-color);
+    }
+    .step {
+      min-width: 40px;
+      padding: 0;
+      background: var(--secondary-background-color, rgba(127, 127, 127, 0.15));
+    }
+    .step[disabled] {
+      opacity: 0.4;
+    }
+    .value {
+      min-width: 64px;
+      text-align: center;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .choices {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .choice {
+      background: var(--secondary-background-color, rgba(127, 127, 127, 0.15));
+      font-weight: 400;
+    }
+    .choice.on {
+      background: var(--primary-color);
+      color: var(--text-primary-color, #fff);
+    }
+    .link {
+      align-self: flex-start;
+      border: 0;
+      background: none;
+      padding: 0;
+      color: var(--primary-color);
+      font-weight: 700;
     }
     .name,
     .subline {

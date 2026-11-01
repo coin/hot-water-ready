@@ -3,7 +3,8 @@
 from datetime import datetime
 from typing import Any
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
+from homeassistant.const import EntityCategory, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
@@ -19,7 +20,15 @@ async def async_setup_entry(
 ) -> None:
     """Add the heater's sensors, then each member's on that member's subentry."""
     heater = entry.runtime_data
-    async_add_entities([StatusSensor(heater, "status"), NextReadySensor(heater, "next_ready_time")])
+    async_add_entities(
+        [
+            StatusSensor(heater, "status"),
+            NextReadySensor(heater, "next_ready_time"),
+            HeatingRateSensor(heater, "heating_rate"),
+            LeadSensor(heater, "lead"),
+            SolarLeadSensor(heater, "solar_lead"),
+        ]
+    )
     for member in heater.members:
         async_add_entities(
             [MemberNextReadySensor(heater, member, "next_ready_time")],
@@ -70,3 +79,54 @@ class MemberNextReadySensor(MemberEntity, SensorEntity):
         """This member's next ready time."""
         coming = self.heater.next_ready(self.member_id)
         return None if coming is None else coming.at
+
+
+class _Diagnostic(HeaterEntity, SensorEntity):
+    """A number for whoever tunes the heater: hidden until shown in the entity settings."""
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_visible_default = False
+
+
+class HeatingRateSensor(_Diagnostic):
+    """Minutes per degree learned from clean heating runs (spec 4.2)."""
+
+    _attr_native_unit_of_measurement = "min/°C"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_suggested_display_precision = 1
+
+    @property
+    def native_value(self) -> float | None:
+        """The learned rate; unknown until three clean runs in a week."""
+        return self.heater.learned_rate
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """The rate actually used, which a value set by hand overrides."""
+        return {"rate_used": self.heater.rate}
+
+
+class _LeadSensor(_Diagnostic):
+    _attr_device_class = SensorDeviceClass.DURATION
+    _attr_native_unit_of_measurement = UnitOfTime.MINUTES
+    _attr_suggested_display_precision = 0
+
+
+class LeadSensor(_LeadSensor):
+    """How long before the next ready time the rule in use would start heating, from now."""
+
+    @property
+    def native_value(self) -> float | None:
+        """The lead of the rule applied."""
+        leads = self.heater.leads()
+        return None if leads is None else leads.used
+
+
+class SolarLeadSensor(_LeadSensor):
+    """The solar-aware lead, worked out whether or not the rule is applied (spec 4.3)."""
+
+    @property
+    def native_value(self) -> float | None:
+        """The solar-aware lead."""
+        leads = self.heater.leads()
+        return None if leads is None else leads.solar

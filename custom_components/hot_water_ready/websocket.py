@@ -16,7 +16,16 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 import probatio
 
-from .const import DOMAIN, signal_heater_updated
+from .const import (
+    CANCEL_EVERYONE,
+    CANCEL_PEOPLE,
+    CANCEL_REQUESTERS,
+    DOMAIN,
+    MAX_MARGIN,
+    MAX_TARGET,
+    MIN_TARGET,
+    signal_heater_updated,
+)
 from .heater import (
     AwayDateInThePastError,
     Heater,
@@ -51,6 +60,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_set_away)
     websocket_api.async_register_command(hass, ws_heat_now)
     websocket_api.async_register_command(hass, ws_cancel_heat_now)
+    websocket_api.async_register_command(hass, ws_set_settings)
 
 
 def _loaded_heaters(hass: HomeAssistant) -> list[Heater]:
@@ -297,4 +307,43 @@ async def ws_cancel_heat_now(
         )
         return
     await heater.async_cancel_heat_now()
+    connection.send_result(msg["id"])
+
+
+@websocket_api.websocket_command(
+    {
+        probatio.Required("type"): f"{DOMAIN}/settings/set",
+        probatio.Required("entry_id"): str,
+        probatio.Optional("target"): probatio.All(
+            probatio.Coerce(float), probatio.Range(min=MIN_TARGET, max=MAX_TARGET)
+        ),
+        probatio.Optional("margin"): probatio.All(
+            probatio.Coerce(float), probatio.Range(min=0, max=MAX_MARGIN)
+        ),
+        probatio.Optional("automatic"): bool,
+        probatio.Optional("cancel_rule"): probatio.In(
+            [CANCEL_REQUESTERS, CANCEL_PEOPLE, CANCEL_EVERYONE]
+        ),
+    }
+)
+@websocket_api.async_response
+async def ws_set_settings(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """The card's settings sheet: target, margin, automatic control, who may cancel (spec 6)."""
+    heater = _loaded_heater(hass, msg["entry_id"])
+    if heater is None:
+        connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "Heater not found")
+        return
+    if not heater.can_change_settings(connection.user):
+        connection.send_error(
+            msg["id"], websocket_api.ERR_UNAUTHORIZED, "Only an admin may change the settings"
+        )
+        return
+    if "target" in msg or "margin" in msg:
+        await heater.async_set_band(target=msg.get("target"), margin=msg.get("margin"))
+    if "automatic" in msg:
+        await heater.async_set_automatic(msg["automatic"])
+    if "cancel_rule" in msg:
+        await heater.async_set_cancel_rule(msg["cancel_rule"])
     connection.send_result(msg["id"])

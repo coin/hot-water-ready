@@ -20,6 +20,8 @@ from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from typing import Any
 
+from .parsing import optional_aware_datetime, optional_number
+
 # Readings come in 0.1 C steps; compare with a little slack so 1.0 C counts as a degree.
 _EPSILON = 1e-6
 # A shower: the water falls this much within this long of its last high. Slower falls are the
@@ -103,36 +105,17 @@ class FaultState:
                 raise TypeError("active")
             return cls(
                 active=frozenset(Fault(item) for item in active),
-                run_start=_moment(data.get("run_start")),
-                run_lowest=_reading(data.get("run_lowest")),
-                run_peak=_reading(data.get("run_peak")),
-                run_peak_at=_moment(data.get("run_peak_at")),
-                low_power_since=_moment(data.get("low_power_since")),
-                high_power_since=_moment(data.get("high_power_since")),
-                stuck_clear_since=_moment(data.get("stuck_clear_since")),
+                run_start=optional_aware_datetime(data.get("run_start")),
+                run_lowest=optional_number(data.get("run_lowest")),
+                run_peak=optional_number(data.get("run_peak")),
+                run_peak_at=optional_aware_datetime(data.get("run_peak_at")),
+                low_power_since=optional_aware_datetime(data.get("low_power_since")),
+                high_power_since=optional_aware_datetime(data.get("high_power_since")),
+                stuck_clear_since=optional_aware_datetime(data.get("stuck_clear_since")),
             )
         except (TypeError, ValueError) as err:
             msg = f"Unreadable fault state: {err!r}"
             raise ValueError(msg) from err
-
-
-def _moment(raw: object) -> datetime | None:
-    if raw is None:
-        return None
-    if not isinstance(raw, str):
-        raise TypeError("datetime")
-    moment = datetime.fromisoformat(raw)
-    if moment.tzinfo is None:
-        raise ValueError("naive datetime")
-    return moment
-
-
-def _reading(raw: object) -> float | None:
-    if raw is None:
-        return None
-    if not isinstance(raw, int | float) or isinstance(raw, bool):
-        raise TypeError("reading")
-    return float(raw)
 
 
 @dataclass(frozen=True)

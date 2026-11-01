@@ -163,6 +163,15 @@
             "name": "For"
           }
         }
+      },
+      "heating_rate": {
+        "name": "Learned heating rate"
+      },
+      "lead": {
+        "name": "Lead"
+      },
+      "solar_lead": {
+        "name": "Solar-aware lead"
       }
     },
     "switch": {
@@ -195,6 +204,8 @@
         "title": "Heater settings",
         "data": {
           "keep_heating_gap_minutes": "Keep heating through gaps shorter than",
+          "solar_aware": "Use the solar-aware rule",
+          "heating_rate": "Heating rate set by hand (optional)",
           "cancel_rule": "Who may cancel heat now",
           "cancel_people": "People who may also cancel",
           "rich_notifications": "Replace earlier messages on phones",
@@ -207,7 +218,9 @@
           "cancel_people": "Used when the rule is \"those who asked, admins and these people\".",
           "rich_notifications": "On phones with the Home Assistant app, \"Hot water ready\" replaces \"heating\" instead of arriving as a second message.",
           "power_sensor": "With a power sensor, a heater that draws nothing and a relay stuck on are noticed too.",
-          "fault_recipients": "Empty: every administrator."
+          "fault_recipients": "Empty: every administrator.",
+          "solar_aware": "Off: the start is worked out from the heater alone, and the solar-aware result is only recorded, for the comparison in the card's settings.",
+          "heating_rate": "Minutes to raise the water one degree. Empty: learned from the heater's own runs."
         },
         "sections": {
           "advanced": {
