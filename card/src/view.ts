@@ -213,6 +213,7 @@ const CANCEL = "hot_water_ready/heat_now/cancel";
 
 /** "Aquecer agora"; "Cancelar" for who asked; "Avisar-me também" for anyone else (spec 4.6). */
 export function heatNowActions(heater: HeaterSnapshot): HeatNowAction[] {
+  if (heater.heat_now_blocked) return [];
   const request = heater.heat_now;
   if (!request) {
     return heater.can_ask_heat_now ? [{ command: START, label: "heat_now.start", primary: true }] : [];
@@ -223,4 +224,9 @@ export function heatNowActions(heater: HeaterSnapshot): HeatNowAction[] {
     : [];
   if (request.can_cancel) actions.push({ command: CANCEL, label: "heat_now.cancel", primary: false });
   return actions;
+}
+
+/** The red banner (spec 4.8): one line per active fault. */
+export function faultBanner(heater: HeaterSnapshot, language: string): string[] {
+  return heater.faults.map((fault) => localize(language, `fault.${fault}`));
 }

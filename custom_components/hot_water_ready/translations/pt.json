@@ -135,11 +135,19 @@
             "name": "Até"
           }
         }
+      },
+      "automatic": {
+        "name": "Controlo automático"
       }
     },
     "button": {
       "heat_now": {
         "name": "Aquecer agora"
+      }
+    },
+    "binary_sensor": {
+      "problem": {
+        "name": "Problema"
       }
     }
   },
@@ -151,12 +159,30 @@
           "keep_heating_gap_minutes": "Continuar a aquecer em intervalos menores do que",
           "cancel_rule": "Quem pode cancelar o aquecer agora",
           "cancel_people": "Pessoas que também podem cancelar",
-          "rich_notifications": "Substituir mensagens anteriores nos telemóveis"
+          "rich_notifications": "Substituir mensagens anteriores nos telemóveis",
+          "power_sensor": "Sensor de potência do aquecedor (opcional)",
+          "fault_recipients": "Quem é avisado das avarias",
+          "advanced": "Limites das avarias"
         },
         "data_description": {
           "keep_heating_gap_minutes": "Horários assim próximos partilham uma janela e o aquecedor continua a aquecer, em vez de deixar a água arrefecer entre eles.",
           "cancel_people": "Usado quando a regra é \"quem pediu, administradores e estas pessoas\".",
-          "rich_notifications": "Nos telemóveis com a aplicação Home Assistant, \"Duche pronto\" substitui \"a aquecer\" em vez de chegar como segunda mensagem."
+          "rich_notifications": "Nos telemóveis com a aplicação Home Assistant, \"Duche pronto\" substitui \"a aquecer\" em vez de chegar como segunda mensagem.",
+          "power_sensor": "Com um sensor de potência, também se detectam um aquecedor que não consome e um relé preso ligado.",
+          "fault_recipients": "Vazio: todos os administradores."
+        },
+        "sections": {
+          "advanced": {
+            "name": "Limites das avarias",
+            "data": {
+              "sensor_timeout_minutes": "Sensor calado durante",
+              "sensor_recovery_minutes": "Leituras de volta durante",
+              "not_rising_minutes": "A aquecer sem subir durante",
+              "not_rising_degrees": "A subir menos de",
+              "power_watts": "Limite de potência",
+              "power_minutes": "Potência fora do sítio durante"
+            }
+          }
         }
       }
     }
@@ -176,6 +202,53 @@
     },
     "ready": {
       "message": "Duche pronto: a água está a {temperature} °C."
+    },
+    "fault_sensor_unavailable": {
+      "message": "{heater}: o sensor da temperatura da água está calado; o aquecimento parou."
+    },
+    "fault_not_rising": {
+      "message": "{heater}: a água não aquece; o aquecimento parou. Verifique o aquecedor."
+    },
+    "fault_no_consumption": {
+      "message": "{heater}: o aquecedor não consome energia; o aquecimento parou. Verifique a resistência."
+    },
+    "fault_relay_stuck": {
+      "message": "{heater}: o aquecedor consome energia desligado. Verifique o relé."
+    },
+    "heat_now_refused": {
+      "message": "Não é possível aquecer agora enquanto uma avaria impede o aquecimento ({faults})."
+    }
+  },
+  "issues": {
+    "sensor_unavailable": {
+      "title": "{heater}: o sensor da temperatura da água está calado",
+      "description": "Há algum tempo que não há leituras do sensor da temperatura da água, por isso o aquecimento parou. Volta sozinho um minuto depois de as leituras regressarem."
+    },
+    "not_rising": {
+      "title": "{heater}: a água não aquece",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Está resolvido?",
+            "description": "O aquecedor esteve ligado muito tempo e a água quase não subiu, por isso o aquecimento parou. Verifique o aquecedor e o disjuntor e confirme aqui que está resolvido. Confirme que o aquecedor foi verificado e resolvido. O aquecimento volta a funcionar."
+          }
+        }
+      }
+    },
+    "no_consumption": {
+      "title": "{heater}: o aquecedor não consome energia",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Está resolvido?",
+            "description": "O relé estava ligado mas o aquecedor quase não consumiu energia, por isso o aquecimento parou. Verifique a resistência e o disjuntor e confirme aqui que está resolvido. Confirme que o aquecedor foi verificado e resolvido. O aquecimento volta a funcionar."
+          }
+        }
+      }
+    },
+    "relay_stuck": {
+      "title": "{heater}: o aquecedor consome energia desligado",
+      "description": "O aquecedor está a consumir energia com o relé desligado. O relé pode ter ficado ligado; verifique-o. Isto desaparece sozinho quando o consumo parar."
     }
   }
 }

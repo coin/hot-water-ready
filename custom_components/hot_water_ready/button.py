@@ -2,11 +2,13 @@
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import Unauthorized
+from homeassistant.exceptions import HomeAssistantError, Unauthorized
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import HotWaterReadyConfigEntry
+from .const import DOMAIN
 from .entity import HeaterEntity
+from .heater import HeatNowRefusedError
 
 
 async def async_setup_entry(
@@ -26,4 +28,11 @@ class HeatNowButton(HeaterEntity, ButtonEntity):
         user = await self._async_calling_user()
         if not self.heater.can_ask_heat_now(user):
             raise Unauthorized(context=self._context)
-        await self.heater.async_heat_now(self.heater.requester_key(user))
+        try:
+            await self.heater.async_heat_now(self.heater.requester_key(user))
+        except HeatNowRefusedError as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="heat_now_refused",
+                translation_placeholders={"faults": str(err)},
+            ) from err

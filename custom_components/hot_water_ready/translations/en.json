@@ -135,11 +135,19 @@
             "name": "Until"
           }
         }
+      },
+      "automatic": {
+        "name": "Automatic control"
       }
     },
     "button": {
       "heat_now": {
         "name": "Heat now"
+      }
+    },
+    "binary_sensor": {
+      "problem": {
+        "name": "Problem"
       }
     }
   },
@@ -151,12 +159,30 @@
           "keep_heating_gap_minutes": "Keep heating through gaps shorter than",
           "cancel_rule": "Who may cancel heat now",
           "cancel_people": "People who may also cancel",
-          "rich_notifications": "Replace earlier messages on phones"
+          "rich_notifications": "Replace earlier messages on phones",
+          "power_sensor": "Heater power sensor (optional)",
+          "fault_recipients": "Who is told about faults",
+          "advanced": "Fault thresholds"
         },
         "data_description": {
           "keep_heating_gap_minutes": "Ready times this close share one window and the heater keeps heating through, instead of letting the water cool in between.",
           "cancel_people": "Used when the rule is \"those who asked, admins and these people\".",
-          "rich_notifications": "On phones with the Home Assistant app, \"Hot water ready\" replaces \"heating\" instead of arriving as a second message."
+          "rich_notifications": "On phones with the Home Assistant app, \"Hot water ready\" replaces \"heating\" instead of arriving as a second message.",
+          "power_sensor": "With a power sensor, a heater that draws nothing and a relay stuck on are noticed too.",
+          "fault_recipients": "Empty: every administrator."
+        },
+        "sections": {
+          "advanced": {
+            "name": "Fault thresholds",
+            "data": {
+              "sensor_timeout_minutes": "Sensor silent for",
+              "sensor_recovery_minutes": "Readings back for",
+              "not_rising_minutes": "Heating without rising for",
+              "not_rising_degrees": "Rising less than",
+              "power_watts": "Power threshold",
+              "power_minutes": "Power out of place for"
+            }
+          }
         }
       }
     }
@@ -176,6 +202,53 @@
     },
     "ready": {
       "message": "Hot water ready: the water is at {temperature} °C."
+    },
+    "fault_sensor_unavailable": {
+      "message": "{heater}: the water temperature sensor is silent; heating is stopped."
+    },
+    "fault_not_rising": {
+      "message": "{heater}: the water is not getting hotter; heating is stopped. Check the heater."
+    },
+    "fault_no_consumption": {
+      "message": "{heater}: the heater draws no power; heating is stopped. Check the element."
+    },
+    "fault_relay_stuck": {
+      "message": "{heater}: the heater draws power while switched off. Check the relay."
+    },
+    "heat_now_refused": {
+      "message": "Heat now is not possible while heating is stopped by a fault ({faults})."
+    }
+  },
+  "issues": {
+    "sensor_unavailable": {
+      "title": "{heater}: the water temperature sensor is silent",
+      "description": "No reading from the water temperature sensor for a while, so heating is stopped. It starts again by itself a minute after readings come back."
+    },
+    "not_rising": {
+      "title": "{heater}: the water is not getting hotter",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Is it fixed?",
+            "description": "The heater was on for a long time and the water barely rose, so heating is stopped. Check the heater and its breaker, then confirm here that it is fixed. Confirm that the heater has been checked and fixed. Heating starts again."
+          }
+        }
+      }
+    },
+    "no_consumption": {
+      "title": "{heater}: the heater draws no power",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Is it fixed?",
+            "description": "The relay was on but the heater drew almost no power, so heating is stopped. Check the element and its breaker, then confirm here that it is fixed. Confirm that the heater has been checked and fixed. Heating starts again."
+          }
+        }
+      }
+    },
+    "relay_stuck": {
+      "title": "{heater}: the heater draws power while switched off",
+      "description": "The heater is drawing power although the relay is off. The relay may be stuck on; check it. This clears by itself when the power stops."
     }
   }
 }

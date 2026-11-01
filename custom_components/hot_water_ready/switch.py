@@ -7,7 +7,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import HotWaterReadyConfigEntry
-from .entity import MemberEntity
+from .entity import HeaterEntity, MemberEntity
 
 
 async def async_setup_entry(
@@ -17,6 +17,7 @@ async def async_setup_entry(
 ) -> None:
     """Add an away switch to each member's device."""
     heater = entry.runtime_data
+    async_add_entities([AutomaticSwitch(heater, "automatic")])
     for member in heater.members:
         async_add_entities([AwaySwitch(heater, member, "away")], config_subentry_id=member.id)
 
@@ -44,3 +45,22 @@ class AwaySwitch(MemberEntity, SwitchEntity):
         """Resume the member's ready times."""
         await self.async_require_editor()
         await self.heater.async_set_away(self.member_id, False, None)
+
+
+class AutomaticSwitch(HeaterEntity, SwitchEntity):
+    """On: the component runs the heater. Off: it can be run by hand (spec 4.7)."""
+
+    @property
+    def is_on(self) -> bool:
+        """Whether the component is in control."""
+        return self.heater.automatic
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Take the heater back."""
+        await self.async_require_admin()
+        await self.heater.async_set_automatic(True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Leave the heater to the household."""
+        await self.async_require_admin()
+        await self.heater.async_set_automatic(False)

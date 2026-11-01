@@ -17,7 +17,13 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 import probatio
 
 from .const import DOMAIN, signal_heater_updated
-from .heater import AwayDateInThePastError, Heater, MemberNotFoundError, ReadyTimeNotFoundError
+from .heater import (
+    AwayDateInThePastError,
+    Heater,
+    HeatNowRefusedError,
+    MemberNotFoundError,
+    ReadyTimeNotFoundError,
+)
 from .storage import ready_time_to_dict
 
 WEEKDAYS = probatio.All(
@@ -262,7 +268,11 @@ async def ws_heat_now(
             msg["id"], websocket_api.ERR_UNAUTHORIZED, "Only members and admins may ask"
         )
         return
-    await heater.async_heat_now(heater.requester_key(connection.user))
+    try:
+        await heater.async_heat_now(heater.requester_key(connection.user))
+    except HeatNowRefusedError as err:
+        connection.send_error(msg["id"], "refused", f"Heating is stopped by a fault: {err}")
+        return
     connection.send_result(msg["id"])
 
 

@@ -11,6 +11,7 @@ from homeassistant.auth.models import User
 from homeassistant.config_entries import ConfigEntry, ConfigSubentry
 from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import (
     async_track_state_change_event,
@@ -22,12 +23,15 @@ from .const import (
     CANCEL_EVERYONE,
     CANCEL_PEOPLE,
     COLOURS,
+    CONF_ADVANCED,
     CONF_CANCEL_PEOPLE,
     CONF_CANCEL_RULE,
     CONF_COLOUR,
+    CONF_FAULT_RECIPIENTS,
     CONF_KEEP_HEATING_GAP,
     CONF_NOTIFY_TARGETS,
     CONF_PERSON,
+    CONF_POWER_SENSOR,
     CONF_RECIPIENTS,
     CONF_RICH_NOTIFICATIONS,
     CONF_SWITCH,
@@ -43,6 +47,7 @@ from .core.controller import (
     Settings,
     minutes_to_ready,
 )
+from .core.faults import BLOCKING, RESOLVABLE, Fault, FaultGuard, FaultSettings
 from .core.household import Away, MemberPlan, household_occurrences
 from .core.ready_times import ReadyTime
 from .core.status import Status, heater_status
@@ -75,6 +80,15 @@ class ReadyTimeNotFoundError(LookupError):
 
 class AwayDateInThePastError(ValueError):
     """An away's last day cannot be before today."""
+
+
+class HeatNowRefusedError(RuntimeError):
+    """Heat now is refused while a fault stops heating (spec 4.6)."""
+
+    def __init__(self, faults: frozenset[Fault]) -> None:
+        """Keep the faults, which are the reason given."""
+        super().__init__(", ".join(sorted(faults)))
+        self.faults = faults
 
 
 @dataclass(frozen=True)
@@ -121,6 +135,7 @@ class Heater:
         self.device_id = ""  # set once the heater's device is registered
         self._unreachable: set[str] = set()  # warned about once, until a message gets through
         self._controller = Controller(self._settings(), data.controller)
+        self._guard = FaultGuard(self._fault_settings(), data.faults)
 
     # ------------------------------------------------------------------ what it is
 
@@ -179,6 +194,83 @@ class Heater:
             ),
         )
 
+    def _fault_settings(self) -> FaultSettings:
+        advanced = self.entry.options.get(CONF_ADVANCED, {})
+        defaults = FaultSettings()
+        return FaultSettings(
+            **{
+                name: float(advanced.get(name, getattr(defaults, name)))
+                for name in FaultSettings.__dataclass_fields__
+            }
+        )
+
+    @property
+    def _power_sensor(self) -> str | None:
+        return self.entry.options.get(CONF_POWER_SENSOR) or None
+
+    def _number(self, entity_id: str | None) -> float | None:
+        state = None if entity_id is None else self.hass.states.get(entity_id)
+        if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            return None
+        try:
+            return float(state.state)
+        except ValueError:
+            return None
+
+    @property
+    def relay_on(self) -> bool | None:
+        """The relay as Home Assistant sees it; None while it is unavailable."""
+        state = self.hass.states.get(self._switch)
+        if state is None or state.state not in (STATE_ON, STATE_OFF):
+            return None
+        return state.state == STATE_ON
+
+    @property
+    def faults(self) -> frozenset[Fault]:
+        """The faults active now."""
+        return self._guard.state.active
+
+    @property
+    def automatic(self) -> bool:
+        """On: the component runs the heater. Off: it is run by hand and left alone."""
+        return self._data.automatic
+
+    async def async_set_automatic(self, on: bool) -> None:
+        """Hand the heater to the household, or take it back (spec 4.7)."""
+        self._data.automatic = on
+        await self._async_saved_and_stepped()
+
+    async def async_resolve_fault(self, fault: Fault) -> None:
+        """Someone confirmed in Repairs that the fault is fixed ("Resolvido")."""
+        if self._guard.resolve(fault):
+            ir.async_delete_issue(self.hass, DOMAIN, self._issue_id(fault))
+            await self._async_saved_and_stepped()
+
+    def _issue_id(self, fault: Fault) -> str:
+        return f"{self.entry_id}_{fault.value}"
+
+    @callback
+    def _sync_issues(self) -> None:
+        """Repairs shows exactly the active faults; called at start, after a restart."""
+        for fault in Fault:
+            if fault in self.faults:
+                self._raise_issue(fault)
+            else:
+                ir.async_delete_issue(self.hass, DOMAIN, self._issue_id(fault))
+
+    @callback
+    def _raise_issue(self, fault: Fault) -> None:
+        ir.async_create_issue(
+            self.hass,
+            DOMAIN,
+            self._issue_id(fault),
+            is_fixable=fault in RESOLVABLE,
+            severity=ir.IssueSeverity.ERROR if fault in BLOCKING else ir.IssueSeverity.WARNING,
+            translation_key=fault.value,
+            translation_placeholders={"heater": self.name},
+            data={"entry_id": self.entry_id, "fault": fault.value},
+        )
+
     @property
     def temperature(self) -> float | None:
         """The water temperature now, or None when the sensor has no number."""
@@ -197,7 +289,11 @@ class Heater:
 
     @property
     def status(self) -> Status:
-        """What the status sensor shows."""
+        """What the status sensor shows: a fault first, then manual, then the water."""
+        if self.faults:
+            return Status.FAULT
+        if not self.automatic:
+            return Status.MANUAL
         return heater_status(temperature=self.temperature, target=self.target, heating=self.heating)
 
     # ------------------------------------------------------------------ ready times
@@ -313,6 +409,7 @@ class Heater:
 
     async def _async_save(self) -> None:
         self._data.controller = self._controller.state
+        self._data.faults = self._guard.state
         await self._store.async_save(self._data)
 
     # ------------------------------------------------------------------ permissions
@@ -384,7 +481,12 @@ class Heater:
         return self.requester_key(user) in self.heat_now_requesters
 
     async def async_heat_now(self, requester: str) -> None:
-        """Ask for hot water now, or join the request already running."""
+        """Ask for hot water now, or join the request already running.
+
+        Refused, with the reason, while a fault stops heating (spec 4.6).
+        """
+        if blocking := self.faults & BLOCKING:
+            raise HeatNowRefusedError(blocking)
         self._controller.request_heat_now(dt_util.now(), requester)
         await self._async_saved_and_stepped()
 
@@ -422,6 +524,25 @@ class Heater:
         """Who was told is on disk before the messages go, so a restart never repeats one."""
         await self._async_save()
         await self._async_tell(events)
+
+    async def async_fault_recipients(self) -> list[str]:
+        """The people told about faults: those chosen in the options, else every admin."""
+        chosen = self.entry.options.get(CONF_FAULT_RECIPIENTS) or []
+        if chosen:
+            return list(chosen)
+        people: list[str] = []
+        for person in self.hass.states.async_all("person"):
+            user_id = person.attributes.get("user_id")
+            user = None if user_id is None else await self.hass.auth.async_get_user(user_id)
+            if user is not None and user.is_admin:
+                people.append(person.entity_id)
+        return sorted(people)
+
+    async def _async_tell_fault(self, faults: tuple[Fault, ...]) -> None:
+        for fault in faults:
+            message = await async_message(self.hass, f"fault_{fault.value}", {"heater": self.name})
+            for person in await self.async_fault_recipients():
+                await self._async_tell_one(person, message, f"{DOMAIN}_{self.entry_id}_fault")
 
     async def _async_tell(self, events: tuple[ControllerEvent, ...]) -> None:
         """Turn what happened into messages for the people it concerns (spec 4.9)."""
@@ -469,11 +590,13 @@ class Heater:
     @callback
     def async_start(self) -> None:
         """Follow the sensor and the relay, step every tick, until the entry unloads."""
+        watched = [self._sensor, self._switch]
+        if self._power_sensor:
+            watched.append(self._power_sensor)
         self.entry.async_on_unload(
-            async_track_state_change_event(
-                self.hass, [self._sensor, self._switch], self._on_state_change
-            )
+            async_track_state_change_event(self.hass, watched, self._on_state_change)
         )
+        self._sync_issues()
         self.entry.async_on_unload(async_track_time_interval(self.hass, self._on_tick, TICK))
         self._step()
 
@@ -485,7 +608,7 @@ class Heater:
         unload entries, so a restart does not pass through here.)
         """
         relay = self.hass.states.get(self._switch)
-        if self.heating and relay is not None and relay.state == STATE_ON:
+        if self.automatic and self.heating and relay is not None and relay.state == STATE_ON:
             await self.hass.services.async_call(
                 "switch", "turn_off", {"entity_id": self._switch}, blocking=True
             )
@@ -510,7 +633,24 @@ class Heater:
             # From a day back, so the open window's own ready times are always in the list.
             occurrences=self.occurrences(now - timedelta(days=1), now + HORIZON),
         )
-        self._apply(decision.relay_on)
+        report = self._guard.step(
+            now=now,
+            temperature=self.temperature,
+            relay_on=self.relay_on,
+            power=self._number(self._power_sensor),
+            target=self.target,
+        )
+        if self.automatic:
+            self._apply(decision.relay_on and not self._guard.blocks_heating)
+        for fault in report.raised:
+            self._raise_issue(fault)
+        for fault in report.cleared:
+            ir.async_delete_issue(self.hass, DOMAIN, self._issue_id(fault))
+        if report.raised:
+            self.entry.async_create_task(self.hass, self._async_tell_fault(report.raised))
+        if report.raised or report.cleared:
+            self._data.faults = self._guard.state
+            self._store.async_delay_save(self._data)
         if decision.events:
             self.entry.async_create_task(self.hass, self._async_save_then_tell(decision.events))
         elif self._controller.state.to_dict() != before:
@@ -581,6 +721,9 @@ class Heater:
             "is_admin": user.is_admin,
             "me": me,
             "can_ask_heat_now": self.can_ask_heat_now(user),
+            "faults": sorted(self.faults),
+            "heat_now_blocked": bool(self.faults & BLOCKING),
+            "automatic": self.automatic,
             "heat_now": None
             if self._controller.state.heat_now is None
             else {

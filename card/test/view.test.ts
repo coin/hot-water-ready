@@ -3,6 +3,7 @@ import { translations } from "../src/i18n";
 import type { HeaterSnapshot, MemberSnapshot } from "../src/types";
 import {
   avatarViews,
+  faultBanner,
   heatNowActions,
   awayLine,
   greeting,
@@ -42,6 +43,9 @@ const cold: HeaterSnapshot = {
   is_admin: true,
   me: "m1",
   can_ask_heat_now: true,
+  faults: [],
+  heat_now_blocked: false,
+  automatic: true,
   heat_now: null,
   today: [],
   members: [tiago, maria],
@@ -344,5 +348,25 @@ describe("heatNowActions", () => {
     expect(heatNowActions(running)).toEqual([
       { command: "hot_water_ready/heat_now/cancel", label: "heat_now.cancel", primary: false },
     ]);
+  });
+});
+
+describe("faultBanner", () => {
+  it("says nothing when all is well", () => {
+    expect(faultBanner(cold, "pt")).toEqual([]);
+  });
+
+  it("names each fault in plain words", () => {
+    const broken = { ...cold, faults: ["not_rising", "relay_stuck"] as HeaterSnapshot["faults"] };
+    expect(faultBanner(broken, "pt")).toEqual([
+      "Avaria: a água não aquece. O aquecimento parou; veja as Reparações.",
+      "Avaria: o aquecedor consome energia desligado. Verifique o relé.",
+    ]);
+  });
+});
+
+describe("heatNowActions during a fault", () => {
+  it("offers nothing to ask while a fault stops heating", () => {
+    expect(heatNowActions({ ...cold, heat_now_blocked: true })).toEqual([]);
   });
 });

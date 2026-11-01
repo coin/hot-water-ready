@@ -39,6 +39,12 @@ export interface HeaterSnapshot {
   is_admin: boolean;
   /** The viewer's own member id, if the viewer is a member. */
   me: string | null;
+  /** Active faults (spec 4.8); the card shows them in a red banner. */
+  faults: ("sensor_unavailable" | "not_rising" | "no_consumption" | "relay_stuck")[];
+  /** A fault stops heating, so heat now is refused. */
+  heat_now_blocked: boolean;
+  /** Off: the heater is run by hand. */
+  automatic: boolean;
   /** Whether this viewer may ask for heat now (members and admins). */
   can_ask_heat_now: boolean;
   /** The heat-now request, if one is running: who asked, and what this viewer may do. */

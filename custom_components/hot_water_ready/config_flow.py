@@ -13,6 +13,7 @@ from homeassistant.config_entries import (
 )
 from homeassistant.const import CONF_NAME
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import section
 from homeassistant.helpers import selector
 import probatio
 
@@ -21,12 +22,15 @@ from .const import (
     CANCEL_PEOPLE,
     CANCEL_REQUESTERS,
     COLOURS,
+    CONF_ADVANCED,
     CONF_CANCEL_PEOPLE,
     CONF_CANCEL_RULE,
     CONF_COLOUR,
+    CONF_FAULT_RECIPIENTS,
     CONF_KEEP_HEATING_GAP,
     CONF_NOTIFY_TARGETS,
     CONF_PERSON,
+    CONF_POWER_SENSOR,
     CONF_RECIPIENTS,
     CONF_RICH_NOTIFICATIONS,
     CONF_SWITCH,
@@ -35,6 +39,7 @@ from .const import (
     SUBENTRY_MEMBER,
 )
 from .core.controller import Settings
+from .core.faults import FaultSettings
 
 USER_SCHEMA = probatio.Schema(
     {
@@ -190,14 +195,47 @@ class MemberSubentryFlow(ConfigSubentryFlow):
         )
 
 
+def _threshold_fields(current: dict[str, Any]) -> dict[Any, Any]:
+    """The fault thresholds (spec 4.8), each a number with its unit."""
+    defaults = FaultSettings()
+    units = {
+        "sensor_timeout_minutes": ("min", 1, 60, 1),
+        "sensor_recovery_minutes": ("min", 0, 30, 1),
+        "not_rising_minutes": ("min", 5, 180, 5),
+        "not_rising_degrees": ("°C", 0.2, 10, 0.1),
+        "power_watts": ("W", 1, 1000, 1),
+        "power_minutes": ("min", 1, 60, 1),
+    }
+    return {
+        probatio.Required(name, default=current.get(name, getattr(defaults, name))): (
+            selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=low,
+                    max=high,
+                    step=step,
+                    unit_of_measurement=unit,
+                    mode=selector.NumberSelectorMode.BOX,
+                )
+            )
+        )
+        for name, (unit, low, high, step) in units.items()
+    }
+
+
 class HeaterOptionsFlow(OptionsFlow):
     """Settings that rarely change (spec 3.1)."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """The keep-heating-through gap and who may cancel heat now."""
         if user_input is not None:
-            # A cleared field is left out of user_input; it means nobody listed.
-            data = {**self.config_entry.options, CONF_CANCEL_PEOPLE: [], **user_input}
+            # A cleared field is left out of user_input; it means nobody listed, or no sensor.
+            data = {
+                **self.config_entry.options,
+                CONF_CANCEL_PEOPLE: [],
+                CONF_FAULT_RECIPIENTS: [],
+                CONF_POWER_SENSOR: None,
+                **user_input,
+            }
             return self.async_create_entry(data=data)
         options = self.config_entry.options
         gap = options.get(CONF_KEEP_HEATING_GAP, Settings().keep_heating_gap_minutes)
@@ -224,6 +262,22 @@ class HeaterOptionsFlow(OptionsFlow):
                     CONF_RICH_NOTIFICATIONS,
                     default=options.get(CONF_RICH_NOTIFICATIONS, False),
                 ): selector.BooleanSelector(),
+                probatio.Optional(
+                    CONF_POWER_SENSOR,
+                    description={"suggested_value": options.get(CONF_POWER_SENSOR)},
+                ): selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain="sensor", device_class="power")
+                ),
+                probatio.Optional(
+                    CONF_FAULT_RECIPIENTS,
+                    description={"suggested_value": options.get(CONF_FAULT_RECIPIENTS, [])},
+                ): selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain="person", multiple=True)
+                ),
+                probatio.Optional(CONF_ADVANCED): section(
+                    probatio.Schema(_threshold_fields(options.get(CONF_ADVANCED, {}))),
+                    {"collapsed": True},
+                ),
                 probatio.Optional(
                     CONF_CANCEL_PEOPLE,
                     description={"suggested_value": options.get(CONF_CANCEL_PEOPLE, [])},

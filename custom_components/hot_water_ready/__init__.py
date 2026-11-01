@@ -3,17 +3,24 @@
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import config_validation as cv, issue_registry as ir
 from homeassistant.helpers.typing import ConfigType
 
 from . import websocket
 from .const import DOMAIN
+from .core.faults import Fault
 from .entity import register_heater_device
 from .frontend import async_load_card, async_unload_card
 from .heater import Heater
 from .storage import HeaterStore
 
-PLATFORMS: list[Platform] = [Platform.BUTTON, Platform.NUMBER, Platform.SENSOR, Platform.SWITCH]
+PLATFORMS: list[Platform] = [
+    Platform.BINARY_SENSOR,
+    Platform.BUTTON,
+    Platform.NUMBER,
+    Platform.SENSOR,
+    Platform.SWITCH,
+]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -52,8 +59,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: HotWaterReadyConfigEntr
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: HotWaterReadyConfigEntry) -> None:
-    """Delete the heater's storage; stop loading the card once no heater is left."""
+    """Delete the heater's storage and Repairs entries; stop loading the card when none is left.
+
+    On 2026.10 a repair issue is not tied to its entry, so it is removed here.
+    """
     await HeaterStore(hass, entry.entry_id).async_remove()
+    for fault in Fault:
+        ir.async_delete_issue(hass, DOMAIN, f"{entry.entry_id}_{fault.value}")
     others = [e for e in hass.config_entries.async_entries(DOMAIN) if e.entry_id != entry.entry_id]
     if not others:
         await async_unload_card(hass)

@@ -8,6 +8,7 @@ import type { CardConfig, Hass, HeaterSnapshot, MemberSnapshot } from "./types";
 import {
   avatarViews,
   awayLine,
+  faultBanner,
   greeting,
   heatNowActions,
   heaterView,
@@ -139,6 +140,8 @@ export class HotWaterReadyCard extends LitElement {
     const member = shownMember(heater, this._selected);
     return html`
       <ha-card>
+        ${faultBanner(heater, language).map((line) => html`<div class="banner fault" role="alert">${line}</div>`)}
+        ${heater.automatic ? nothing : html`<div class="banner manual">${localize(language, "manual")}</div>`}
         ${this._renderTop(heater)}
         ${mode === "member"
           ? html`<div class="greeting">${greeting(heater, language)}</div>`
@@ -666,6 +669,20 @@ export class HotWaterReadyCard extends LitElement {
       background: var(--primary-color);
       color: var(--text-primary-color, #fff);
       border-color: var(--primary-color);
+    }
+    .banner {
+      margin: 12px 16px 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .banner.fault {
+      background: var(--hwr-fault);
+      color: var(--text-primary-color, #fff);
+    }
+    .banner.manual {
+      background: var(--secondary-background-color, rgba(127, 127, 127, 0.15));
     }
     .heat-now {
       display: flex;

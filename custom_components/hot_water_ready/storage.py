@@ -15,6 +15,7 @@ from homeassistant.helpers.storage import Store
 
 from .const import DEFAULT_MARGIN, DEFAULT_TARGET, DOMAIN, MAX_MARGIN, MAX_TARGET, MIN_TARGET
 from .core.controller import ControllerState
+from .core.faults import FaultState
 from .core.household import Away
 from .core.ready_times import ReadyTime
 
@@ -33,6 +34,8 @@ class HeaterData:
     ready_times: dict[str, list[ReadyTime]] = field(default_factory=dict)
     away: dict[str, Away] = field(default_factory=dict)
     controller: ControllerState | None = None
+    faults: FaultState | None = None
+    automatic: bool = True  # off: the heater is run by hand and left alone (spec 4.7)
 
 
 def ready_time_to_dict(ready: ReadyTime) -> dict[str, Any]:
@@ -112,6 +115,24 @@ def _controller(raw: object) -> ControllerState | None:
         return None
 
 
+def _faults(raw: object) -> FaultState | None:
+    if not raw:
+        return None
+    try:
+        return FaultState.from_dict(raw)
+    except ValueError as err:
+        _LOGGER.warning("Ignored the saved fault state: %s", err)
+        return None
+
+
+def _flag(raw: object, *, default: bool) -> bool:
+    if isinstance(raw, bool):
+        return raw
+    if raw is not None:
+        _LOGGER.warning("Stored flag %r is not true or false; using %s", raw, default)
+    return default
+
+
 class HeaterStore:
     """Load and save one heater's data."""
 
@@ -127,6 +148,8 @@ class HeaterStore:
             target=_number(settings.get("target"), DEFAULT_TARGET, MIN_TARGET, MAX_TARGET),
             margin=_number(settings.get("margin"), DEFAULT_MARGIN, 0.0, MAX_MARGIN),
             controller=_controller(raw.get("controller")),
+            faults=_faults(raw.get("faults")),
+            automatic=_flag(raw.get("automatic"), default=True),
         )
         for member_id, member in _mapping(raw.get("members"), "members").items():
             stored = _mapping(member, "member")
@@ -161,6 +184,8 @@ class HeaterStore:
                 for member_id in sorted(set(data.ready_times) | set(data.away))
             },
             "controller": None if data.controller is None else data.controller.to_dict(),
+            "faults": None if data.faults is None else data.faults.to_dict(),
+            "automatic": data.automatic,
         }
 
     async def async_save(self, data: HeaterData) -> None:
