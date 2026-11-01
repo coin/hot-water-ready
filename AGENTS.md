@@ -15,4 +15,6 @@
   `translations/pt.json` and the card's `pt` strings (the lint lives outside the repo, not in CI).
 - Commits run `.githooks/pre-commit` (lint, card bundle): `git config core.hooksPath .githooks`
   once per clone. Never commit past it.
+- Every check reformats with ruff, so text copied from earlier output goes stale: read a file
+  again before editing it.
 - Review rules: `CODING_STANDARDS.md`.
