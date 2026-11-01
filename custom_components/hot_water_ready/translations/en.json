@@ -29,11 +29,29 @@
       "step": {
         "user": {
           "title": "Add a member",
-          "description": "Someone the heater makes hot water ready for, linked to their person so they can set their own times and be told when the water is ready.",
+          "description": "A linked member is a person who sets their own times and is told when the water is ready. A virtual member, such as Global or Guests, has no person; an administrator sets its times.",
+          "menu_options": {
+            "linked": "A person",
+            "virtual": "Virtual (Global, Guests)"
+          }
+        },
+        "linked": {
+          "title": "Add a person",
           "data": {
             "name": "Name",
             "person": "Person",
             "colour": "Colour on the card"
+          }
+        },
+        "virtual": {
+          "title": "Add a virtual member",
+          "data": {
+            "name": "Name",
+            "recipients": "Who is told",
+            "colour": "Colour on the card"
+          },
+          "data_description": {
+            "recipients": "People told when this member's water is ready. Leave empty to tell nobody."
           }
         },
         "reconfigure": {
@@ -41,6 +59,7 @@
           "data": {
             "name": "Name",
             "person": "Person",
+            "recipients": "Who is told",
             "colour": "Colour on the card"
           }
         }
@@ -89,6 +108,16 @@
         "state_attributes": {
           "members": {
             "name": "For"
+          }
+        }
+      }
+    },
+    "switch": {
+      "away": {
+        "name": "Away",
+        "state_attributes": {
+          "until": {
+            "name": "Until"
           }
         }
       }

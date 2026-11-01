@@ -20,6 +20,10 @@ async def test_admin_adds_a_linked_member(
     result = await hass.config_entries.subentries.async_init(
         (heater.entry_id, "member"), context={"source": SOURCE_USER}
     )
+    assert result["type"] is FlowResultType.MENU
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"next_step_id": "linked"}
+    )
     assert result["type"] is FlowResultType.FORM
     result = await hass.config_entries.subentries.async_configure(
         result["flow_id"], {"name": "José", "person": "person.jose", "colour": "orange"}

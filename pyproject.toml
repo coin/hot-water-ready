@@ -19,6 +19,7 @@ ignore = [
   "PLR2004",  # magic values read fine in scheduling rules and tests
   "PLR0913",
   "RUF012",   # Home Assistant entities declare _attr_ defaults as plain class attributes
+  "ANN401",   # Home Assistant entity methods take **kwargs: Any
 ]
 
 [tool.ruff.lint.isort]

@@ -1,6 +1,6 @@
 // What the card shows, worked out from a heater snapshot without touching the DOM.
 
-import { localeOf, localize, weekdayLetters } from "./i18n";
+import { localeOf, localize, pickLanguage, weekdayLetters } from "./i18n";
 import type { HeaterSnapshot, MemberSnapshot, Status } from "./types";
 
 export interface ViewContext {
@@ -120,4 +120,77 @@ export function readyTimeRows(member: MemberSnapshot, language: string): ReadyTi
       enabled: ready.enabled,
       days: letters.map((letter, index) => ({ letter, on: ready.weekdays.includes(index) })),
     }));
+}
+
+export type ViewMode = "admin" | "member" | "viewer";
+
+/** Admins see and edit the household; a member sees their own; anyone else sees it read-only. */
+export function viewMode(heater: HeaterSnapshot): ViewMode {
+  if (heater.is_admin) return "admin";
+  return heater.me ? "member" : "viewer";
+}
+
+export interface AvatarView {
+  id: string;
+  name: string;
+  initial: string;
+  colour: string;
+  /** A virtual member (Global, Guests). */
+  star: boolean;
+  /** Away. */
+  faded: boolean;
+  selected: boolean;
+}
+
+export function avatarViews(heater: HeaterSnapshot, selectedId: string | undefined): AvatarView[] {
+  return heater.members.map((member) => ({
+    id: member.id,
+    name: member.name,
+    initial: member.name.slice(0, 1).toLocaleUpperCase(),
+    colour: member.colour,
+    star: member.virtual,
+    faded: member.away.on,
+    selected: member.id === selectedId,
+  }));
+}
+
+export function greeting(heater: HeaterSnapshot, language: string): string {
+  const me = heater.members.find((member) => member.id === heater.me);
+  return me ? localize(language, "greeting", { name: me.name }) : "";
+}
+
+function clock(iso: string, context: ViewContext): string {
+  return new Intl.DateTimeFormat(localeOf(context.language), {
+    timeZone: context.timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(new Date(iso));
+}
+
+/** "Tiago 07:00 · José 07:30": everyone else's ready times today, read-only. */
+export function houseToday(heater: HeaterSnapshot, context: ViewContext, exceptMemberId: string): string {
+  const names = new Map(heater.members.map((member) => [member.id, member.name]));
+  const others = heater.today.filter((entry) => entry.member !== exceptMemberId);
+  if (others.length === 0) return localize(context.language, "today.nobody");
+  return others.map((entry) => `${names.get(entry.member) ?? "?"} ${clock(entry.at, context)}`).join(" · ");
+}
+
+/** "4 de Novembro" or "4 November". Portuguese months are capitalised (spelling before 1990). */
+function dayAndMonth(day: string, language: string): string {
+  const moment = new Date(`${day}T12:00:00Z`);
+  const locale = localeOf(language);
+  const number = new Intl.DateTimeFormat(locale, { timeZone: "UTC", day: "numeric" }).format(moment);
+  const month = new Intl.DateTimeFormat(locale, { timeZone: "UTC", month: "long" }).format(moment);
+  if (pickLanguage(language) === "pt") {
+    return `${number} de ${month.slice(0, 1).toLocaleUpperCase("pt-PT")}${month.slice(1)}`;
+  }
+  return `${number} ${month}`;
+}
+
+/** "Ausente", "Ausente até 4 de Novembro", or nothing while the member is home. */
+export function awayLine(member: MemberSnapshot, context: Pick<ViewContext, "language">): string {
+  if (!member.away.on) return "";
+  if (!member.away.until) return localize(context.language, "away.line");
+  return localize(context.language, "away.line_until", { date: dayAndMonth(member.away.until, context.language) });
 }

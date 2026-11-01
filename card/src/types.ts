@@ -17,6 +17,10 @@ export interface MemberSnapshot {
   colour: string;
   /** Whether the viewer may change this member's ready times (checked again on the server). */
   can_edit: boolean;
+  /** A member with no person behind it, such as Global or Guests. */
+  virtual: boolean;
+  /** `until` is the last day away, "YYYY-MM-DD". */
+  away: { on: boolean; until: string | null };
   /** ISO datetime of this member's next ready time. */
   next_ready: string | null;
   ready_times: ReadyTimeSnapshot[];
@@ -35,6 +39,8 @@ export interface HeaterSnapshot {
   is_admin: boolean;
   /** The viewer's own member id, if the viewer is a member. */
   me: string | null;
+  /** Everyone's ready times today, earliest first. */
+  today: { member: string; at: string }[];
   members: MemberSnapshot[];
 }
 

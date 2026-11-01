@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Any
 
 from freezegun.api import FrozenDateTimeFactory
+from homeassistant.auth.const import GROUP_ID_USER
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 import pytest
@@ -78,9 +79,11 @@ def heater_entry(hass: HomeAssistant, heater_data: dict[str, Any]) -> MockConfig
 
 
 @pytest.fixture
-def maria_user(hass: HomeAssistant, hass_admin_user: MockUser) -> MockUser:
+async def maria_user(hass: HomeAssistant, hass_admin_user: MockUser) -> MockUser:
     """A non-admin user whose person is Maria; Tiago's person belongs to the admin."""
-    user = MockUser(name="Maria").add_to_hass(hass)  # no admin group
+    users = await hass.auth.async_get_group(GROUP_ID_USER)
+    assert users is not None
+    user = MockUser(name="Maria", groups=[users]).add_to_hass(hass)
     hass.states.async_set(MARIA_PERSON, "home", {"user_id": user.id})
     hass.states.async_set(TIAGO_PERSON, "home", {"user_id": hass_admin_user.id})
     return user

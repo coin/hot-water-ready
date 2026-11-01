@@ -71,6 +71,7 @@ describe("HeaterSubscription", () => {
       next_ready: null,
       is_admin: true,
       me: null,
+      today: [],
       members: [],
     };
     hass.subscriptions[0]?.push(snapshot);

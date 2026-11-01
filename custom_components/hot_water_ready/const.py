@@ -14,6 +14,7 @@ CONF_TEMPERATURE_SENSOR: Final = "temperature_sensor"
 SUBENTRY_MEMBER: Final = "member"
 CONF_PERSON: Final = "person"
 CONF_COLOUR: Final = "colour"
+CONF_RECIPIENTS: Final = "recipients"
 COLOURS: Final = ("blue", "green", "orange", "purple", "red", "teal", "pink", "brown")
 
 # Temperature band (number entities, kept in storage)

@@ -42,6 +42,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_add_ready_time)
     websocket_api.async_register_command(hass, ws_update_ready_time)
     websocket_api.async_register_command(hass, ws_remove_ready_time)
+    websocket_api.async_register_command(hass, ws_set_away)
 
 
 def _loaded_heaters(hass: HomeAssistant) -> list[Heater]:
@@ -208,4 +209,26 @@ async def ws_remove_ready_time(
 ) -> None:
     """Remove a ready time."""
     await heater.async_remove_ready_time(msg["member_id"], msg["ready_time_id"])
+    connection.send_result(msg["id"])
+
+
+@websocket_api.websocket_command(
+    {
+        probatio.Required("type"): f"{DOMAIN}/away/set",
+        probatio.Required("entry_id"): str,
+        probatio.Required("member_id"): str,
+        probatio.Required("away"): bool,
+        probatio.Optional("until"): probatio.Any(None, cv.date),
+    }
+)
+@websocket_api.async_response
+@_member_edit
+async def ws_set_away(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+    heater: Heater,
+) -> None:
+    """Pause or resume a member's ready times, optionally until a date (the last day away)."""
+    await heater.async_set_away(msg["member_id"], msg["away"], msg.get("until"))
     connection.send_result(msg["id"])

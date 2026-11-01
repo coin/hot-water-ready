@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { translations } from "../src/i18n";
 import type { HeaterSnapshot, MemberSnapshot } from "../src/types";
 import {
+  avatarViews,
+  awayLine,
+  greeting,
   heaterView,
+  houseToday,
+  viewMode,
   readyTimeRows,
   selectedMember,
   sheetIsComplete,
@@ -15,6 +20,8 @@ const tiago: MemberSnapshot = {
   name: "Tiago",
   colour: "blue",
   can_edit: true,
+  virtual: false,
+  away: { on: false, until: null },
   next_ready: null,
   ready_times: [],
 };
@@ -31,6 +38,7 @@ const cold: HeaterSnapshot = {
   next_ready: null,
   is_admin: true,
   me: "m1",
+  today: [],
   members: [tiago, maria],
 };
 
@@ -199,5 +207,72 @@ describe("readyTimeRows", () => {
 describe("translations", () => {
   it("has every English text in Portuguese", () => {
     expect(Object.keys(translations.pt).sort()).toEqual(Object.keys(translations.en).sort());
+  });
+});
+
+describe("viewMode", () => {
+  it("gives administrators the whole household", () => {
+    expect(viewMode(cold)).toBe("admin");
+  });
+
+  it("gives a member their own view", () => {
+    expect(viewMode({ ...cold, is_admin: false, me: "m2" })).toBe("member");
+  });
+
+  it("shows the house read-only to someone who is neither", () => {
+    expect(viewMode({ ...cold, is_admin: false, me: null })).toBe("viewer");
+  });
+});
+
+describe("avatarViews", () => {
+  const global: MemberSnapshot = { ...tiago, id: "g", name: "global", virtual: true };
+  const away: MemberSnapshot = { ...maria, away: { on: true, until: null } };
+
+  it("stars virtual members and fades away ones", () => {
+    const views = avatarViews({ ...cold, members: [tiago, away, global] }, "m1");
+    expect(views.map((v) => [v.initial, v.star, v.faded, v.selected])).toEqual([
+      ["T", false, false, true],
+      ["M", false, true, false],
+      ["G", true, false, false],
+    ]);
+  });
+});
+
+describe("greeting", () => {
+  it("greets the member by name", () => {
+    expect(greeting({ ...cold, is_admin: false, me: "m2" }, "pt")).toBe("Olá, Maria");
+    expect(greeting({ ...cold, is_admin: false, me: "m2" }, "en")).toBe("Hello, Maria");
+  });
+});
+
+describe("houseToday", () => {
+  const today = [
+    { member: "m1", at: "2026-11-02T07:00:00+00:00" },
+    { member: "m2", at: "2026-11-02T07:30:00+00:00" },
+    { member: "m1", at: "2026-11-02T21:00:00+00:00" },
+  ];
+
+  it("lists everyone else's times today in the house's time zone", () => {
+    expect(houseToday({ ...cold, me: "m2", today }, pt, "m2")).toBe("Tiago 07:00 · Tiago 21:00");
+  });
+
+  it("says when nobody else wants water today", () => {
+    expect(houseToday({ ...cold, me: "m1", today: [] }, pt, "m1")).toBe("Ninguém mais hoje");
+    expect(houseToday({ ...cold, me: "m1", today: [] }, en, "m1")).toBe("Nobody else today");
+  });
+});
+
+describe("awayLine", () => {
+  it("says nothing while the member is home", () => {
+    expect(awayLine(tiago, pt)).toBe("");
+  });
+
+  it("says away without an end date", () => {
+    expect(awayLine({ ...tiago, away: { on: true, until: null } }, pt)).toBe("Ausente");
+  });
+
+  it("names the last day away", () => {
+    expect(awayLine({ ...tiago, away: { on: true, until: "2026-11-04" } }, pt)).toBe("Ausente até 4 de Novembro");
+    expect(awayLine({ ...tiago, away: { on: true, until: "2026-11-04" } }, en)).toBe("Away until 4 November");
   });
 });

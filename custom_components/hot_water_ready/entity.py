@@ -1,5 +1,6 @@
 """Base entities: on the heater's device, or on a member's device."""
 
+from homeassistant.auth.models import User
 from homeassistant.exceptions import Unauthorized
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -42,12 +43,16 @@ class HeaterEntity(Entity):
         self._attr_unique_id = f"{heater.entry_id}_{key}"
         self._attr_device_info = heater_device_info(heater)
 
+    async def _async_calling_user(self) -> User | None:
+        """The user behind the current service call; None for automations and the system."""
+        user_id = self._context.user_id if self._context else None
+        return None if user_id is None else await self.hass.auth.async_get_user(user_id)
+
     async def async_require_admin(self) -> None:
         """Heater settings are for administrators (spec 2); calls without a user are allowed."""
-        user_id = self._context.user_id if self._context else None
-        if user_id is None:
+        if self._context and self._context.user_id is None:
             return
-        user = await self.hass.auth.async_get_user(user_id)
+        user = await self._async_calling_user()
         if user is None or not user.is_admin:
             raise Unauthorized(context=self._context)
 
@@ -71,3 +76,11 @@ class MemberEntity(HeaterEntity):
             model="Member",
             via_device_id=heater.device_id,
         )
+
+    async def async_require_editor(self) -> None:
+        """Admins change every member; a linked member only their own (spec 2)."""
+        if self._context and self._context.user_id is None:
+            return
+        user = await self._async_calling_user()
+        if user is None or not self.heater.can_edit(user, self.member_id):
+            raise Unauthorized(context=self._context)

@@ -5,7 +5,7 @@ element only heats while the relay is on.
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from custom_components.hot_water_ready.core.controller import (
     Controller,
@@ -66,7 +66,10 @@ class Cylinder:
         ticks = round(minutes * 10)
         last_probe = self.probe
         for tick in range(1, ticks + 1):
-            self.now += timedelta(minutes=0.1)
+            # Real time, not wall-clock time: across a clock change an hour is still an hour.
+            self.now = (self.now.astimezone(UTC) + timedelta(minutes=0.1)).astimezone(
+                self.now.tzinfo
+            )
             change = (self.heat_per_minute if self.relay else -self.cool_per_minute) - (
                 draw_per_minute
             )
@@ -77,7 +80,8 @@ class Cylinder:
 
     def run_until(self, when: datetime, **kwargs: float) -> None:
         """Advance to `when`."""
-        self.run((when - self.now).total_seconds() / 60, **kwargs)
+        elapsed = when.astimezone(UTC) - self.now.astimezone(UTC)
+        self.run(elapsed.total_seconds() / 60, **kwargs)
 
     def restart(self, *, keep_state: bool = True) -> None:
         """Home Assistant restarts: a new controller from the saved state, or from nothing."""

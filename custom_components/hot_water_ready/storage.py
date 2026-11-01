@@ -6,7 +6,7 @@ warning instead of breaking the heater.
 """
 
 from dataclasses import dataclass, field
-from datetime import time
+from datetime import date, time
 import logging
 from typing import Any
 
@@ -15,6 +15,7 @@ from homeassistant.helpers.storage import Store
 
 from .const import DEFAULT_MARGIN, DEFAULT_TARGET, DOMAIN, MAX_MARGIN, MAX_TARGET, MIN_TARGET
 from .core.controller import ControllerState
+from .core.household import Away
 from .core.ready_times import ReadyTime
 
 _LOGGER = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ class HeaterData:
     target: float = DEFAULT_TARGET
     margin: float = DEFAULT_MARGIN
     ready_times: dict[str, list[ReadyTime]] = field(default_factory=dict)
+    away: dict[str, Away] = field(default_factory=dict)
     controller: ControllerState | None = None
 
 
@@ -64,6 +66,23 @@ def ready_time_from_dict(raw: object) -> ReadyTime:
         weekdays=frozenset(weekdays),
         enabled=enabled,
     )
+
+
+def away_to_dict(away: Away) -> dict[str, Any]:
+    """Away as plain data, for storage and for the card."""
+    return {"on": away.on, "until": None if away.until is None else away.until.isoformat()}
+
+
+def away_from_dict(raw: object) -> Away:
+    """Read an away, raising ValueError or TypeError when anything is off."""
+    if not isinstance(raw, dict):
+        raise TypeError("not a mapping")
+    on, until = raw.get("on", False), raw.get("until")
+    if not isinstance(on, bool):
+        raise TypeError("bad on")
+    if until is not None and not isinstance(until, str):
+        raise TypeError("bad until")
+    return Away(on=on, until=None if until is None else date.fromisoformat(until))
 
 
 def _number(raw: object, default: float, low: float, high: float) -> float:
@@ -110,7 +129,13 @@ class HeaterStore:
             controller=_controller(raw.get("controller")),
         )
         for member_id, member in _mapping(raw.get("members"), "members").items():
-            ready_times = _mapping(member, "member").get("ready_times") or []
+            stored = _mapping(member, "member")
+            if "away" in stored:
+                try:
+                    data.away[member_id] = away_from_dict(stored["away"])
+                except (TypeError, ValueError) as err:
+                    _LOGGER.warning("Ignored an invalid away %r: %s", stored["away"], err)
+            ready_times = stored.get("ready_times") or []
             if not isinstance(ready_times, list):
                 _LOGGER.warning("Ignored ready times that are not a list: %r", ready_times)
                 ready_times = []
@@ -127,8 +152,13 @@ class HeaterStore:
         return {
             "settings": {"target": data.target, "margin": data.margin},
             "members": {
-                member_id: {"ready_times": [ready_time_to_dict(r) for r in ready_times]}
-                for member_id, ready_times in data.ready_times.items()
+                member_id: {
+                    "ready_times": [
+                        ready_time_to_dict(r) for r in data.ready_times.get(member_id, [])
+                    ],
+                    "away": away_to_dict(data.away.get(member_id, Away())),
+                }
+                for member_id in sorted(set(data.ready_times) | set(data.away))
             },
             "controller": None if data.controller is None else data.controller.to_dict(),
         }

@@ -5,11 +5,16 @@ import { localize, weekdayLetters } from "./i18n";
 import { HeaterSubscription, fetchHeaters } from "./subscription";
 import type { CardConfig, Hass, HeaterSnapshot, MemberSnapshot } from "./types";
 import {
+  avatarViews,
+  awayLine,
+  greeting,
   heaterView,
+  houseToday,
   readyTimeRows,
   selectedMember,
   sheetIsComplete,
   showsAvatars,
+  viewMode,
   type Sheet,
   type ViewContext,
 } from "./view";
@@ -127,15 +132,70 @@ export class HotWaterReadyCard extends LitElement {
     if (!heater) {
       return html`<ha-card><div class="message">${localize(language, "card.loading")}</div></ha-card>`;
     }
-    const member = selectedMember(heater, this._selected);
+    const mode = viewMode(heater);
+    // A member always sees their own list; admins and others pick from the avatars.
+    const member = selectedMember(heater, mode === "member" ? undefined : this._selected);
     return html`
       <ha-card>
-        ${this._renderTop(heater)} ${this._renderAvatars(heater, member)}
+        ${this._renderTop(heater)}
+        ${mode === "member"
+          ? html`<div class="greeting">${greeting(heater, language)}</div>`
+          : this._renderAvatars(heater, member, mode === "admin")}
         ${member ? this._renderList(member) : html`<div class="message">${localize(language, "members.none")}</div>`}
-        ${this._error ? html`<div class="error" role="alert">${this._error}</div>` : nothing}
         ${member && this._sheet ? this._renderSheet(member, this._sheet) : nothing}
+        ${member ? this._renderAway(member) : nothing}
+        ${mode === "member" && member ? this._renderToday(heater, member) : nothing}
+        ${this._error ? html`<div class="error" role="alert">${this._error}</div>` : nothing}
       </ha-card>
     `;
+  }
+
+  private _renderAway(member: MemberSnapshot): unknown {
+    const language = this._language;
+    const line = awayLine(member, this._context);
+    if (!member.can_edit) return line ? html`<div class="away-line">${line}</div>` : nothing;
+    const set = (away: boolean, until: string | null) =>
+      this._call({ type: "hot_water_ready/away/set", member_id: member.id, away, until });
+    return html`
+      <div class="away">
+        <label class="away-toggle">
+          <input
+            type="checkbox"
+            class="switch"
+            .checked=${member.away.on}
+            @change=${(event: Event) => {
+              void set((event.target as HTMLInputElement).checked, null);
+            }}
+          />
+          ${line || localize(language, "away.label")}
+        </label>
+        ${member.away.on
+          ? html`<label class="until">
+              ${localize(language, "away.until_label")}
+              <input
+                type="date"
+                .value=${member.away.until ?? ""}
+                @change=${(event: Event) => {
+                  void set(true, (event.target as HTMLInputElement).value || null);
+                }}
+              />
+            </label>`
+          : nothing}
+      </div>
+    `;
+  }
+
+  private _renderToday(heater: HeaterSnapshot, member: MemberSnapshot): unknown {
+    return html`<div class="today">
+      <span class="today-label">${localize(this._language, "today.label")}</span>
+      ${houseToday(heater, this._context, member.id)}
+    </div>`;
+  }
+
+  private _openMembers(): void {
+    // Members are added in the integration's settings, where the member flow lives.
+    history.pushState(null, "", "/config/integrations/integration/hot_water_ready");
+    window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
   }
 
   private _renderTop(heater: HeaterSnapshot): unknown {
@@ -161,28 +221,43 @@ export class HotWaterReadyCard extends LitElement {
     `;
   }
 
-  private _renderAvatars(heater: HeaterSnapshot, selected: MemberSnapshot | undefined): unknown {
-    if (!showsAvatars(heater)) return nothing;
+  private _renderAvatars(
+    heater: HeaterSnapshot,
+    selected: MemberSnapshot | undefined,
+    canAddMembers: boolean,
+  ): unknown {
+    if (!canAddMembers && !showsAvatars(heater)) return nothing;
     return html`
       <div class="avatars" role="tablist">
-        ${heater.members.map(
-          (member) => html`
+        ${avatarViews(heater, selected?.id).map(
+          (avatar) => html`
             <button
-              class="avatar ${member.id === selected?.id ? "selected" : ""}"
+              class="avatar ${avatar.selected ? "selected" : ""} ${avatar.faded ? "faded" : ""}"
               role="tab"
-              aria-selected=${member.id === selected?.id}
+              aria-selected=${avatar.selected}
               @click=${() => {
-                this._selected = member.id;
+                this._selected = avatar.id;
                 this._sheet = undefined;
               }}
             >
-              <span class="dot" style="background: var(--${member.colour}-color, var(--primary-color))"
-                >${member.name.slice(0, 1).toUpperCase()}</span
+              <span class="dot" style="background: var(--${avatar.colour}-color, var(--primary-color))"
+                >${avatar.initial}${avatar.star ? html`<span class="star">★</span>` : nothing}</span
               >
-              <span class="label">${member.name}</span>
+              <span class="label">${avatar.name}</span>
             </button>
           `,
         )}
+        ${canAddMembers
+          ? html`<button
+              class="avatar add-member"
+              @click=${() => {
+                this._openMembers();
+              }}
+            >
+              <span class="dot plus">+</span>
+              <span class="label">${localize(this._language, "members.add")}</span>
+            </button>`
+          : nothing}
       </div>
     `;
   }
@@ -394,6 +469,64 @@ export class HotWaterReadyCard extends LitElement {
     }
     .avatar.selected {
       opacity: 1;
+    }
+    .avatar.faded .dot {
+      opacity: 0.4;
+    }
+    .dot {
+      position: relative;
+    }
+    .star {
+      position: absolute;
+      right: -4px;
+      top: -4px;
+      font-size: 13px;
+      color: var(--warning-color, #ef6c00);
+    }
+    .dot.plus {
+      background: none;
+      border: 2px dashed var(--divider-color, #9aa2ad);
+      color: var(--secondary-text-color);
+      box-sizing: border-box;
+    }
+    .add-member {
+      opacity: 1;
+    }
+    .greeting {
+      padding: 0 16px 8px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .away,
+    .away-line,
+    .today {
+      margin: 0 16px 12px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+    }
+    .away-toggle,
+    .until {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .until input {
+      font: inherit;
+      color: var(--primary-text-color);
+      background: var(--secondary-background-color, transparent);
+      border: 1px solid var(--divider-color, #ccc);
+      border-radius: 8px;
+      padding: 4px 6px;
+    }
+    .today {
+      color: var(--secondary-text-color);
+    }
+    .today-label {
+      font-weight: 700;
+      color: var(--primary-text-color);
     }
     .dot {
       width: 44px;

@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 from dataclasses import dataclass, replace
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 import logging
 from typing import Any
 import uuid
@@ -22,15 +22,17 @@ from .const import (
     COLOURS,
     CONF_COLOUR,
     CONF_PERSON,
+    CONF_RECIPIENTS,
     CONF_SWITCH,
     CONF_TEMPERATURE_SENSOR,
     SUBENTRY_MEMBER,
     signal_heater_updated,
 )
 from .core.controller import Controller, Occurrence, Settings, minutes_to_ready
-from .core.ready_times import ReadyTime, occurrences
+from .core.household import Away, MemberPlan, household_occurrences
+from .core.ready_times import ReadyTime
 from .core.status import Status, heater_status
-from .storage import HeaterData, HeaterStore, ready_time_to_dict
+from .storage import HeaterData, HeaterStore, away_to_dict, ready_time_to_dict
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -56,6 +58,12 @@ class Member:
     name: str
     colour: str
     person: str | None
+    recipients: tuple[str, ...] = ()
+
+    @property
+    def virtual(self) -> bool:
+        """A member with no person behind it, such as Global or Guests."""
+        return self.person is None
 
     @classmethod
     def from_subentry(cls, subentry: ConfigSubentry) -> Member:
@@ -65,6 +73,7 @@ class Member:
             name=subentry.title,
             colour=str(subentry.data.get(CONF_COLOUR, COLOURS[0])),
             person=subentry.data.get(CONF_PERSON),
+            recipients=tuple(subentry.data.get(CONF_RECIPIENTS, ())),
         )
 
 
@@ -159,13 +168,38 @@ class Heater:
         """A member's ready times."""
         return list(self._data.ready_times.get(member_id, []))
 
+    def away(self, member_id: str) -> Away:
+        """A member's away."""
+        return self._data.away.get(member_id, Away())
+
     def occurrences(self, start: datetime, end: datetime) -> list[Occurrence]:
-        """Every member's ready times in [start, end), people at the same time together."""
-        by_time: dict[datetime, set[str]] = {}
-        for member in self.members:
-            for when, _ready in occurrences(self.ready_times(member.id), start=start, end=end):
-                by_time.setdefault(when, set()).add(member.id)
-        return [Occurrence(at, frozenset(ids)) for at, ids in sorted(by_time.items())]
+        """Every member's ready times in [start, end), away skipped, same times together."""
+        plans = [
+            MemberPlan(member.id, tuple(self.ready_times(member.id)), self.away(member.id))
+            for member in self.members
+        ]
+        return household_occurrences(plans, start=start, end=end)
+
+    def today(self) -> list[Occurrence]:
+        """Everyone's ready times today, from midnight to midnight in the house's time zone."""
+        midnight = dt_util.start_of_local_day()
+        tomorrow = dt_util.start_of_local_day(midnight.date() + timedelta(days=1))
+        return self.occurrences(midnight, tomorrow)
+
+    async def async_set_away(self, member_id: str, on: bool, until: date | None) -> None:
+        """Pause or resume a member's ready times; an end date ends the pause by itself."""
+        self.member(member_id)
+        self._data.away[member_id] = Away(on=on, until=until if on else None)
+        await self._async_saved_and_stepped()
+
+    @callback
+    def _end_expired_aways(self) -> None:
+        today = dt_util.now().date()
+        expired = [m for m, away in self._data.away.items() if away.expired(today)]
+        for member_id in expired:
+            self._data.away[member_id] = Away()
+        if expired:
+            self._store.async_delay_save(self._data)
 
     def next_ready(self, member_id: str | None = None) -> Occurrence | None:
         """The next ready time from now, of one member or of anyone."""
@@ -291,13 +325,14 @@ class Heater:
 
     @callback
     def _step(self) -> None:
+        self._end_expired_aways()
         now = dt_util.now()
-        grace = timedelta(minutes=self._controller.settings.grace_minutes)
         before = self._controller.state.to_dict()
         decision = self._controller.step(
             now=now,
             temperature=self.temperature,
-            occurrences=self.occurrences(now - grace, now + HORIZON),
+            # From a day back, so the open window's own ready times are always in the list.
+            occurrences=self.occurrences(now - timedelta(days=1), now + HORIZON),
         )
         self._apply(decision.relay_on)
         if self._controller.state.to_dict() != before:
@@ -367,12 +402,19 @@ class Heater:
             else {"at": next_ready.at.isoformat(), "members": sorted(next_ready.members)},
             "is_admin": user.is_admin,
             "me": me,
+            "today": [
+                {"member": member_id, "at": occurrence.at.isoformat()}
+                for occurrence in self.today()
+                for member_id in sorted(occurrence.members)
+            ],
             "members": [
                 {
                     "id": member.id,
                     "name": member.name,
                     "colour": member.colour,
                     "can_edit": self.can_edit(user, member.id),
+                    "virtual": member.virtual,
+                    "away": away_to_dict(self.away(member.id)),
                     "ready_times": [ready_time_to_dict(r) for r in self.ready_times(member.id)],
                     "next_ready": None
                     if (mine := self.next_ready(member.id)) is None

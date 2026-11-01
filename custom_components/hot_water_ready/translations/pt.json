@@ -29,11 +29,29 @@
       "step": {
         "user": {
           "title": "Acrescentar um membro",
-          "description": "Alguém para quem o aquecedor prepara água quente, ligado à sua pessoa para poder definir os seus horários e ser avisado quando a água estiver pronta.",
+          "description": "Um membro ligado é uma pessoa que define os seus horários e é avisada quando a água está pronta. Um membro virtual, como Global ou Convidados, não tem pessoa; um administrador define os seus horários.",
+          "menu_options": {
+            "linked": "Uma pessoa",
+            "virtual": "Virtual (Global, Convidados)"
+          }
+        },
+        "linked": {
+          "title": "Acrescentar uma pessoa",
           "data": {
             "name": "Nome",
             "person": "Pessoa",
             "colour": "Cor no cartão"
+          }
+        },
+        "virtual": {
+          "title": "Acrescentar um membro virtual",
+          "data": {
+            "name": "Nome",
+            "recipients": "Quem é avisado",
+            "colour": "Cor no cartão"
+          },
+          "data_description": {
+            "recipients": "Pessoas avisadas quando a água deste membro está pronta. Vazio: ninguém é avisado."
           }
         },
         "reconfigure": {
@@ -41,6 +59,7 @@
           "data": {
             "name": "Nome",
             "person": "Pessoa",
+            "recipients": "Quem é avisado",
             "colour": "Cor no cartão"
           }
         }
@@ -89,6 +108,16 @@
         "state_attributes": {
           "members": {
             "name": "Para"
+          }
+        }
+      }
+    },
+    "switch": {
+      "away": {
+        "name": "Ausente",
+        "state_attributes": {
+          "until": {
+            "name": "Até"
           }
         }
       }
