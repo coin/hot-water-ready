@@ -320,6 +320,21 @@
     },
     "away_date_in_past": {
       "message": "O último dia de ausência não pode estar no passado."
+    },
+    "edit_own_only": {
+      "message": "Só pode alterar os seus próprios horários."
+    },
+    "ready_time_gone": {
+      "message": "Esse horário já não existe."
+    },
+    "ask_members_only": {
+      "message": "Só os membros e os administradores podem pedir água quente."
+    },
+    "cancel_not_allowed": {
+      "message": "Só quem pediu, ou um administrador, pode cancelar."
+    },
+    "settings_admin_only": {
+      "message": "Só um administrador pode alterar as definições."
     }
   },
   "issues": {

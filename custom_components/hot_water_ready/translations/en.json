@@ -320,6 +320,21 @@
     },
     "away_date_in_past": {
       "message": "The last day away cannot be in the past."
+    },
+    "edit_own_only": {
+      "message": "You may change only your own ready times."
+    },
+    "ready_time_gone": {
+      "message": "That ready time no longer exists."
+    },
+    "ask_members_only": {
+      "message": "Only members and administrators may ask for hot water."
+    },
+    "cancel_not_allowed": {
+      "message": "Only whoever asked, or an administrator, may cancel."
+    },
+    "settings_admin_only": {
+      "message": "Only an administrator may change the settings."
     }
   },
   "issues": {

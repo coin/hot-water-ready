@@ -33,6 +33,7 @@ from .heater import (
     MemberNotFoundError,
     ReadyTimeNotFoundError,
 )
+from .messages import async_message
 from .storage import ready_time_to_dict
 
 WEEKDAYS = probatio.All(
@@ -82,6 +83,17 @@ def _loaded_heater(hass: HomeAssistant, entry_id: str) -> Heater | None:
     return heater
 
 
+async def _async_error(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+    code: str,
+    key: str,
+) -> None:
+    """Refuse a command with a message in Home Assistant's language; the card shows it."""
+    connection.send_error(msg["id"], code, await async_message(hass, key))
+
+
 def _member_edit(handler: Handler) -> Callable[..., Awaitable[None]]:
     """Find the heater and member, check the caller may edit that member, map errors."""
 
@@ -91,22 +103,28 @@ def _member_edit(handler: Handler) -> Callable[..., Awaitable[None]]:
     ) -> None:
         heater = _loaded_heater(hass, msg["entry_id"])
         if heater is None:
-            connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "Heater not found")
+            await _async_error(
+                hass, connection, msg, websocket_api.ERR_NOT_FOUND, "heater_not_found"
+            )
             return
         try:
             heater.member(msg["member_id"])
         except MemberNotFoundError:
-            connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "Member not found")
+            await _async_error(
+                hass, connection, msg, websocket_api.ERR_NOT_FOUND, "member_not_found"
+            )
             return
         if not heater.can_edit(connection.user, msg["member_id"]):
-            connection.send_error(
-                msg["id"], websocket_api.ERR_UNAUTHORIZED, "You may only change your own times"
+            await _async_error(
+                hass, connection, msg, websocket_api.ERR_UNAUTHORIZED, "edit_own_only"
             )
             return
         try:
             await handler(hass, connection, msg, heater)
         except ReadyTimeNotFoundError:
-            connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "Ready time not found")
+            await _async_error(
+                hass, connection, msg, websocket_api.ERR_NOT_FOUND, "ready_time_gone"
+            )
 
     return wrapper
 
@@ -126,14 +144,14 @@ def ws_heaters(
 @websocket_api.websocket_command(
     {probatio.Required("type"): f"{DOMAIN}/subscribe", probatio.Required("entry_id"): str}
 )
-@callback
-def ws_subscribe(
+@websocket_api.async_response
+async def ws_subscribe(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Send the heater's snapshot now and again whenever it changes, across reloads."""
     entry_id: str = msg["entry_id"]
     if _loaded_heater(hass, entry_id) is None:
-        connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "Heater not found")
+        await _async_error(hass, connection, msg, websocket_api.ERR_NOT_FOUND, "heater_not_found")
         return
 
     @callback
@@ -251,8 +269,8 @@ async def ws_set_away(
     try:
         await heater.async_set_away(msg["member_id"], msg["away"], msg.get("until"))
     except AwayDateInThePastError:
-        connection.send_error(
-            msg["id"], websocket_api.ERR_INVALID_FORMAT, "The last day away is in the past"
+        await _async_error(
+            hass, connection, msg, websocket_api.ERR_INVALID_FORMAT, "away_date_in_past"
         )
         return
     connection.send_result(msg["id"])
@@ -271,11 +289,11 @@ async def ws_heat_now(
     """Ask for hot water now ("Aquecer agora"), or join a request ("Avisar-me também")."""
     heater = _loaded_heater(hass, msg["entry_id"])
     if heater is None:
-        connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "Heater not found")
+        await _async_error(hass, connection, msg, websocket_api.ERR_NOT_FOUND, "heater_not_found")
         return
     if not heater.can_ask_heat_now(connection.user):
-        connection.send_error(
-            msg["id"], websocket_api.ERR_UNAUTHORIZED, "Only members and admins may ask"
+        await _async_error(
+            hass, connection, msg, websocket_api.ERR_UNAUTHORIZED, "ask_members_only"
         )
         return
     try:
@@ -299,11 +317,11 @@ async def ws_cancel_heat_now(
     """Cancel the heat-now request, if the caller may (spec 2)."""
     heater = _loaded_heater(hass, msg["entry_id"])
     if heater is None:
-        connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "Heater not found")
+        await _async_error(hass, connection, msg, websocket_api.ERR_NOT_FOUND, "heater_not_found")
         return
     if not heater.can_cancel_heat_now(connection.user):
-        connection.send_error(
-            msg["id"], websocket_api.ERR_UNAUTHORIZED, "Only who asked or an admin may cancel"
+        await _async_error(
+            hass, connection, msg, websocket_api.ERR_UNAUTHORIZED, "cancel_not_allowed"
         )
         return
     await heater.async_cancel_heat_now()
@@ -333,11 +351,11 @@ async def ws_set_settings(
     """The card's settings sheet: target, margin, automatic control, who may cancel (spec 6)."""
     heater = _loaded_heater(hass, msg["entry_id"])
     if heater is None:
-        connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "Heater not found")
+        await _async_error(hass, connection, msg, websocket_api.ERR_NOT_FOUND, "heater_not_found")
         return
     if not heater.can_change_settings(connection.user):
-        connection.send_error(
-            msg["id"], websocket_api.ERR_UNAUTHORIZED, "Only an admin may change the settings"
+        await _async_error(
+            hass, connection, msg, websocket_api.ERR_UNAUTHORIZED, "settings_admin_only"
         )
         return
     if "target" in msg or "margin" in msg:
