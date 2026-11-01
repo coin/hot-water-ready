@@ -19,9 +19,14 @@ from homeassistant.helpers.event import (
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CANCEL_EVERYONE,
+    CANCEL_PEOPLE,
     COLOURS,
+    CONF_CANCEL_PEOPLE,
+    CONF_CANCEL_RULE,
     CONF_COLOUR,
     CONF_KEEP_HEATING_GAP,
+    CONF_NOTIFY_TARGETS,
     CONF_PERSON,
     CONF_RECIPIENTS,
     CONF_SWITCH,
@@ -29,10 +34,23 @@ from .const import (
     SUBENTRY_MEMBER,
     signal_heater_updated,
 )
-from .core.controller import Controller, Occurrence, Settings, minutes_to_ready
+from .core.controller import (
+    Controller,
+    ControllerEvent,
+    Occurrence,
+    Settings,
+    minutes_to_ready,
+)
 from .core.household import Away, MemberPlan, household_occurrences
 from .core.ready_times import ReadyTime
 from .core.status import Status, heater_status
+from .messages import (
+    async_message,
+    async_nobody_to_tell,
+    async_send,
+    format_temperature,
+    person_targets,
+)
 from .storage import HeaterData, HeaterStore, away_to_dict, ready_time_to_dict
 
 _LOGGER = logging.getLogger(__name__)
@@ -41,6 +59,8 @@ TICK = timedelta(seconds=30)
 HORIZON = timedelta(days=8)  # far enough to find next week's ready time
 
 type Listener = Callable[[], None]
+
+NOBODY = ""  # a heat-now request from no one in particular (an automation, voice)
 
 
 class MemberNotFoundError(LookupError):
@@ -64,6 +84,7 @@ class Member:
     colour: str
     person: str | None
     recipients: tuple[str, ...] = ()
+    notify_targets: tuple[str, ...] = ()  # explicit notify entities; empty: find the phones
 
     @property
     def virtual(self) -> bool:
@@ -79,6 +100,7 @@ class Member:
             colour=str(subentry.data.get(CONF_COLOUR, COLOURS[0])),
             person=subentry.data.get(CONF_PERSON),
             recipients=tuple(subentry.data.get(CONF_RECIPIENTS, ())),
+            notify_targets=tuple(subentry.data.get(CONF_NOTIFY_TARGETS, ())),
         )
 
 
@@ -315,6 +337,99 @@ class Heater:
         """Heater settings are for administrators, automations and Home Assistant (spec 2)."""
         return user is None or user.is_admin
 
+    def person_of(self, user: User) -> str | None:
+        """The person entity that belongs to this user, if any."""
+        for person in self.hass.states.async_all("person"):
+            if person.attributes.get("user_id") == user.id:
+                return person.entity_id
+        return None
+
+    # ------------------------------------------------------------------ heat now
+
+    def requester_key(self, user: User | None) -> str:
+        """Who a heat-now request is from: their member, else their person, else nobody ("").
+
+        From an automation or voice there is no user, and nobody is told (spec 4.6).
+        """
+        if user is None:
+            return NOBODY
+        return self.user_member_id(user) or self.person_of(user) or NOBODY
+
+    @property
+    def heat_now_requesters(self) -> frozenset[str]:
+        """Who is waiting on the heat-now request; empty when there is none."""
+        heat_now = self._controller.state.heat_now
+        return frozenset() if heat_now is None else heat_now.requesters
+
+    def can_cancel_heat_now(self, user: User | None) -> bool:
+        """Who asked and admins; the options can add a list of people, or everyone (spec 2)."""
+        if user is None or user.is_admin:
+            return True
+        rule = self.entry.options.get(CONF_CANCEL_RULE)
+        if rule == CANCEL_EVERYONE:
+            return True
+        if rule == CANCEL_PEOPLE and self.person_of(user) in self.entry.options.get(
+            CONF_CANCEL_PEOPLE, []
+        ):
+            return True
+        return self.requester_key(user) in self.heat_now_requesters - {NOBODY}
+
+    async def async_heat_now(self, requester: str) -> None:
+        """Ask for hot water now, or join the request already running."""
+        self._controller.request_heat_now(dt_util.now(), requester)
+        await self._async_saved_and_stepped()
+
+    async def async_cancel_heat_now(self) -> None:
+        """Drop the heat-now request; an open window keeps the heater if it wants it."""
+        self._controller.cancel_heat_now()
+        await self._async_saved_and_stepped()
+
+    # ------------------------------------------------------------------ telling people
+
+    def recipients(self, who: str) -> tuple[str, list[str]] | None:
+        """The name and the phones of someone to tell; None when nobody is meant to be told.
+
+        A member: their explicit notify entities, else their person's phones. A virtual member:
+        the phones of the people chosen for it, which may be nobody. A person: their phones.
+        """
+        try:
+            member = self.member(who)
+        except MemberNotFoundError:
+            state = self.hass.states.get(who)
+            name = state.name if state is not None else who
+            return name, person_targets(self.hass, who)
+        if member.notify_targets:
+            return member.name, list(member.notify_targets)
+        if member.person is not None:
+            return member.name, person_targets(self.hass, member.person)
+        if not member.recipients:
+            return None
+        targets = sorted(
+            {t for person in member.recipients for t in person_targets(self.hass, person)}
+        )
+        return member.name, targets
+
+    async def _async_tell(self, events: tuple[ControllerEvent, ...]) -> None:
+        for event in events:
+            if event.kind == "heat_now_ready":
+                key = "heat_now_ready"
+                placeholders = {"temperature": format_temperature(self.hass, event.temperature)}
+            elif event.kind == "heat_now_timeout":
+                key, placeholders = "heat_now_timeout", {}
+            else:
+                continue  # scheduled windows are told from ticket 05
+            message = await async_message(self.hass, key, placeholders)
+            for who in sorted(event.members - {NOBODY}):
+                await self._async_tell_one(who, message)
+
+    async def _async_tell_one(self, who: str, message: str) -> None:
+        found = self.recipients(who)
+        if found is None:
+            return  # a virtual member with nobody chosen: not an error
+        name, targets = found
+        if not await async_send(self.hass, targets, self.name, message):
+            await async_nobody_to_tell(self.hass, name, self.name, message)
+
     # ------------------------------------------------------------------ running
 
     @callback
@@ -362,6 +477,8 @@ class Heater:
             occurrences=self.occurrences(now - timedelta(days=1), now + HORIZON),
         )
         self._apply(decision.relay_on)
+        if decision.events:
+            self.hass.async_create_task(self._async_tell(decision.events), eager_start=False)
         if self._controller.state.to_dict() != before:
             self._data.controller = self._controller.state
             self._store.async_delay_save(self._data)
@@ -429,6 +546,13 @@ class Heater:
             else {"at": next_ready.at.isoformat(), "members": sorted(next_ready.members)},
             "is_admin": user.is_admin,
             "me": me,
+            "heat_now": None
+            if self._controller.state.heat_now is None
+            else {
+                "requesters": sorted(self.heat_now_requesters - {NOBODY}),
+                "asked": self.requester_key(user) in self.heat_now_requesters - {NOBODY},
+                "can_cancel": self.can_cancel_heat_now(user),
+            },
             "today": [
                 {"member": member_id, "at": occurrence.at.isoformat()}
                 for occurrence in self.today()

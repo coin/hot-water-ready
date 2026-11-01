@@ -39,7 +39,7 @@ class Occurrence:
 class ControllerEvent:
     """Something the household may be told about."""
 
-    kind: Literal["heating", "ready"]
+    kind: Literal["heating", "ready", "heat_now_ready", "heat_now_timeout"]
     ready_at: datetime
     members: frozenset[str]
     temperature: float
@@ -67,11 +67,24 @@ class Window:
 
 
 @dataclass
+class HeatNow:
+    """A request for hot water as soon as possible (spec 4.6), from one or more people."""
+
+    started_at: datetime
+    deadline: datetime
+    target: float
+    requesters: frozenset[str]
+    told: frozenset[str] = frozenset()
+    starting: bool = True  # pressed, not yet looked at by a step
+
+
+@dataclass
 class ControllerState:
     """What the controller must remember across steps and restarts."""
 
     window: Window | None = None
     heating: bool = False
+    heat_now: HeatNow | None = None
     # (member, ready time) pairs already told the water is ready. Kept apart from the window,
     # which can close and open again, so nobody is told twice (spec 4.9, 4.10).
     told: frozenset[tuple[str, datetime]] = frozenset()
@@ -83,8 +96,19 @@ class ControllerState:
     def to_dict(self) -> dict[str, Any]:
         """Plain data for storage."""
         window = self.window
+        heat_now = self.heat_now
         return {
             "heating": self.heating,
+            "heat_now": None
+            if heat_now is None
+            else {
+                "started_at": heat_now.started_at.isoformat(),
+                "deadline": heat_now.deadline.isoformat(),
+                "target": heat_now.target,
+                "requesters": sorted(heat_now.requesters),
+                "told": sorted(heat_now.told),
+                "starting": heat_now.starting,
+            },
             "told": sorted([member, at.isoformat()] for member, at in self.told),
             "window": None
             if window is None
@@ -133,7 +157,23 @@ class ControllerState:
                 members=members,
                 target=float(raw["target"]),
             )
-        return cls(window=window, heating=bool(data.get("heating", False)), told=frozenset(told))
+        raw_now = data.get("heat_now")
+        heat_now = None
+        if raw_now is not None:
+            heat_now = HeatNow(
+                started_at=_parse_aware_datetime(raw_now["started_at"]),
+                deadline=_parse_aware_datetime(raw_now["deadline"]),
+                target=float(raw_now["target"]),
+                requesters=_parse_name_list(raw_now["requesters"]),
+                told=_parse_name_list(raw_now["told"]),
+                starting=bool(raw_now["starting"]),
+            )
+        return cls(
+            window=window,
+            heating=bool(data.get("heating", False)),
+            heat_now=heat_now,
+            told=frozenset(told),
+        )
 
 
 def _parse_aware_datetime(raw: object) -> datetime:
@@ -184,6 +224,32 @@ class Controller:
         self.settings = settings
         self.state = state or ControllerState()
 
+    def request_heat_now(self, now: datetime, requester: str) -> None:
+        """Someone asks for hot water now, or joins a request already running.
+
+        The request ends when everyone who asked has been told and the band has finished, when
+        it is cancelled, or after the lead cap plus the lead margin, like version 1.
+        """
+        now = now.astimezone(UTC)
+        settings = self.settings
+        heat_now = self.state.heat_now
+        if heat_now is None:
+            limit = timedelta(minutes=settings.lead_cap_minutes + settings.lead_margin_minutes)
+            self.state.heat_now = HeatNow(
+                started_at=now,
+                deadline=now + limit,
+                target=settings.target,
+                requesters=frozenset({requester}),
+            )
+        else:
+            heat_now.requesters |= {requester}
+
+    def cancel_heat_now(self) -> None:
+        """Drop the heat-now request; a window that wants the heater keeps it."""
+        self.state.heat_now = None
+        if self.state.window is None:
+            self.state.heating = False
+
     def step(
         self, *, now: datetime, temperature: float | None, occurrences: Iterable[Occurrence]
     ) -> Decision:
@@ -201,22 +267,66 @@ class Controller:
         state = self.state
         state.told = frozenset((m, at) for m, at in state.told if at > now - timedelta(days=1))
         self._close_if_done(now)
+        events: list[ControllerEvent] = []
+        self._time_out_heat_now(now, events)
         if temperature is None:
             # No reading: hold what is happening; the fault guard decides when that ends.
-            return Decision(relay_on=state.heating and state.window is not None)
+            return Decision(relay_on=state.heating and self._requested(), events=tuple(events))
 
-        events: list[ControllerEvent] = []
         if state.window is not None:
             self._follow_ready_times(state.window, now, temperature, ready_times)
         if state.window is None:
             self._open_window(now, temperature, ready_times, events)
         if state.window is not None:
             self._join_close_ones(state.window, ready_times)
-            self._band(state.window, temperature, events)
-            self._close_if_done(now)  # a window past its end closes the moment it is ready
+        self._start_heat_now(temperature)
+        if self._requested():
+            self._band(temperature)
+            if state.window is not None:
+                self._tell_window(state.window, temperature, events)
+                self._close_if_done(now)  # a window past its end closes the moment it is ready
+            self._tell_heat_now(temperature, events)
         else:
             state.heating = False
         return Decision(relay_on=state.heating, events=tuple(events))
+
+    def _requested(self) -> bool:
+        """Whether anything asks for hot water now: an open window or a heat-now request."""
+        return self.state.window is not None or self.state.heat_now is not None
+
+    # ------------------------------------------------------------------ heat now
+
+    def _start_heat_now(self, temperature: float) -> None:
+        heat_now = self.state.heat_now
+        if heat_now is None or not heat_now.starting:
+            return
+        heat_now.starting = False
+        if temperature < self.settings.target - _EPSILON:
+            self.state.heating = True  # a request below the target heats to target + margin
+
+    def _tell_heat_now(self, temperature: float, events: list[ControllerEvent]) -> None:
+        heat_now = self.state.heat_now
+        if heat_now is None:
+            return
+        waiting = heat_now.requesters - heat_now.told
+        if waiting and temperature >= self.settings.target - _EPSILON:
+            heat_now.told |= waiting
+            events.append(
+                ControllerEvent("heat_now_ready", heat_now.started_at, waiting, temperature)
+            )
+        if heat_now.told >= heat_now.requesters and not self.state.heating:
+            self.state.heat_now = None  # everyone told and the band has finished
+
+    def _time_out_heat_now(self, now: datetime, events: list[ControllerEvent]) -> None:
+        heat_now = self.state.heat_now
+        if heat_now is None or now < heat_now.deadline:
+            return
+        waiting = heat_now.requesters - heat_now.told
+        if waiting:
+            events.append(
+                ControllerEvent("heat_now_timeout", heat_now.started_at, waiting, float("nan"))
+            )
+        self.cancel_heat_now()
 
     # ------------------------------------------------------------------ windows
 
@@ -224,8 +334,10 @@ class Controller:
         return timedelta(minutes=self.settings.grace_minutes)
 
     def _close(self) -> None:
+        """Close the window; the heater stops unless a heat-now request still wants it."""
         self.state.window = None
-        self.state.heating = False
+        if self.state.heat_now is None:
+            self.state.heating = False
 
     def _close_if_done(self, now: datetime) -> None:
         """Close a window past its end, unless it is still heating towards ready (spec 4.2)."""
@@ -319,19 +431,20 @@ class Controller:
 
     # ------------------------------------------------------------------ band
 
-    def _band(self, window: Window, temperature: float, events: list[ControllerEvent]) -> None:
-        """Ready at the target; stop at target + margin; restart at target - margin.
+    def _band(self, temperature: float) -> None:
+        """Stop at target + margin; restart at target - margin.
 
-        A request that starts below the target (the window opening, or the target raised while
-        it is open) heats straight to target + margin, even from inside the band.
+        A request that starts below the target (a window opening, heat now pressed, or the target
+        raised while one is running) heats straight to target + margin, even from inside the band.
         """
         settings = self.settings
         state = self.state
         target, margin = settings.target, settings.margin
-        if window.target != target:
-            window.target = target
-            if temperature < target - _EPSILON:
-                state.heating = True
+        for request in (state.window, state.heat_now):
+            if request is not None and request.target != target:
+                request.target = target
+                if temperature < target - _EPSILON:
+                    state.heating = True
         if state.heating and temperature >= target + margin - _EPSILON:
             state.heating = False
         elif (
@@ -340,8 +453,14 @@ class Controller:
             and temperature < target - _EPSILON
         ):
             state.heating = True
+
+    def _tell_window(
+        self, window: Window, temperature: float, events: list[ControllerEvent]
+    ) -> None:
+        """Ready at the target: tell each member of the window, once per ready time."""
+        state = self.state
         waiting = {window.ready_for(member) for member in window.members} - state.told
-        if waiting and temperature >= target - _EPSILON:
+        if waiting and temperature >= self.settings.target - _EPSILON:
             state.told |= waiting
             # One event per ready time, so each member is told about their own.
             by_time: dict[datetime, set[str]] = {}

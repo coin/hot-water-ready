@@ -39,6 +39,8 @@ export interface HeaterSnapshot {
   is_admin: boolean;
   /** The viewer's own member id, if the viewer is a member. */
   me: string | null;
+  /** The heat-now request, if one is running: who asked, and what this viewer may do. */
+  heat_now: { requesters: string[]; asked: boolean; can_cancel: boolean } | null;
   /** Everyone's ready times today, earliest first. */
   today: { member: string; at: string }[];
   members: MemberSnapshot[];

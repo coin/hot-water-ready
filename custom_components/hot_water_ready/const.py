@@ -15,10 +15,16 @@ SUBENTRY_MEMBER: Final = "member"
 CONF_PERSON: Final = "person"
 CONF_COLOUR: Final = "colour"
 CONF_RECIPIENTS: Final = "recipients"
+CONF_NOTIFY_TARGETS: Final = "notify_targets"
 COLOURS: Final = ("blue", "green", "orange", "purple", "red", "teal", "pink", "brown")
 
 # Options
 CONF_KEEP_HEATING_GAP: Final = "keep_heating_gap_minutes"
+CONF_CANCEL_RULE: Final = "cancel_rule"
+CONF_CANCEL_PEOPLE: Final = "cancel_people"
+CANCEL_REQUESTERS: Final = "requesters"  # who asked, and admins (default)
+CANCEL_PEOPLE: Final = "people"  # also the people listed
+CANCEL_EVERYONE: Final = "everyone"
 
 # Temperature band (number entities, kept in storage)
 DEFAULT_TARGET: Final = Settings().target

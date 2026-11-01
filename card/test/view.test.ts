@@ -3,6 +3,7 @@ import { translations } from "../src/i18n";
 import type { HeaterSnapshot, MemberSnapshot } from "../src/types";
 import {
   avatarViews,
+  heatNowActions,
   awayLine,
   greeting,
   heaterView,
@@ -40,6 +41,7 @@ const cold: HeaterSnapshot = {
   next_ready: null,
   is_admin: true,
   me: "m1",
+  heat_now: null,
   today: [],
   members: [tiago, maria],
 };
@@ -302,5 +304,29 @@ describe("awayLine", () => {
   it("names the last day away", () => {
     expect(awayLine({ ...tiago, away: { on: true, until: "2026-11-04" } }, pt)).toBe("Ausente até 4 de Novembro");
     expect(awayLine({ ...tiago, away: { on: true, until: "2026-11-04" } }, en)).toBe("Away until 4 November");
+  });
+});
+
+describe("heatNowActions", () => {
+  it("offers to heat now when nothing is running", () => {
+    expect(heatNowActions(cold)).toEqual([{ action: "start", label: "heat_now.start", primary: true }]);
+  });
+
+  it("offers to cancel to someone who asked", () => {
+    const asked = { ...cold, heat_now: { requesters: ["m1"], asked: true, can_cancel: true } };
+    expect(heatNowActions(asked)).toEqual([{ action: "cancel", label: "heat_now.cancel", primary: true }]);
+  });
+
+  it("offers to be told too to someone who did not ask", () => {
+    const other = { ...cold, heat_now: { requesters: ["m2"], asked: false, can_cancel: false } };
+    expect(heatNowActions(other)).toEqual([{ action: "join", label: "heat_now.join", primary: true }]);
+  });
+
+  it("also offers an administrator to cancel someone else's request", () => {
+    const other = { ...cold, heat_now: { requesters: ["m2"], asked: false, can_cancel: true } };
+    expect(heatNowActions(other)).toEqual([
+      { action: "join", label: "heat_now.join", primary: true },
+      { action: "cancel", label: "heat_now.cancel", primary: false },
+    ]);
   });
 });

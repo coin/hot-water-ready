@@ -40,7 +40,11 @@
           "data": {
             "name": "Name",
             "person": "Person",
-            "colour": "Colour on the card"
+            "colour": "Colour on the card",
+            "notify_targets": "Phones to tell"
+          },
+          "data_description": {
+            "notify_targets": "Leave empty to find this person's phones automatically."
           }
         },
         "virtual": {
@@ -60,7 +64,11 @@
             "name": "Name",
             "person": "Person",
             "recipients": "Who is told",
-            "colour": "Colour on the card"
+            "colour": "Colour on the card",
+            "notify_targets": "Phones to tell"
+          },
+          "data_description": {
+            "notify_targets": "Leave empty to find this person's phones automatically."
           }
         }
       },
@@ -80,6 +88,13 @@
         "teal": "Teal",
         "pink": "Pink",
         "brown": "Brown"
+      }
+    },
+    "cancel_rule": {
+      "options": {
+        "requesters": "Those who asked, and admins",
+        "people": "Those who asked, admins and these people",
+        "everyone": "Everyone"
       }
     }
   },
@@ -121,6 +136,11 @@
           }
         }
       }
+    },
+    "button": {
+      "heat_now": {
+        "name": "Heat now"
+      }
     }
   },
   "options": {
@@ -128,12 +148,26 @@
       "init": {
         "title": "Heater settings",
         "data": {
-          "keep_heating_gap_minutes": "Keep heating through gaps shorter than"
+          "keep_heating_gap_minutes": "Keep heating through gaps shorter than",
+          "cancel_rule": "Who may cancel heat now",
+          "cancel_people": "People who may also cancel"
         },
         "data_description": {
-          "keep_heating_gap_minutes": "Ready times this close share one window and the heater keeps heating through, instead of letting the water cool in between."
+          "keep_heating_gap_minutes": "Ready times this close share one window and the heater keeps heating through, instead of letting the water cool in between.",
+          "cancel_people": "Used when the rule is \"those who asked, admins and these people\"."
         }
       }
+    }
+  },
+  "exceptions": {
+    "heat_now_ready": {
+      "message": "Hot water ready: the water is at {temperature} °C."
+    },
+    "heat_now_timeout": {
+      "message": "The water did not get hot in time; the heat-now request has ended. Check the heater."
+    },
+    "no_target": {
+      "message": "Hot Water Ready found no phone to tell {name}: {message}"
     }
   }
 }

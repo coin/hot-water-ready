@@ -43,6 +43,8 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_update_ready_time)
     websocket_api.async_register_command(hass, ws_remove_ready_time)
     websocket_api.async_register_command(hass, ws_set_away)
+    websocket_api.async_register_command(hass, ws_heat_now)
+    websocket_api.async_register_command(hass, ws_cancel_heat_now)
 
 
 def _loaded_heaters(hass: HomeAssistant) -> list[Heater]:
@@ -237,4 +239,47 @@ async def ws_set_away(
             msg["id"], websocket_api.ERR_INVALID_FORMAT, "The last day away is in the past"
         )
         return
+    connection.send_result(msg["id"])
+
+
+@websocket_api.websocket_command(
+    {
+        probatio.Required("type"): f"{DOMAIN}/heat_now/start",
+        probatio.Required("entry_id"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_heat_now(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Ask for hot water now ("Aquecer agora"), or join a request ("Avisar-me também")."""
+    heater = _loaded_heater(hass, msg["entry_id"])
+    if heater is None:
+        connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "Heater not found")
+        return
+    await heater.async_heat_now(heater.requester_key(connection.user))
+    connection.send_result(msg["id"])
+
+
+@websocket_api.websocket_command(
+    {
+        probatio.Required("type"): f"{DOMAIN}/heat_now/cancel",
+        probatio.Required("entry_id"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_cancel_heat_now(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Cancel the heat-now request, if the caller may (spec 2)."""
+    heater = _loaded_heater(hass, msg["entry_id"])
+    if heater is None:
+        connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "Heater not found")
+        return
+    if not heater.can_cancel_heat_now(connection.user):
+        connection.send_error(
+            msg["id"], websocket_api.ERR_UNAUTHORIZED, "Only who asked or an admin may cancel"
+        )
+        return
+    await heater.async_cancel_heat_now()
     connection.send_result(msg["id"])

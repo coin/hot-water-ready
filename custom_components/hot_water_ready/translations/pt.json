@@ -40,7 +40,11 @@
           "data": {
             "name": "Nome",
             "person": "Pessoa",
-            "colour": "Cor no cartão"
+            "colour": "Cor no cartão",
+            "notify_targets": "Telemóveis a avisar"
+          },
+          "data_description": {
+            "notify_targets": "Vazio: os telemóveis desta pessoa são encontrados automaticamente."
           }
         },
         "virtual": {
@@ -60,7 +64,11 @@
             "name": "Nome",
             "person": "Pessoa",
             "recipients": "Quem é avisado",
-            "colour": "Cor no cartão"
+            "colour": "Cor no cartão",
+            "notify_targets": "Telemóveis a avisar"
+          },
+          "data_description": {
+            "notify_targets": "Vazio: os telemóveis desta pessoa são encontrados automaticamente."
           }
         }
       },
@@ -80,6 +88,13 @@
         "teal": "Azul-petróleo",
         "pink": "Cor-de-rosa",
         "brown": "Castanho"
+      }
+    },
+    "cancel_rule": {
+      "options": {
+        "requesters": "Quem pediu e os administradores",
+        "people": "Quem pediu, administradores e estas pessoas",
+        "everyone": "Todos"
       }
     }
   },
@@ -121,6 +136,11 @@
           }
         }
       }
+    },
+    "button": {
+      "heat_now": {
+        "name": "Aquecer agora"
+      }
     }
   },
   "options": {
@@ -128,12 +148,26 @@
       "init": {
         "title": "Definições do aquecedor",
         "data": {
-          "keep_heating_gap_minutes": "Continuar a aquecer em intervalos menores do que"
+          "keep_heating_gap_minutes": "Continuar a aquecer em intervalos menores do que",
+          "cancel_rule": "Quem pode cancelar o aquecer agora",
+          "cancel_people": "Pessoas que também podem cancelar"
         },
         "data_description": {
-          "keep_heating_gap_minutes": "Horários assim próximos partilham uma janela e o aquecedor continua a aquecer, em vez de deixar a água arrefecer entre eles."
+          "keep_heating_gap_minutes": "Horários assim próximos partilham uma janela e o aquecedor continua a aquecer, em vez de deixar a água arrefecer entre eles.",
+          "cancel_people": "Usado quando a regra é \"quem pediu, administradores e estas pessoas\"."
         }
       }
+    }
+  },
+  "exceptions": {
+    "heat_now_ready": {
+      "message": "Duche pronto: a água está a {temperature} °C."
+    },
+    "heat_now_timeout": {
+      "message": "A água não aqueceu a tempo e o pedido de aquecer agora terminou. Verifique o aquecedor."
+    },
+    "no_target": {
+      "message": "O Hot Water Ready não encontrou um telemóvel para avisar {name}: {message}"
     }
   }
 }

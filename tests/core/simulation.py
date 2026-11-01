@@ -63,6 +63,16 @@ class Cylinder:
             probe_value = -1.0 if probe is None else probe
             self.toggles.append(Toggle(self.now, self.relay, probe_value, in_window))
 
+    def heat_now(self, requester: str) -> None:
+        """Someone presses "Aquecer agora"; Home Assistant steps at once."""
+        self.controller.request_heat_now(self.now, requester)
+        self.step()
+
+    def cancel_heat_now(self) -> None:
+        """Someone presses "Cancelar"; Home Assistant steps at once."""
+        self.controller.cancel_heat_now()
+        self.step()
+
     def run(self, minutes: float, *, draw_per_minute: float = 0.0) -> None:
         """Advance in 0.1-minute ticks, stepping the controller whenever the probe changes and
         at least once a minute, as the Home Assistant layer does."""

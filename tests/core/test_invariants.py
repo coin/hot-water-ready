@@ -5,7 +5,8 @@ and the spec):
 - the relay never chatters: inside a window, each switch needs a different probe reading than
   the one before;
 - each member is told "ready" at most once per ready time, and only at or above the target;
-- the relay is never on without an open window;
+- the relay is never on without an open window or a heat-now request;
+- a heat-now request tells each person who asked once, at or above the target;
 - a restart at any moment, from the saved state, changes none of the above.
 """
 
@@ -54,16 +55,21 @@ def test_random_households_keep_the_rules(seed: int) -> None:
             cylinder.restart()
         if minute == withdraw_at and cylinder.occurrences:
             cylinder.occurrences = cylinder.occurrences[1:]
-        assert not cylinder.relay or cylinder.controller.state.window is not None, (
-            f"seed {seed}: relay on without a window at {cylinder.now}"
+        if rng.random() < 0.01:
+            cylinder.heat_now(rng.choice("abc"))
+        if rng.random() < 0.003:
+            cylinder.cancel_heat_now()
+        state = cylinder.controller.state
+        assert not cylinder.relay or state.window is not None or state.heat_now is not None, (
+            f"seed {seed}: relay on with nothing asking for it at {cylinder.now}"
         )
 
-    # A window closing may switch off at the reading the band last switched on; inside an open
-    # window, two switches at one reading would be the band chattering.
+    # A window closing (or the next one opening) may switch at the reading of the switch before;
+    # two switches at one reading, both with a window open, would be the band chattering.
     chatter = [
         (a.probe, b.at)
         for a, b in itertools.pairwise(cylinder.toggles)
-        if b.in_window and a.probe == b.probe
+        if a.in_window and b.in_window and a.probe == b.probe
     ]
     assert not chatter, f"seed {seed}: chatter {chatter}"
     told = [
@@ -71,3 +77,7 @@ def test_random_households_keep_the_rules(seed: int) -> None:
     ]
     assert len(told) == len(set(told)), f"seed {seed}: told twice {told}"
     assert all(e.temperature >= settings.target for _, e in cylinder.ready_events()), f"seed {seed}"
+    now_told = [e for _, e in cylinder.events if e.kind == "heat_now_ready"]
+    assert all(e.temperature >= settings.target for e in now_told), f"seed {seed}"
+    per_request = [(m, e.ready_at) for e in now_told for m in e.members]
+    assert len(per_request) == len(set(per_request)), f"seed {seed}: heat now told twice"

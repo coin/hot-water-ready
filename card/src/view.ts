@@ -1,6 +1,6 @@
 // What the card shows, worked out from a heater snapshot without touching the DOM.
 
-import { localeOf, localize, pickLanguage, weekdayLetters } from "./i18n";
+import { localeOf, localize, pickLanguage, weekdayLetters, type TextKey } from "./i18n";
 import type { HeaterSnapshot, MemberSnapshot, Status } from "./types";
 
 export interface ViewContext {
@@ -200,4 +200,20 @@ export function awayLine(member: MemberSnapshot, context: Pick<ViewContext, "lan
   if (!member.away.on) return "";
   if (!member.away.until) return localize(context.language, "away.line");
   return localize(context.language, "away.line_until", { date: dayAndMonth(member.away.until, context.language) });
+}
+
+export interface HeatNowAction {
+  action: "start" | "cancel" | "join";
+  label: TextKey;
+  primary: boolean;
+}
+
+/** "Aquecer agora"; "Cancelar" for who asked; "Avisar-me também" for anyone else (spec 4.6). */
+export function heatNowActions(heater: HeaterSnapshot): HeatNowAction[] {
+  const request = heater.heat_now;
+  if (!request) return [{ action: "start", label: "heat_now.start", primary: true }];
+  if (request.asked) return [{ action: "cancel", label: "heat_now.cancel", primary: true }];
+  const actions: HeatNowAction[] = [{ action: "join", label: "heat_now.join", primary: true }];
+  if (request.can_cancel) actions.push({ action: "cancel", label: "heat_now.cancel", primary: false });
+  return actions;
 }

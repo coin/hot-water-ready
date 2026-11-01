@@ -17,9 +17,15 @@ from homeassistant.helpers import selector
 import probatio
 
 from .const import (
+    CANCEL_EVERYONE,
+    CANCEL_PEOPLE,
+    CANCEL_REQUESTERS,
     COLOURS,
+    CONF_CANCEL_PEOPLE,
+    CONF_CANCEL_RULE,
     CONF_COLOUR,
     CONF_KEEP_HEATING_GAP,
+    CONF_NOTIFY_TARGETS,
     CONF_PERSON,
     CONF_RECIPIENTS,
     CONF_SWITCH,
@@ -110,6 +116,9 @@ def _member_schema(
         fields[probatio.Required(CONF_PERSON, description=suggested(CONF_PERSON))] = (
             selector.EntitySelector(selector.EntitySelectorConfig(domain="person"))
         )
+        fields[
+            probatio.Optional(CONF_NOTIFY_TARGETS, description=suggested(CONF_NOTIFY_TARGETS))
+        ] = selector.EntitySelector(selector.EntitySelectorConfig(domain="notify", multiple=True))
     fields[probatio.Required(CONF_COLOUR, default=current.get(CONF_COLOUR, free))] = (
         selector.SelectSelector(
             selector.SelectSelectorConfig(options=list(COLOURS), translation_key=CONF_COLOUR)
@@ -120,7 +129,11 @@ def _member_schema(
 
 def _member_data(user_input: dict[str, Any]) -> dict[str, Any]:
     if CONF_PERSON in user_input:
-        return {CONF_PERSON: user_input[CONF_PERSON], CONF_COLOUR: user_input[CONF_COLOUR]}
+        return {
+            CONF_PERSON: user_input[CONF_PERSON],
+            CONF_COLOUR: user_input[CONF_COLOUR],
+            CONF_NOTIFY_TARGETS: list(user_input.get(CONF_NOTIFY_TARGETS, [])),
+        }
     return {
         CONF_COLOUR: user_input[CONF_COLOUR],
         CONF_RECIPIENTS: list(user_input.get(CONF_RECIPIENTS, [])),
@@ -180,9 +193,14 @@ class HeaterOptionsFlow(OptionsFlow):
     """Settings that rarely change (spec 3.1)."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """The keep-heating-through gap, for now."""
+        """The keep-heating-through gap and who may cancel heat now."""
         if user_input is not None:
-            return self.async_create_entry(data={**self.config_entry.options, **user_input})
+            data = {**self.config_entry.options, **user_input}
+            data.setdefault(CONF_CANCEL_PEOPLE, [])
+            if CONF_CANCEL_PEOPLE not in user_input:
+                data[CONF_CANCEL_PEOPLE] = []
+            return self.async_create_entry(data=data)
+        options = self.config_entry.options
         gap = self.config_entry.options.get(
             CONF_KEEP_HEATING_GAP, Settings().keep_heating_gap_minutes
         )
@@ -196,6 +214,20 @@ class HeaterOptionsFlow(OptionsFlow):
                         unit_of_measurement="min",
                         mode=selector.NumberSelectorMode.BOX,
                     )
+                ),
+                probatio.Required(
+                    CONF_CANCEL_RULE, default=options.get(CONF_CANCEL_RULE, CANCEL_REQUESTERS)
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[CANCEL_REQUESTERS, CANCEL_PEOPLE, CANCEL_EVERYONE],
+                        translation_key=CONF_CANCEL_RULE,
+                    )
+                ),
+                probatio.Optional(
+                    CONF_CANCEL_PEOPLE,
+                    description={"suggested_value": options.get(CONF_CANCEL_PEOPLE, [])},
+                ): selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain="person", multiple=True)
                 ),
             }
         )

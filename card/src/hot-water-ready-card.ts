@@ -9,6 +9,7 @@ import {
   avatarViews,
   awayLine,
   greeting,
+  heatNowActions,
   heaterView,
   houseToday,
   readyTimeRows,
@@ -218,6 +219,20 @@ export class HotWaterReadyCard extends LitElement {
           <div class="name">${heater.name}</div>
           <div class="headline ${view.tone}">${view.headline}</div>
           ${view.subline ? html`<div class="subline">${view.subline}</div>` : nothing}
+          <div class="heat-now">
+            ${heatNowActions(heater).map(
+              (item) => html`<button
+                class=${item.primary ? "primary" : "secondary"}
+                @click=${() => {
+                  void this._call({
+                    type: item.action === "cancel" ? "hot_water_ready/heat_now/cancel" : "hot_water_ready/heat_now/start",
+                  });
+                }}
+              >
+                ${localize(this._language, item.label)}
+              </button>`,
+            )}
+          </div>
         </div>
       </div>
     `;
@@ -653,6 +668,18 @@ export class HotWaterReadyCard extends LitElement {
       background: var(--primary-color);
       color: var(--text-primary-color, #fff);
       border-color: var(--primary-color);
+    }
+    .heat-now {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .heat-now button {
+      min-height: 40px;
+      padding: 0 14px;
+      border-radius: 10px;
+      border: 0;
+      font-weight: 700;
     }
     .actions {
       display: flex;
