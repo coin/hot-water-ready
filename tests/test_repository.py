@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+import re
 import subprocess
 
 ROOT = Path(__file__).parents[1]
@@ -14,6 +15,38 @@ def test_manifest_has_the_fields_hacs_and_the_marketplace_read() -> None:
     for key in ("version", "documentation", "issue_tracker", "codeowners", "categories"):
         assert key in manifest, key
     assert 1 <= len(manifest["categories"]) <= 3
+
+
+def test_manifest_keys_are_in_hassfest_order() -> None:
+    keys = list(json.loads(MANIFEST.read_text(encoding="utf-8")))
+    assert keys == ["domain", "name", *sorted(keys[2:])]
+
+
+# Components hassfest lets any integration import without declaring them (entity platforms and
+# helpers). A component outside this set and the manifest fails hassfest: declare it in
+# `dependencies`, or in `after_dependencies` when the integration works without it.
+UNDECLARED_ALLOWED = {
+    "binary_sensor",
+    "button",
+    "calendar",
+    "diagnostics",
+    "number",
+    "persistent_notification",
+    "repairs",
+    "sensor",
+    "switch",
+}
+
+
+def test_every_imported_component_is_declared() -> None:
+    """hassfest's dependency check, which only CI on GitHub runs, caught here first."""
+    manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    declared = {*manifest["dependencies"], *manifest.get("after_dependencies", [])}
+    source = "\n".join(path.read_text(encoding="utf-8") for path in MANIFEST.parent.rglob("*.py"))
+    imported = set(re.findall(r"homeassistant\.components\.(\w+)", source))
+    for names in re.findall(r"from homeassistant\.components import ([\w, ]+)", source):
+        imported |= {name.strip() for name in names.split(",")}
+    assert imported - declared - UNDECLARED_ALLOWED == set()
 
 
 def _tracked_text_files() -> list[Path]:
