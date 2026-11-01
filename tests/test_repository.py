@@ -41,3 +41,16 @@ def test_no_em_dashes() -> None:
     assert not offenders, "Use a comma, colon, parentheses or a full stop instead: " + ", ".join(
         offenders
     )
+
+
+def test_the_readme_names_every_option() -> None:
+    """A new option is documented: each option's English label appears in the README."""
+    english = json.loads(
+        (ROOT / "custom_components" / "hot_water_ready" / "translations" / "en.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    readme = (ROOT / "README.md").read_text(encoding="utf-8").lower()
+    labels = english["options"]["step"]["init"]["data"].values()
+    missing = [label for label in labels if label.removesuffix(" (optional)").lower() not in readme]
+    assert missing == []

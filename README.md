@@ -45,9 +45,9 @@ Everything else is in the heater's options (*Configure*):
 | Heating rate set by hand | Minutes to raise the water one degree. Empty: learned from the heater's own clean runs (started with the sun down, over 15 min, a rise of more than 3 °C, no water drawn), the median of the last week once there are three. |
 | Tank volume, element power | Both together let the heater heat higher for showers close together that the tank at the normal target cannot carry. The element power also gives the solar comparison its kWh without a power sensor. |
 | Highest temperature for showers close together | The cap for that raise: 50 °C by default, the scald limit without a mixing valve; up to 60 °C only with one. |
-| Who may cancel heat now | Who asked and the administrators; or also a list of people; or everyone. |
+| Who may cancel heat now | Who asked and the administrators; or also the *People who may also cancel*; or everyone. |
 | Replace earlier messages on phones | On phones with the Home Assistant app, "ready" replaces "heating" instead of arriving as a second message. |
-| Power sensor | With one, a heater that draws nothing while on, or power while switched off, is noticed. |
+| Heater power sensor | With one, a heater that draws nothing while on, or power while switched off, is noticed. |
 | Who is told about faults | Empty: every administrator. |
 | Fault thresholds | Advanced, collapsed: how long a silent sensor, or a heater that does not warm the water, is tolerated before it counts as a fault. |
 

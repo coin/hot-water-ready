@@ -65,6 +65,10 @@ Read by the reviewer. Mechanical rules live in the checks (`scripts/check`, `car
 - An assertion must be able to fail: `assert x is not None` after `x = a or b`, or a check on
   something the test itself just set, proves nothing. When a test passes on the first run,
   break the code it guards once and watch it fail.
+- The same goes for the live checks in `dev/trial.py`: a scenario must fail if the integration
+  did nothing. Home Assistant restores entity states after a restart, and a heater that runs
+  whenever a ready time exists also "heats for a window"; ticket 11's first trial passed both ways
+  until the relay was switched off by hand and a scenario checked that heating waits for the lead.
 - A new invariant in `tests/core/test_invariants.py` comes with a test that breaks the controller
   on purpose and expects the random households to catch it.
 - `async_mock_service(hass, "switch", ...)` registered before the entry is set up is replaced
