@@ -29,7 +29,7 @@ combine-as-imports = true
 force-sort-within-sections = true
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["ANN", "S101", "S311", "S603", "S607", "PLR0915", "DTZ"]
+"tests/**" = ["ANN", "S101", "S311", "S603", "S607", "PLR0915", "PLR0917", "DTZ"]
 "scripts/**" = ["S603", "T201"]
 
 [tool.mypy]
