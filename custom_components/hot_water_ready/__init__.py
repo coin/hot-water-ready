@@ -6,7 +6,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv, issue_registry as ir
 from homeassistant.helpers.typing import ConfigType
 
-from . import websocket
+from . import services, websocket
 from .const import DOMAIN
 from .core.faults import Fault
 from .entity import register_heater_device
@@ -17,6 +17,7 @@ from .storage import HeaterStore
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
     Platform.BUTTON,
+    Platform.CALENDAR,
     Platform.NUMBER,
     Platform.SENSOR,
     Platform.SWITCH,
@@ -30,6 +31,7 @@ type HotWaterReadyConfigEntry = ConfigEntry[Heater]
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Register what every heater shares."""
     websocket.async_register(hass)
+    services.async_register(hass)
     return True
 
 

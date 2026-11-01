@@ -57,9 +57,11 @@ from .core.controller import (
     ControllerEvent,
     Decision,
     Occurrence,
+    PlannedWindow,
     Settings,
     lead_minutes,
     minutes_to_ready,
+    planned_windows,
     solar_lead_minutes,
     stop_point,
 )
@@ -224,6 +226,10 @@ class Heater:
             for subentry in self.entry.subentries.values()
             if subentry.subentry_type == SUBENTRY_MEMBER
         ]
+
+    def member_names(self) -> dict[str, str]:
+        """Each member's name by id."""
+        return {member.id: member.name for member in self.members}
 
     def member(self, member_id: str) -> Member:
         """One member, or MemberNotFoundError."""
@@ -415,6 +421,33 @@ class Heater:
         ]
         return household_occurrences(plans, start=start, end=end)
 
+    def windows_between(self, start: datetime, end: datetime) -> list[PlannedWindow]:
+        """The heating windows of the ready times in [start, end), in UTC (spec 5, 6).
+
+        Their starts are estimated from the water now; see `core.controller.planned_windows`.
+        """
+        return planned_windows(
+            self._controller.settings, self.occurrences(start, end), self.temperature
+        )
+
+    def _week(self) -> dict[str, Any]:
+        """This week, Monday to Sunday in the house's time zone: when the heater may heat."""
+        today = dt_util.now().date()
+        monday = today - timedelta(days=today.weekday())
+        start = dt_util.start_of_local_day(monday)
+        end = dt_util.start_of_local_day(monday + timedelta(days=7))
+        return {
+            "monday": monday.isoformat(),
+            "today": today.isoformat(),
+            "windows": [
+                {
+                    "start": dt_util.as_local(window.start).isoformat(),
+                    "end": dt_util.as_local(window.end).isoformat(),
+                }
+                for window in self.windows_between(start, end)
+            ],
+        }
+
     def today(self) -> list[Occurrence]:
         """Everyone's ready times today, from midnight to midnight in the house's time zone."""
         midnight = dt_util.start_of_local_day()
@@ -482,6 +515,13 @@ class Heater:
                 await self._async_saved_and_stepped()
                 return ready_times[index]
         raise ReadyTimeNotFoundError(ready_id)
+
+    async def async_remove_ready_times_at(self, member_id: str, at: time) -> int:
+        """Remove a member's ready times at a time of day, whatever their days; how many."""
+        found = [ready for ready in self.ready_times(member_id) if ready.time == at]
+        for ready in found:
+            await self.async_remove_ready_time(member_id, ready.id)
+        return len(found)
 
     async def async_remove_ready_time(self, member_id: str, ready_id: str) -> None:
         """Remove a ready time."""
@@ -932,6 +972,7 @@ class Heater:
                 "can_cancel": self.can_cancel_heat_now(user),
             },
             "settings": self._settings_snapshot() if user.is_admin else None,
+            "week": self._week() if user.is_admin else None,
             "today": [
                 {"member": member_id, "at": occurrence.at.isoformat()}
                 for occurrence in self.today()

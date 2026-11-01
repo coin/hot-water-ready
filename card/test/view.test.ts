@@ -18,6 +18,7 @@ import {
   shownMember,
   solarLine,
   todayInHouse,
+  weekView,
   type ViewContext,
 } from "../src/view";
 
@@ -55,6 +56,7 @@ const cold: HeaterSnapshot = {
     solar_aware: false,
     solar: { windows: 0, on_time: 0, minutes_saved: 0, kwh: null, solar_windows: 0, solar_on_time: 0 },
   },
+  week: null,
   today: [],
   members: [tiago, maria],
 };
@@ -461,5 +463,82 @@ describe("solarLine", () => {
     expect(solarLine({ ...off, solar: { windows: 2, on_time: 2, minutes_saved: 0, kwh: 0, solar_windows: 0, solar_on_time: 0 } }, "en")).toBe(
       "With the solar-aware rule on, the water would have been ready on time in 2 of 2 windows.",
     );
+  });
+});
+
+describe("weekView", () => {
+  const at = (time: string, weekdays: number[]) => ({ id: time, time, weekdays, enabled: true });
+  const household: HeaterSnapshot = {
+    ...cold,
+    members: [
+      { ...tiago, ready_times: [at("07:00", [0, 1, 2, 3, 4]), { ...at("09:00", [5]), enabled: false }] },
+      { ...maria, ready_times: [at("20:00", [0]), at("07:30", [0, 2])] },
+      { ...tiago, id: "g", name: "Global", virtual: true, ready_times: [at("10:00", [5])] },
+      { ...tiago, id: "j", name: "José", away: { on: true, until: null }, ready_times: [at("19:30", [0, 1, 2, 3, 4, 5, 6])] },
+    ],
+    week: {
+      monday: "2026-11-02",
+      today: "2026-11-04",
+      windows: [
+        { start: "2026-11-02T06:30:00+00:00", end: "2026-11-02T07:45:00+00:00" },
+        { start: "2026-11-02T19:30:00+00:00", end: "2026-11-02T20:15:00+00:00" },
+        { start: "2026-11-08T23:30:00+00:00", end: "2026-11-09T00:15:00+00:00" },
+      ],
+    },
+  };
+
+  it("is for administrators only", () => {
+    expect(weekView({ ...household, is_admin: false, week: null }, pt)).toBeUndefined();
+    expect(viewMode({ ...household, is_admin: false })).not.toBe("admin");
+  });
+
+  it("puts each person's enabled times under their days", () => {
+    const rows = weekView(household, pt)?.rows;
+    expect(rows?.[0]?.cells.map((cell) => cell.times)).toEqual([
+      ["07:00"],
+      ["07:00"],
+      ["07:00"],
+      ["07:00"],
+      ["07:00"],
+      [],
+      [],
+    ]);
+    expect(rows?.[1]?.cells[0]?.times).toEqual(["07:30", "20:00"]);
+  });
+
+  it("notes away, virtual and the count a week", () => {
+    expect(weekView(household, pt)?.rows.map((row) => [row.initial, row.note])).toEqual([
+      ["T", "5 por semana"],
+      ["M", "3 por semana"],
+      ["★", "virtual · 1"],
+      ["J", "ausente"],
+    ]);
+  });
+
+  it("counts showers without the away, windows, and the busiest day", () => {
+    const week = weekView(household, pt);
+    expect([week?.showers, week?.windows, week?.busiest]).toEqual([9, 3, "Seg"]);
+  });
+
+  it("marks today and places the heating on the 05h to 24h day", () => {
+    const days = weekView(household, pt)?.days ?? [];
+    expect(days.map((day) => day.today)).toEqual([false, false, true, false, false, false, false]);
+    expect(days[0]?.bars).toEqual([
+      { from: 90 / 1140, length: 75 / 1140 },
+      { from: 870 / 1140, length: 45 / 1140 },
+    ]);
+  });
+
+  it("counts an away with a last day only up to that day", () => {
+    const until = { ...household, members: [{ ...tiago, away: { on: true, until: "2026-11-04" }, ready_times: [at("07:00", [0, 1, 2, 3, 4])] }] };
+    const week = weekView(until, pt);
+    expect(week?.rows[0]?.cells.map((cell) => cell.away)).toEqual([true, true, true, false, false, false, false]);
+    expect(week?.rows[0]?.note).toBe("5 por semana");
+    expect(week?.showers).toBe(2); // Thursday and Friday
+  });
+
+  it("splits a window across midnight and leaves the night part out", () => {
+    const days = weekView(household, pt)?.days ?? [];
+    expect(days[6]?.bars).toEqual([{ from: 1110 / 1140, length: 30 / 1140 }]);
   });
 });

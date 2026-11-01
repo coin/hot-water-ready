@@ -21,13 +21,17 @@ import {
   shownMember,
   todayInHouse,
   viewMode,
+  weekView,
   type SettingsView,
   type Sheet,
   type Stepper,
   type ViewContext,
+  type WeekView,
 } from "./view";
 
 const TAG = "hot-water-ready-card";
+
+type Tab = "people" | "week";
 const RING_RADIUS = 38;
 const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
 const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
@@ -41,6 +45,8 @@ export class HotWaterReadyCard extends LitElement {
     _selected: { state: true },
     _sheet: { state: true },
     _settingsOpen: { state: true },
+    _tab: { state: true },
+    _focus: { state: true },
     _error: { state: true },
   };
 
@@ -51,6 +57,9 @@ export class HotWaterReadyCard extends LitElement {
   private _selected: string | undefined;
   private _sheet: Sheet | undefined;
   private _settingsOpen = false;
+  private _tab: Tab = "people";
+  /** The person highlighted on the week, if any. */
+  private _focus: string | undefined;
   private _error = "";
   private readonly _subscription = new HeaterSubscription(
     (snapshot) => {
@@ -144,19 +153,25 @@ export class HotWaterReadyCard extends LitElement {
     }
     const mode = viewMode(heater);
     const member = shownMember(heater, this._selected);
+    const week = weekView(heater, this._context);
     return html`
       <ha-card>
         ${faultBanner(heater, language).map((line) => html`<div class="banner fault" role="alert">${line}</div>`)}
         ${heater.automatic ? nothing : html`<div class="banner manual">${localize(language, "manual")}</div>`}
         ${this._renderTop(heater)}
         ${this._renderSettings(heater)}
-        ${mode === "member"
-          ? html`<div class="greeting">${greeting(heater, language)}</div>`
-          : this._renderAvatars(heater, member)}
-        ${member ? this._renderList(member) : html`<div class="message">${localize(language, "members.none")}</div>`}
-        ${member && this._sheet ? this._renderSheet(member, this._sheet) : nothing}
-        ${member ? this._renderAway(member) : nothing}
-        ${mode === "member" && member ? this._renderToday(heater, member) : nothing}
+        ${this._renderTabs(heater)}
+        ${week && this._tab === "week"
+          ? this._renderWeek(week)
+          : html`
+              ${mode === "member"
+                ? html`<div class="greeting">${greeting(heater, language)}</div>`
+                : this._renderAvatars(heater, member)}
+              ${member ? this._renderList(member) : html`<div class="message">${localize(language, "members.none")}</div>`}
+              ${member && this._sheet ? this._renderSheet(member, this._sheet) : nothing}
+              ${member ? this._renderAway(member) : nothing}
+              ${mode === "member" && member ? this._renderToday(heater, member) : nothing}
+            `}
         ${this._error ? html`<div class="error" role="alert">${this._error}</div>` : nothing}
       </ha-card>
     `;
@@ -254,6 +269,77 @@ export class HotWaterReadyCard extends LitElement {
             )}
           </div>
         </div>
+      </div>
+    `;
+  }
+
+  private _renderTabs(heater: HeaterSnapshot): unknown {
+    if (!heater.week) return nothing; // the week is for administrators
+    const tab = (name: Tab) => html`<button
+      class="tab ${this._tab === name ? "on" : ""}"
+      role="tab"
+      aria-selected=${this._tab === name}
+      @click=${() => (this._tab = name)}
+    >
+      ${localize(this._language, `tabs.${name}`)}
+    </button>`;
+    return html`<div class="tabs" role="tablist">${tab("people")}${tab("week")}</div>`;
+  }
+
+  private _renderWeek(week: WeekView): unknown {
+    const language = this._language;
+    const focus = this._focus;
+    return html`
+      <div class="week">
+        <div class="totals">
+          <div><b>${week.showers}</b><span>${localize(language, "week.showers")}</span></div>
+          <div><b>${week.windows}</b><span>${localize(language, "week.windows")}</span></div>
+          <div><b>${week.busiest || "-"}</b><span>${localize(language, "week.busiest")}</span></div>
+        </div>
+        <div class="grid">
+          <span></span>
+          ${week.days.map((day) => html`<span class="head ${day.today ? "is-today" : ""}">${day.label}</span>`)}
+          ${week.rows.map(
+            (row) => html`
+              <button
+                class="who ${row.away ? "away" : ""} ${focus && focus !== row.id ? "dim" : ""}"
+                aria-pressed=${focus === row.id}
+                @click=${() => (this._focus = focus === row.id ? undefined : row.id)}
+              >
+                <span class="mini" style="background: var(--${row.colour}-color, var(--primary-color))"
+                  >${row.initial}</span
+                >
+                <span class="who-text"><span>${row.name}</span><span class="hint">${row.note}</span></span>
+              </button>
+              ${row.cells.map(
+                (cell, index) => html`<div
+                  class="cell ${week.days[index]?.today ? "is-today" : ""} ${focus && focus !== row.id ? "dim" : ""}"
+                >
+                  ${cell.times.map(
+                    (time) => html`<span
+                      class="tag ${cell.away ? "away" : ""}"
+                      style=${cell.away ? "" : `background: var(--${row.colour}-color, var(--primary-color))`}
+                      >${time}</span
+                    >`,
+                  )}
+                </div>`,
+              )}
+            `,
+          )}
+          <span class="hint heating-label">${localize(language, "week.heating")}</span>
+          ${week.days.map(
+            (day) => html`<div class="bar ${day.today ? "is-today" : ""}">
+              ${day.bars.map(
+                (bar) =>
+                  html`<span
+                    class="heat"
+                    style="top: ${(bar.from * 100).toFixed(1)}%; height: max(3px, ${(bar.length * 100).toFixed(1)}%)"
+                  ></span>`,
+              )}
+            </div>`,
+          )}
+        </div>
+        <div class="hint">${localize(language, "week.hint")}</div>
       </div>
     `;
   }
@@ -565,6 +651,145 @@ export class HotWaterReadyCard extends LitElement {
       flex-direction: column;
       gap: 6px;
       min-width: 0;
+    }
+    .tabs {
+      display: flex;
+      gap: 6px;
+      padding: 0 16px 10px;
+    }
+    .tab {
+      flex: 1;
+      min-height: 36px;
+      border: 0;
+      border-radius: 10px;
+      background: var(--secondary-background-color, rgba(127, 127, 127, 0.15));
+      font-weight: 700;
+    }
+    .tab.on {
+      background: var(--primary-color);
+      color: var(--text-primary-color, #fff);
+    }
+    .week {
+      padding: 0 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .totals {
+      display: flex;
+      gap: 8px;
+    }
+    .totals div {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 4px;
+      border-radius: 10px;
+      background: var(--secondary-background-color, rgba(127, 127, 127, 0.08));
+      font-size: 11px;
+      color: var(--secondary-text-color);
+      text-align: center;
+    }
+    .totals b {
+      font-size: 18px;
+      color: var(--primary-text-color);
+    }
+    .grid {
+      display: grid;
+      /* Fixed person column, so a long name never pushes Sunday off a phone screen. */
+      grid-template-columns: 58px repeat(7, minmax(0, 1fr));
+      gap: 3px;
+      align-items: stretch;
+      font-size: 11px;
+    }
+    .head {
+      text-align: center;
+      font-weight: 700;
+      padding: 2px 0;
+      border-radius: 6px;
+    }
+    .head.is-today {
+      background: var(--primary-color);
+      color: var(--text-primary-color, #fff);
+    }
+    .who {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      border: 0;
+      background: none;
+      padding: 2px 0;
+      text-align: left;
+      min-width: 0;
+    }
+    .who-text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .who-text span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mini {
+      flex: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: var(--text-primary-color, #fff);
+      font-weight: 700;
+    }
+    .who.away,
+    .dim {
+      opacity: 0.35;
+    }
+    .cell {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      align-items: center;
+      min-width: 0;
+      padding: 2px 0;
+      border-radius: 6px;
+    }
+    .cell.is-today,
+    .bar.is-today {
+      background: var(--secondary-background-color, rgba(127, 127, 127, 0.08));
+    }
+    .tag {
+      max-width: 100%;
+      box-sizing: border-box;
+      overflow: hidden;
+      font-size: 9.5px;
+      padding: 1px 2px;
+      border-radius: 4px;
+      color: var(--text-primary-color, #fff);
+      font-variant-numeric: tabular-nums;
+    }
+    .tag.away {
+      color: var(--secondary-text-color);
+      text-decoration: line-through;
+    }
+    .heating-label {
+      align-self: center;
+    }
+    .bar {
+      position: relative;
+      height: 64px;
+      border-radius: 6px;
+      border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.25));
+    }
+    .heat {
+      position: absolute;
+      left: 2px;
+      right: 2px;
+      border-radius: 3px;
+      background: var(--hwr-heating);
     }
     .name-row {
       display: flex;

@@ -18,6 +18,8 @@ from pytest_homeassistant_custom_component.common import (
 )
 from pytest_homeassistant_custom_component.typing import WebSocketGenerator
 
+from custom_components.hot_water_ready.const import DOMAIN
+
 from .conftest import MARIA, MARIA_PERSON, SENSOR, SWITCH, TIAGO, TIAGO_PERSON, access_token
 
 
@@ -353,3 +355,24 @@ async def test_phones_that_refuse_are_reported_as_such_and_logged_once(
     (note,) = (n for n in notes.values() if n["notification_id"].startswith("hot_water_ready"))
     assert "could not reach Maria's phones" in note["message"]
     assert caplog.text.count("Nobody to notify for Maria") == 1
+
+
+async def test_heat_now_from_an_automation_tells_the_member_it_names(
+    hass: HomeAssistant,
+    heater: MockConfigEntry,
+    phones: dict[str, str],
+    sent: list[ServiceCall],
+) -> None:
+    device = dr.async_get(hass).async_get_device_by_identifier(
+        (DOMAIN, f"{heater.entry_id}_{TIAGO}"), heater.entry_id
+    )
+    assert device is not None
+    _water(hass, 40.0)
+    await hass.services.async_call(
+        DOMAIN, "heat_now", {"heater": heater.entry_id, "member": device.id}, blocking=True
+    )
+    hass.states.async_set(SWITCH, "on")
+
+    _water(hass, 42.1)
+    await hass.async_block_till_done()
+    assert [c.data["entity_id"] for c in sent] == [phones[TIAGO]]

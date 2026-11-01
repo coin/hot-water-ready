@@ -134,6 +134,17 @@
         "people": "Those who asked, admins and these people",
         "everyone": "Everyone"
       }
+    },
+    "weekdays": {
+      "options": {
+        "mon": "Monday",
+        "tue": "Tuesday",
+        "wed": "Wednesday",
+        "thu": "Thursday",
+        "fri": "Friday",
+        "sat": "Saturday",
+        "sun": "Sunday"
+      }
     }
   },
   "entity": {
@@ -195,6 +206,11 @@
     "binary_sensor": {
       "problem": {
         "name": "Problem"
+      }
+    },
+    "calendar": {
+      "windows": {
+        "name": "Heating windows"
       }
     }
   },
@@ -283,6 +299,21 @@
     },
     "heat_now_refused_manual": {
       "message": "Heat now is not possible while automatic control is off: the heater is run by hand."
+    },
+    "calendar_window": {
+      "message": "Heating: {members}"
+    },
+    "heater_not_found": {
+      "message": "No loaded Hot Water Ready heater with that id."
+    },
+    "member_not_found": {
+      "message": "That device is not a member of this heater."
+    },
+    "ready_time_not_found": {
+      "message": "This member has no ready time at {time}."
+    },
+    "away_date_in_past": {
+      "message": "The last day away cannot be in the past."
     }
   },
   "issues": {
@@ -315,6 +346,76 @@
     "relay_stuck": {
       "title": "{heater}: the heater draws power while switched off",
       "description": "The heater is drawing power although the relay is off. The relay may be stuck on; check it. This clears by itself a minute after the power stops."
+    }
+  },
+  "services": {
+    "heat_now": {
+      "name": "Heat now",
+      "description": "Heats the water now. The member named is told when it is ready; without one, the person who asked, if any.",
+      "fields": {
+        "heater": {
+          "name": "Heater",
+          "description": "The heater to heat."
+        },
+        "member": {
+          "name": "Member",
+          "description": "Who to tell when it is ready."
+        }
+      }
+    },
+    "add_ready_time": {
+      "name": "Add a ready time",
+      "description": "Adds a time when a member wants hot water.",
+      "fields": {
+        "member": {
+          "name": "Member",
+          "description": "Whose ready time it is."
+        },
+        "time": {
+          "name": "Time",
+          "description": "When the water should be ready."
+        },
+        "weekdays": {
+          "name": "Days",
+          "description": "The days it repeats on. Left out: every day."
+        },
+        "enabled": {
+          "name": "On",
+          "description": "Off keeps the time without acting on it."
+        }
+      }
+    },
+    "remove_ready_time": {
+      "name": "Remove a ready time",
+      "description": "Removes a member's ready times at a time of day, whatever their days.",
+      "fields": {
+        "member": {
+          "name": "Member",
+          "description": "Whose ready time it is."
+        },
+        "time": {
+          "name": "Time",
+          "description": "The time to remove."
+        }
+      }
+    },
+    "set_away": {
+      "name": "Set away",
+      "description": "Pauses or resumes a member's ready times.",
+      "fields": {
+        "member": {
+          "name": "Member",
+          "description": "Who is away."
+        },
+        "away": {
+          "name": "Away",
+          "description": "On pauses the ready times, off resumes them."
+        },
+        "until": {
+          "name": "Until",
+          "description": "The last day away; after it, away ends by itself."
+        }
+      }
     }
   }
 }

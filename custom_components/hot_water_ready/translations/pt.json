@@ -134,6 +134,17 @@
         "people": "Quem pediu, administradores e estas pessoas",
         "everyone": "Todos"
       }
+    },
+    "weekdays": {
+      "options": {
+        "mon": "Segunda-feira",
+        "tue": "Terça-feira",
+        "wed": "Quarta-feira",
+        "thu": "Quinta-feira",
+        "fri": "Sexta-feira",
+        "sat": "Sábado",
+        "sun": "Domingo"
+      }
     }
   },
   "entity": {
@@ -195,6 +206,11 @@
     "binary_sensor": {
       "problem": {
         "name": "Problema"
+      }
+    },
+    "calendar": {
+      "windows": {
+        "name": "Janelas de aquecimento"
       }
     }
   },
@@ -283,6 +299,21 @@
     },
     "heat_now_refused_manual": {
       "message": "Não é possível aquecer agora com o controlo automático desligado: o aquecedor está a ser comandado manualmente."
+    },
+    "calendar_window": {
+      "message": "Aquecimento: {members}"
+    },
+    "heater_not_found": {
+      "message": "Não há nenhum aquecedor do Hot Water Ready carregado com esse id."
+    },
+    "member_not_found": {
+      "message": "Esse dispositivo não é um membro deste aquecedor."
+    },
+    "ready_time_not_found": {
+      "message": "Este membro não tem nenhum horário às {time}."
+    },
+    "away_date_in_past": {
+      "message": "O último dia de ausência não pode estar no passado."
     }
   },
   "issues": {
@@ -315,6 +346,76 @@
     "relay_stuck": {
       "title": "{heater}: o aquecedor consome energia com o relé desligado",
       "description": "O aquecedor está a consumir energia com o relé desligado. O relé pode ter ficado ligado; verifique-o. Isto desaparece sozinho um minuto depois de o consumo parar."
+    }
+  },
+  "services": {
+    "heat_now": {
+      "name": "Aquecer agora",
+      "description": "Aquece a água agora. O membro indicado é avisado quando estiver pronta; sem membro, a pessoa que pediu, se houver.",
+      "fields": {
+        "heater": {
+          "name": "Aquecedor",
+          "description": "O aquecedor a ligar."
+        },
+        "member": {
+          "name": "Membro",
+          "description": "Quem avisar quando estiver pronta."
+        }
+      }
+    },
+    "add_ready_time": {
+      "name": "Acrescentar um horário",
+      "description": "Acrescenta uma hora a que um membro quer água quente.",
+      "fields": {
+        "member": {
+          "name": "Membro",
+          "description": "De quem é o horário."
+        },
+        "time": {
+          "name": "Hora",
+          "description": "Quando a água deve estar pronta."
+        },
+        "weekdays": {
+          "name": "Dias",
+          "description": "Os dias em que se repete. Sem dias indicados: todos os dias."
+        },
+        "enabled": {
+          "name": "Ligado",
+          "description": "Desligado guarda a hora sem a usar."
+        }
+      }
+    },
+    "remove_ready_time": {
+      "name": "Remover um horário",
+      "description": "Remove os horários de um membro a uma hora do dia, sejam quais forem os dias.",
+      "fields": {
+        "member": {
+          "name": "Membro",
+          "description": "De quem é o horário."
+        },
+        "time": {
+          "name": "Hora",
+          "description": "A hora a remover."
+        }
+      }
+    },
+    "set_away": {
+      "name": "Marcar ausência",
+      "description": "Suspende ou retoma os horários de um membro.",
+      "fields": {
+        "member": {
+          "name": "Membro",
+          "description": "Quem está ausente."
+        },
+        "away": {
+          "name": "Ausente",
+          "description": "Ligado suspende os horários, desligado retoma-os."
+        },
+        "until": {
+          "name": "Até",
+          "description": "O último dia de ausência; depois dele, a ausência termina sozinha."
+        }
+      }
     }
   }
 }

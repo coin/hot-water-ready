@@ -237,6 +237,52 @@ def stop_point(settings: Settings) -> float:
     return settings.target + settings.margin
 
 
+def joins(settings: Settings, window_end: datetime, ready_at: datetime) -> bool:
+    """Whether a ready time joins a window ending at `window_end` (spec 4.1).
+
+    It joins when its own window would start less than the keep-heating-through gap after this
+    one ends. Its start is judged with the water at the target, where it will be by then, so the
+    answer does not depend on how cold the water happens to be now. Both moments in UTC.
+    """
+    lead = timedelta(minutes=lead_minutes(settings, settings.target))
+    return ready_at - lead - window_end < timedelta(minutes=settings.keep_heating_gap_minutes)
+
+
+@dataclass(frozen=True)
+class PlannedWindow:
+    """A heating window as the coming ready times make it, in UTC (spec 5, 6)."""
+
+    start: datetime  # the first ready time less the lead
+    end: datetime  # the last ready time plus the grace
+    ready_times: tuple[Occurrence, ...]
+
+
+def planned_windows(
+    settings: Settings, occurrences: Iterable[Occurrence], temperature: float | None
+) -> list[PlannedWindow]:
+    """The windows the controller would open for these ready times, joined as it joins them.
+
+    The lead is worked out from `temperature`, the water now, or from the restart point when
+    there is no reading: how cold the water will be days ahead is not known, so a start is an
+    estimate, and the heater may start later when the water is warmer.
+    """
+    water = settings.target - settings.margin if temperature is None else temperature
+    lead = timedelta(minutes=lead_minutes(settings, water))
+    grace = timedelta(minutes=settings.grace_minutes)
+    windows: list[list[Occurrence]] = []
+    for occurrence in sorted(
+        (Occurrence(o.at.astimezone(UTC), o.members) for o in occurrences), key=lambda o: o.at
+    ):
+        if windows and joins(settings, windows[-1][-1].at + grace, occurrence.at):
+            windows[-1].append(occurrence)
+        else:
+            windows.append([occurrence])
+    return [
+        PlannedWindow(start=group[0].at - lead, end=group[-1].at + grace, ready_times=tuple(group))
+        for group in windows
+    ]
+
+
 def minutes_to_ready(settings: Settings, temperature: float | None) -> int | None:
     """About how long heating from `temperature` to the target takes, by the rate."""
     if temperature is None:
@@ -497,19 +543,11 @@ class Controller:
             self._close()
 
     def _join_close_ones(self, window: Window, ready_times: list[Occurrence]) -> None:
-        """Take in the next ready times that keep the heater heating through (spec 4.1).
-
-        One joins when its own window would start less than the keep-heating-through gap after
-        this one ends. Its start is judged with the water at the target, where it will be by
-        then, so the answer does not depend on how cold the water happens to be now.
-        """
-        settings = self.settings
-        lead = timedelta(minutes=lead_minutes(settings, settings.target))
-        gap = timedelta(minutes=settings.keep_heating_gap_minutes)
+        """Take in the next ready times that keep the heater heating through (spec 4.1)."""
         for occurrence in ready_times:
             if occurrence.at <= window.last_ready_at:
                 continue
-            if occurrence.at - lead - window.end >= gap:
+            if not joins(self.settings, window.end, occurrence.at):
                 break
             for member in occurrence.members:
                 window.member_times.setdefault(member, occurrence.at)

@@ -1,0 +1,68 @@
+heat_now:
+  fields:
+    heater:
+      required: true
+      selector:
+        config_entry:
+          integration: hot_water_ready
+    member:
+      selector:
+        device:
+          integration: hot_water_ready
+          model: Member
+add_ready_time:
+  fields:
+    member:
+      required: true
+      selector:
+        device:
+          integration: hot_water_ready
+          model: Member
+    time:
+      required: true
+      selector:
+        time:
+    weekdays:
+      selector:
+        select:
+          multiple: true
+          translation_key: weekdays
+          options:
+            - mon
+            - tue
+            - wed
+            - thu
+            - fri
+            - sat
+            - sun
+    enabled:
+      default: true
+      selector:
+        boolean:
+remove_ready_time:
+  fields:
+    member:
+      required: true
+      selector:
+        device:
+          integration: hot_water_ready
+          model: Member
+    time:
+      required: true
+      selector:
+        time:
+set_away:
+  fields:
+    member:
+      required: true
+      selector:
+        device:
+          integration: hot_water_ready
+          model: Member
+    away:
+      required: true
+      selector:
+        boolean:
+    until:
+      selector:
+        date:

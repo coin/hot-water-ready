@@ -75,9 +75,23 @@ export interface HeaterSnapshot {
   heat_now: { requesters: string[]; asked: boolean; can_cancel: boolean } | null;
   /** The settings sheet; null unless the viewer is an administrator. */
   settings: AdminSettings | null;
+  /** This week, Monday to Sunday, for the Semana tab; null unless the viewer is an administrator. */
+  week: {
+    /** "YYYY-MM-DD" of this week's Monday and of today, in the house's time zone. */
+    monday: string;
+    today: string;
+    /** When the heater may heat. */
+    windows: TimeSpan[];
+  } | null;
   /** Everyone's ready times today, earliest first. */
   today: { member: string; at: string }[];
   members: MemberSnapshot[];
+}
+
+/** A span of time, ISO datetimes. */
+export interface TimeSpan {
+  start: string;
+  end: string;
 }
 
 export interface HeaterSummary {

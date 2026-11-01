@@ -1,7 +1,7 @@
 // What the card shows, worked out from a heater snapshot without touching the DOM.
 
 import { localeOf, localize, pickLanguage, weekdayLetters, type TextKey } from "./i18n";
-import type { AdminSettings, CancelRule, HeaterSnapshot, MemberSnapshot, Status } from "./types";
+import type { AdminSettings, CancelRule, HeaterSnapshot, MemberSnapshot, Status, TimeSpan } from "./types";
 
 export interface ViewContext {
   language: string;
@@ -300,4 +300,127 @@ export function solarLine(settings: AdminSettings, language: string): string {
     line += localize(language, "solar.applied", { applied, on_time: appliedOnTime });
   }
   return line;
+}
+
+// ---------------------------------------------------------------- the week (Semana tab)
+
+const DAY_START = 5 * 60; // the bars run from 05h...
+const DAY_END = 24 * 60; // ...to midnight
+
+/** Minutes since midnight, and the calendar day, of a moment in the house's time zone. */
+function wallClock(iso: string, timeZone: string): { day: string; minutes: number } {
+  const moment = new Date(iso);
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+    .formatToParts(moment)
+    .reduce<Record<string, string>>((all, part) => ({ ...all, [part.type]: part.value }), {});
+  return { day: dayKey(moment, timeZone), minutes: Number(parts.hour) * 60 + Number(parts.minute) };
+}
+
+export interface WeekDay {
+  key: string;
+  label: string;
+  today: boolean;
+  /** Heating, as fractions of the 05h to 24h day: where it starts and how long it lasts. */
+  bars: { from: number; length: number }[];
+}
+
+export interface WeekRow {
+  id: string;
+  name: string;
+  colour: string;
+  initial: string;
+  /** Away the whole week. */
+  away: boolean;
+  /** "ausente", "virtual · 2" or "5 por semana". */
+  note: string;
+  /** For each day, Monday first: the member's times, earliest first, and whether they are away. */
+  cells: { times: string[]; away: boolean }[];
+}
+
+export interface WeekView {
+  days: WeekDay[];
+  rows: WeekRow[];
+  showers: number;
+  windows: number;
+  /** The day with most showers, or "" when there are none. */
+  busiest: string;
+}
+
+/** The household week, people by day (spec 6), for an administrator only. */
+export function weekView(heater: HeaterSnapshot, context: ViewContext): WeekView | undefined {
+  const week = heater.week;
+  if (!heater.is_admin || !week) return undefined;
+  const labels = localize(context.language, "week.days").split(",");
+  const keys = labels.map((_, index) => addDays(week.monday, index));
+  const rows = heater.members.map((member) => weekRow(member, keys, context.language));
+  const perDay = keys.map((_, day) =>
+    rows.reduce((count, row) => {
+      const cell = row.cells[day];
+      return cell && !cell.away ? count + cell.times.length : count;
+    }, 0),
+  );
+  const most = Math.max(0, ...perDay);
+  return {
+    days: keys.map((key, index) => ({
+      key,
+      label: labels[index] ?? key,
+      today: key === week.today,
+      bars: dayBars(key, week.windows, context.timeZone),
+    })),
+    rows,
+    showers: perDay.reduce((sum, count) => sum + count, 0),
+    windows: week.windows.length,
+    busiest: most > 0 ? (labels[perDay.indexOf(most)] ?? "") : "",
+  };
+}
+
+function addDays(day: string, count: number): string {
+  let key = day;
+  for (let step = 0; step < count; step += 1) key = nextDayKey(key);
+  return key;
+}
+
+/** Whether a member is away on a day: away and, with a last day, not past it (spec 3.3). */
+function awayOn(member: MemberSnapshot, day: string): boolean {
+  return member.away.on && (member.away.until === null || day <= member.away.until);
+}
+
+function weekRow(member: MemberSnapshot, days: string[], language: string): WeekRow {
+  const enabled = member.ready_times.filter((ready) => ready.enabled);
+  const cells = days.map((key, day) => ({
+    times: enabled
+      .filter((ready) => ready.weekdays.includes(day))
+      .map((ready) => ready.time)
+      .sort(),
+    away: awayOn(member, key),
+  }));
+  const awayAllWeek = cells.every((cell) => cell.away);
+  const count = cells.reduce((sum, cell) => sum + cell.times.length, 0);
+  let note = localize(language, "week.per_week", { count });
+  if (awayAllWeek) note = localize(language, "week.away");
+  else if (member.virtual) note = localize(language, "week.virtual", { count });
+  return {
+    id: member.id,
+    name: member.name,
+    colour: member.colour,
+    initial: member.virtual ? "★" : (member.name[0] ?? "?"),
+    away: awayAllWeek,
+    note,
+    cells,
+  };
+}
+
+/** The windows' share of one day, clipped to 05h to 24h; a window across midnight is split. */
+function dayBars(day: string, windows: TimeSpan[], timeZone: string): WeekDay["bars"] {
+  const span = DAY_END - DAY_START;
+  const bars: WeekDay["bars"] = [];
+  for (const window of windows) {
+    const start = wallClock(window.start, timeZone);
+    const end = wallClock(window.end, timeZone);
+    if (start.day > day || end.day < day) continue;
+    const from = Math.max(DAY_START, start.day < day ? 0 : start.minutes);
+    const to = Math.min(DAY_END, end.day > day ? DAY_END : end.minutes);
+    if (to > from) bars.push({ from: (from - DAY_START) / span, length: (to - from) / span });
+  }
+  return bars;
 }

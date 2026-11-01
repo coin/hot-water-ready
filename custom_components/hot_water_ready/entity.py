@@ -1,6 +1,7 @@
 """Base entities: on the heater's device, or on a member's device."""
 
 from homeassistant.auth.models import User
+from homeassistant.core import Context, HomeAssistant
 from homeassistant.exceptions import Unauthorized
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -10,6 +11,25 @@ from .const import DOMAIN
 from .heater import Heater, Member
 
 MANUFACTURER = "Hot Water Ready"
+
+
+async def async_calling_user(hass: HomeAssistant, context: Context | None) -> User | None:
+    """The user behind a service call; None for automations and the system.
+
+    A user id that no longer resolves to a user is refused rather than treated as nobody.
+    """
+    user_id = context.user_id if context else None
+    if user_id is None:
+        return None
+    user = await hass.auth.async_get_user(user_id)
+    if user is None:
+        raise Unauthorized(context=context)
+    return user
+
+
+def member_device_identifier(entry_id: str, member_id: str) -> tuple[str, str]:
+    """How a member's device is known in the device registry."""
+    return (DOMAIN, f"{entry_id}_{member_id}")
 
 
 def heater_device_info(heater: Heater) -> DeviceInfo:
@@ -44,17 +64,8 @@ class HeaterEntity(Entity):
         self._attr_device_info = heater_device_info(heater)
 
     async def _async_calling_user(self) -> User | None:
-        """The user behind the current service call; None for automations and the system.
-
-        A user id that no longer resolves to a user is refused rather than treated as nobody.
-        """
-        user_id = self._context.user_id if self._context else None
-        if user_id is None:
-            return None
-        user = await self.hass.auth.async_get_user(user_id)
-        if user is None:
-            raise Unauthorized(context=self._context)
-        return user
+        """The user behind the current service call; None for automations and the system."""
+        return await async_calling_user(self.hass, self._context)
 
     async def async_require_admin(self) -> None:
         """Heater settings are for administrators (spec 2)."""
@@ -75,7 +86,7 @@ class MemberEntity(HeaterEntity):
         self.member_id = member.id
         self._attr_unique_id = f"{heater.entry_id}_{member.id}_{key}"
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{heater.entry_id}_{member.id}")},
+            identifiers={member_device_identifier(heater.entry_id, member.id)},
             name=member.name,
             manufacturer=MANUFACTURER,
             model="Member",
