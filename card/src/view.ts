@@ -227,3 +227,9 @@ export function heatNowActions(heater: HeaterSnapshot): HeatNowAction[] {
 export function faultBanner(heater: HeaterSnapshot, language: string): string[] {
   return heater.faults.map((fault) => localize(language, `fault.${fault}`));
 }
+
+/** Notes only an administrator needs, such as a check the heater cannot support. */
+export function adminNotes(heater: HeaterSnapshot, language: string): string[] {
+  if (!heater.is_admin) return [];
+  return heater.not_rising_checked ? [] : [localize(language, "note.not_rising_skipped")];
+}

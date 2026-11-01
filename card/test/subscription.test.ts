@@ -74,6 +74,7 @@ describe("HeaterSubscription", () => {
       can_ask_heat_now: true,
       faults: [],
       heat_now_blocked: false,
+      not_rising_checked: true,
       automatic: true,
       heat_now: null,
       today: [],

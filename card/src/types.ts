@@ -41,6 +41,8 @@ export interface HeaterSnapshot {
   me: string | null;
   /** Active faults (spec 4.8); the card shows them in a red banner. */
   faults: ("sensor_unavailable" | "not_rising" | "no_consumption" | "relay_stuck")[];
+  /** False for a thermostat without a heating indication: "not rising" is not checked. */
+  not_rising_checked: boolean;
   /** A fault stops heating, so heat now is refused. */
   heat_now_blocked: boolean;
   /** Off: the heater is run by hand. */

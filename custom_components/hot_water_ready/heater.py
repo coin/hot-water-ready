@@ -9,8 +9,9 @@ import uuid
 
 from homeassistant.auth.models import User
 from homeassistant.config_entries import ConfigEntry, ConfigSubentry
-from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import (
@@ -19,6 +20,7 @@ from homeassistant.helpers.event import (
 )
 from homeassistant.util import dt as dt_util
 
+from .actuator import Actuator, ClimateActuator, SwitchActuator
 from .const import (
     CANCEL_EVERYONE,
     CANCEL_PEOPLE,
@@ -26,8 +28,10 @@ from .const import (
     CONF_ADVANCED,
     CONF_CANCEL_PEOPLE,
     CONF_CANCEL_RULE,
+    CONF_CLIMATE,
     CONF_COLOUR,
     CONF_FAULT_RECIPIENTS,
+    CONF_HEATER_TYPE,
     CONF_KEEP_HEATING_GAP,
     CONF_NOTIFY_TARGETS,
     CONF_PERSON,
@@ -37,6 +41,7 @@ from .const import (
     CONF_SWITCH,
     CONF_TEMPERATURE_SENSOR,
     DOMAIN,
+    HEATER_CLIMATE,
     SUBENTRY_MEMBER,
     signal_heater_updated,
 )
@@ -160,8 +165,17 @@ class Heater:
         return str(self.entry.data[CONF_TEMPERATURE_SENSOR])
 
     @property
-    def _switch(self) -> str:
-        return str(self.entry.data[CONF_SWITCH])
+    def actuator(self) -> Actuator:
+        """What switches the element: a relay, or a thermostat (spec 3.1)."""
+        data = self.entry.data
+        if data.get(CONF_HEATER_TYPE) == HEATER_CLIMATE:
+            return ClimateActuator(str(data[CONF_CLIMATE]))
+        return SwitchActuator(str(data[CONF_SWITCH]))
+
+    @property
+    def not_rising_checked(self) -> bool:
+        """False for a thermostat that reports no heating indication: the check is skipped."""
+        return self.actuator.has_heating_indication(self.hass)
 
     @property
     def members(self) -> list[Member]:
@@ -225,11 +239,8 @@ class Heater:
 
     @property
     def relay_on(self) -> bool | None:
-        """The relay as Home Assistant sees it; None while it is unavailable."""
-        state = self.hass.states.get(self._switch)
-        if state is None or state.state not in (STATE_ON, STATE_OFF):
-            return None
-        return state.state == STATE_ON
+        """Whether the element is heating, as Home Assistant sees it; None when unknown."""
+        return self.actuator.heating(self.hass)
 
     @property
     def faults(self) -> frozenset[Fault]:
@@ -601,7 +612,7 @@ class Heater:
     @callback
     def async_start(self) -> None:
         """Follow the sensor and the relay, step every tick, until the entry unloads."""
-        watched = [self._sensor, self._switch]
+        watched = [self._sensor, self.actuator.entity_id]
         if self._power_sensor:
             watched.append(self._power_sensor)
         self.entry.async_on_unload(
@@ -618,11 +629,13 @@ class Heater:
         switches it back on if the window still wants it. (Stopping Home Assistant does not
         unload entries, so a restart does not pass through here.)
         """
-        relay = self.hass.states.get(self._switch)
-        if self.automatic and self.heating and relay is not None and relay.state == STATE_ON:
-            await self.hass.services.async_call(
-                "switch", "turn_off", {"entity_id": self._switch}, blocking=True
-            )
+        if self.automatic and self.heating:
+            for domain, service, data in self.actuator.calls_for(self.hass, False, self.target):
+                try:
+                    await self.hass.services.async_call(domain, service, data, blocking=True)
+                except HomeAssistantError as err:
+                    # Unloading must not fail because the element is gone or refuses.
+                    _LOGGER.warning("Could not switch %s off: %s", self.actuator.entity_id, err)
         await self._async_save()
 
     @callback
@@ -677,22 +690,22 @@ class Heater:
         self._notify()
 
     @callback
-    def _apply(self, relay_on: bool) -> None:
-        """Switch the relay when it differs; a relay that is unavailable is switched when back."""
-        state = self.hass.states.get(self._switch)
-        if state is None or state.state not in (STATE_ON, STATE_OFF):
-            return
-        if (state.state == STATE_ON) == relay_on:
-            return
-        self.hass.async_create_task(
-            self.hass.services.async_call(
-                "switch",
-                "turn_on" if relay_on else "turn_off",
-                {"entity_id": self._switch},
-                blocking=False,
-            ),
-            eager_start=True,
-        )
+    def _apply(self, on: bool) -> None:
+        """Bring the element to on or off when it differs; an unavailable one is set when back.
+
+        A thermostat heating is given the stop point (target + margin) as its setpoint.
+        """
+        calls = self.actuator.calls_for(self.hass, on, self.target + self.margin)
+        if calls:
+            self.entry.async_create_task(self.hass, self._async_call(calls))
+
+    async def _async_call(self, calls: list[tuple[str, str, dict[str, Any]]]) -> None:
+        """Send the element its commands; a refusal is logged, and the next step tries again."""
+        for domain, service, data in calls:
+            try:
+                await self.hass.services.async_call(domain, service, data, blocking=True)
+            except HomeAssistantError as err:
+                _LOGGER.warning("%s.%s on %s failed: %s", domain, service, data["entity_id"], err)
 
     @callback
     def async_add_listener(self, listener: Listener) -> Callable[[], None]:
@@ -740,6 +753,7 @@ class Heater:
             "me": me,
             "can_ask_heat_now": self.can_ask_heat_now(user),
             "faults": sorted(self.faults),
+            "not_rising_checked": self.not_rising_checked,
             "heat_now_blocked": bool(self.faults & BLOCKING),
             "automatic": self.automatic,
             "heat_now": None

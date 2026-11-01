@@ -59,3 +59,17 @@ automation:
             {% set t = states('input_number.fake_water_temperature') | float(20) %}
             {% if is_state('input_boolean.fake_relay', 'on') %}{{ [t + 0.5, 70] | min | round(1) }}
             {% else %}{{ [t - 0.02, 5] | max | round(2) }}{% endif %}
+
+# A real thermostat over the same fake relay and water, for the climate setup (b).
+climate:
+  - platform: generic_thermostat
+    name: Fake boiler
+    unique_id: fake_boiler
+    heater: switch.fake_heater_relay
+    target_sensor: sensor.fake_water_temperature
+    initial_hvac_mode: "off"
+    target_temp: 30
+    min_temp: 20
+    max_temp: 70
+    cold_tolerance: 0
+    hot_tolerance: 0

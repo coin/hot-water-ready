@@ -4,6 +4,7 @@ import type { HeaterSnapshot, MemberSnapshot } from "../src/types";
 import {
   avatarViews,
   faultBanner,
+  adminNotes,
   heatNowActions,
   awayLine,
   greeting,
@@ -45,6 +46,7 @@ const cold: HeaterSnapshot = {
   can_ask_heat_now: true,
   faults: [],
   heat_now_blocked: false,
+  not_rising_checked: true,
   automatic: true,
   heat_now: null,
   today: [],
@@ -375,5 +377,18 @@ describe("heatNowActions during a fault", () => {
     expect(heatNowActions(running)).toEqual([
       { command: "hot_water_ready/heat_now/cancel", label: "heat_now.cancel", primary: true },
     ]);
+  });
+});
+
+describe("adminNotes", () => {
+  it("tells an administrator when not rising cannot be checked", () => {
+    expect(adminNotes({ ...cold, not_rising_checked: false }, "pt")).toEqual([
+      "O termóstato não indica quando está a aquecer, por isso a verificação de \"a água não aquece\" não é feita.",
+    ]);
+  });
+
+  it("keeps it from members and when the check runs", () => {
+    expect(adminNotes({ ...cold, not_rising_checked: false, is_admin: false }, "pt")).toEqual([]);
+    expect(adminNotes(cold, "pt")).toEqual([]);
   });
 });

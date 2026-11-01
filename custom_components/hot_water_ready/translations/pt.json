@@ -3,6 +3,14 @@
     "step": {
       "user": {
         "title": "Acrescentar um aquecedor de água",
+        "description": "Como é que o Home Assistant liga a resistência.",
+        "menu_options": {
+          "switch": "Um interruptor (relé ou tomada inteligente)",
+          "climate": "Um termóstato existente"
+        }
+      },
+      "switch": {
+        "title": "Acrescentar um aquecedor de água",
         "description": "Escolha o interruptor que liga o aquecedor e o sensor que mede a água.",
         "data": {
           "name": "Nome",
@@ -15,6 +23,22 @@
           "switch": "O relé ou a tomada inteligente que alimenta a resistência.",
           "temperature_sensor": "Um sensor que mede a temperatura da água acumulada.",
           "power_sensor": "Com um sensor de potência, também se detectam um aquecedor que não consome e um relé preso ligado."
+        }
+      },
+      "climate": {
+        "title": "Acrescentar um aquecedor de água com termóstato",
+        "description": "Escolha o termóstato que comanda o aquecedor e o sensor que mede a água. O Hot Water Ready define o modo e a temperatura do termóstato.",
+        "data": {
+          "name": "Nome",
+          "temperature_sensor": "Sensor de temperatura da água",
+          "power_sensor": "Sensor de potência do aquecedor (opcional)",
+          "climate": "Termóstato"
+        },
+        "data_description": {
+          "name": "Aparece no cartão e no dispositivo do aquecedor, por exemplo Cilindro.",
+          "temperature_sensor": "Um sensor que mede a temperatura da água acumulada.",
+          "power_sensor": "Com um sensor de potência, também se detectam um aquecedor que não consome e um relé preso ligado.",
+          "climate": "O Hot Water Ready põe-no a aquecer até à temperatura de paragem, ou desliga-o."
         }
       }
     },

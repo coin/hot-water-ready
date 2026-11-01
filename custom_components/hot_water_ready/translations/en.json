@@ -3,6 +3,14 @@
     "step": {
       "user": {
         "title": "Add a water heater",
+        "description": "How Home Assistant turns the heating element on.",
+        "menu_options": {
+          "switch": "A switch (relay or smart plug)",
+          "climate": "An existing thermostat"
+        }
+      },
+      "switch": {
+        "title": "Add a water heater",
         "description": "Choose the switch that turns the heater on and the sensor that measures the water.",
         "data": {
           "name": "Name",
@@ -15,6 +23,22 @@
           "switch": "The relay or smart plug that powers the heating element.",
           "temperature_sensor": "A sensor measuring the stored water's temperature.",
           "power_sensor": "With a power sensor, a heater that draws nothing and a relay stuck on are noticed too."
+        }
+      },
+      "climate": {
+        "title": "Add a water heater with a thermostat",
+        "description": "Choose the thermostat that runs the heater and the sensor that measures the water. Hot Water Ready sets its mode and setpoint.",
+        "data": {
+          "name": "Name",
+          "temperature_sensor": "Water temperature sensor",
+          "power_sensor": "Heater power sensor (optional)",
+          "climate": "Thermostat"
+        },
+        "data_description": {
+          "name": "Shown on the card and on the heater's device, for example Cylinder.",
+          "temperature_sensor": "A sensor measuring the stored water's temperature.",
+          "power_sensor": "With a power sensor, a heater that draws nothing and a relay stuck on are noticed too.",
+          "climate": "Hot Water Ready sets it to heat at the stop temperature, or off."
         }
       }
     },

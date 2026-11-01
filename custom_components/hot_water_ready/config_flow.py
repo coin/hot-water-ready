@@ -25,8 +25,10 @@ from .const import (
     CONF_ADVANCED,
     CONF_CANCEL_PEOPLE,
     CONF_CANCEL_RULE,
+    CONF_CLIMATE,
     CONF_COLOUR,
     CONF_FAULT_RECIPIENTS,
+    CONF_HEATER_TYPE,
     CONF_KEEP_HEATING_GAP,
     CONF_NOTIFY_TARGETS,
     CONF_PERSON,
@@ -36,25 +38,44 @@ from .const import (
     CONF_SWITCH,
     CONF_TEMPERATURE_SENSOR,
     DOMAIN,
+    HEATER_CLIMATE,
+    HEATER_SWITCH,
     SUBENTRY_MEMBER,
 )
 from .core.controller import Settings
 from .core.faults import FaultSettings
 
-USER_SCHEMA = probatio.Schema(
+
+def _heater_schema(element: dict[Any, Any]) -> probatio.Schema:
+    """Name, the element (switch or thermostat), the water sensor, an optional power sensor."""
+    return probatio.Schema(
+        {
+            probatio.Required(CONF_NAME): selector.TextSelector(),
+            **element,
+            probatio.Required(CONF_TEMPERATURE_SENSOR): selector.EntitySelector(
+                selector.EntitySelectorConfig(
+                    domain="sensor", device_class=SensorDeviceClass.TEMPERATURE
+                )
+            ),
+            probatio.Optional(CONF_POWER_SENSOR): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain="sensor", device_class=SensorDeviceClass.POWER)
+            ),
+        }
+    )
+
+
+SWITCH_SCHEMA = _heater_schema(
     {
-        probatio.Required(CONF_NAME): selector.TextSelector(),
         probatio.Required(CONF_SWITCH): selector.EntitySelector(
             selector.EntitySelectorConfig(domain="switch")
-        ),
-        probatio.Required(CONF_TEMPERATURE_SENSOR): selector.EntitySelector(
-            selector.EntitySelectorConfig(
-                domain="sensor", device_class=SensorDeviceClass.TEMPERATURE
-            )
-        ),
-        probatio.Optional(CONF_POWER_SENSOR): selector.EntitySelector(
-            selector.EntitySelectorConfig(domain="sensor", device_class=SensorDeviceClass.POWER)
-        ),
+        )
+    }
+)
+CLIMATE_SCHEMA = _heater_schema(
+    {
+        probatio.Required(CONF_CLIMATE): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain="climate")
+        )
     }
 )
 
@@ -82,18 +103,41 @@ class HotWaterReadyConfigFlow(ConfigFlow, domain=DOMAIN):
 
     @override
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """Ask for the heater's name, relay and temperature sensor."""
-        if user_input is not None:
-            self._async_abort_entries_match({CONF_SWITCH: user_input[CONF_SWITCH]})
-            return self.async_create_entry(
-                title=user_input[CONF_NAME],
-                data={
-                    CONF_SWITCH: user_input[CONF_SWITCH],
-                    CONF_TEMPERATURE_SENSOR: user_input[CONF_TEMPERATURE_SENSOR],
-                },
-                options={CONF_POWER_SENSOR: user_input.get(CONF_POWER_SENSOR)},
-            )
-        return self.async_show_form(step_id="user", data_schema=USER_SCHEMA)
+        """(a) a switch the component runs, or (b) an existing thermostat (spec 3.1).
+
+        A menu, as 2026.10 has no `visible` fields.
+        """
+        return self.async_show_menu(step_id="user", menu_options=[HEATER_SWITCH, HEATER_CLIMATE])
+
+    async def async_step_switch(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """A relay or smart plug and a water sensor."""
+        return self._create_or_ask(HEATER_SWITCH, CONF_SWITCH, SWITCH_SCHEMA, user_input)
+
+    async def async_step_climate(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """An existing thermostat and a water sensor."""
+        return self._create_or_ask(HEATER_CLIMATE, CONF_CLIMATE, CLIMATE_SCHEMA, user_input)
+
+    def _create_or_ask(
+        self,
+        heater_type: str,
+        element: str,
+        schema: probatio.Schema,
+        user_input: dict[str, Any] | None,
+    ) -> ConfigFlowResult:
+        if user_input is None:
+            return self.async_show_form(step_id=heater_type, data_schema=schema)
+        self._async_abort_entries_match({element: user_input[element]})
+        return self.async_create_entry(
+            title=user_input[CONF_NAME],
+            data={
+                CONF_HEATER_TYPE: heater_type,
+                element: user_input[element],
+                CONF_TEMPERATURE_SENSOR: user_input[CONF_TEMPERATURE_SENSOR],
+            },
+            options={CONF_POWER_SENSOR: user_input.get(CONF_POWER_SENSOR)},
+        )
 
 
 def _member_schema(

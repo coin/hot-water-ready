@@ -8,6 +8,7 @@ import type { CardConfig, Hass, HeaterSnapshot, MemberSnapshot } from "./types";
 import {
   avatarViews,
   awayLine,
+  adminNotes,
   faultBanner,
   greeting,
   heatNowActions,
@@ -142,6 +143,7 @@ export class HotWaterReadyCard extends LitElement {
       <ha-card>
         ${faultBanner(heater, language).map((line) => html`<div class="banner fault" role="alert">${line}</div>`)}
         ${heater.automatic ? nothing : html`<div class="banner manual">${localize(language, "manual")}</div>`}
+        ${adminNotes(heater, language).map((line) => html`<div class="banner manual">${line}</div>`)}
         ${this._renderTop(heater)}
         ${mode === "member"
           ? html`<div class="greeting">${greeting(heater, language)}</div>`

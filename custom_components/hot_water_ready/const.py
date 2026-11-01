@@ -7,7 +7,11 @@ from .core.controller import Settings
 DOMAIN: Final = "hot_water_ready"
 
 # Heater (config entry)
+CONF_HEATER_TYPE: Final = "heater_type"
+HEATER_SWITCH: Final = "switch"  # (a) a relay; the component runs the band itself
+HEATER_CLIMATE: Final = "climate"  # (b) an existing thermostat; the component sets it
 CONF_SWITCH: Final = "switch"
+CONF_CLIMATE: Final = "climate"
 CONF_TEMPERATURE_SENSOR: Final = "temperature_sensor"
 
 # Members (config subentries)
