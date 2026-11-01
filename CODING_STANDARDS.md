@@ -47,7 +47,9 @@ Read by the reviewer. Mechanical rules live in the checks (`scripts/check`, `car
 - A new controller rule gets a scenario test, and `tests/core/test_invariants.py` must still
   pass: it runs hundreds of random households and checks no chatter, nobody told twice, no relay
   on without a window. When a rule adds something that must always hold, add it there, with its
-  can-fail test.
+  can-fail test. A new field on `Settings` is varied in the random households too (`broken_rules`
+  draws margin, gap and tank): the tank, added there only at review, at once showed a rule that
+  could not tell two windows apart.
 
 ## Card
 
