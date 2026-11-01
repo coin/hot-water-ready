@@ -11,4 +11,6 @@
   fake relay is on); `python dev/ha_ws.py '<json>'` sends websocket commands;
   `cd card; node browser-check.mjs firefox` reloads the test dashboard. After a new card build,
   load the dashboard twice: on 2026.10 the first load can come from a cached `index.html`.
+- Portuguese on-screen text: `python scripts/lint-pt-strings.py` runs the owner's PT-PT lint over
+  `translations/pt.json` and the card's `pt` strings (the lint lives outside the repo, not in CI).
 - Review rules: `CODING_STANDARDS.md`.

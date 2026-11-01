@@ -31,11 +31,16 @@ Read by the reviewer. Mechanical rules live in the checks (`scripts/check`, `car
 
 - When version 1's behaviour and the spec differ, the spec wins. A test carried over from version
   1 names the spec section it checks; a test that pins version 1 against the spec is a finding.
-
 - `core/` decides; the HA layer reads entities, calls services and stores state. A rule about
   when to heat or what to tell someone belongs in `core/` with a scenario test.
-- Times are timezone-aware local datetimes; a ready time stays at its wall-clock time across
-  daylight-saving changes.
+- A ready time is a wall-clock time in the house's time zone and stays at it across
+  daylight-saving changes (`core/ready_times.local_datetime`). Arithmetic on moments (leads,
+  graces, gaps) happens in UTC: Python adds a timedelta to a local datetime as wall-clock time,
+  which is an hour out on a change day, and subtracts two datetimes sharing a `tzinfo` the same
+  way.
+- A new controller rule gets a scenario test, and `tests/core/test_invariants.py` must still
+  pass: it runs hundreds of random households and checks no chatter, nobody told twice, no relay
+  on without a window. When a rule adds something that must always hold, add it there.
 
 ## Card
 

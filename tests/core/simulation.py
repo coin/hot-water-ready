@@ -23,6 +23,7 @@ class Toggle:
     at: datetime
     on: bool
     probe: float
+    in_window: bool = True  # whether a window was still open after the switch
 
 
 @dataclass
@@ -58,7 +59,9 @@ class Cylinder:
         if decision.relay_on is not None and decision.relay_on != self.relay:
             self.relay = decision.relay_on
             probe = self.probe
-            self.toggles.append(Toggle(self.now, self.relay, -1.0 if probe is None else probe))
+            in_window = self.controller.state.window is not None
+            probe_value = -1.0 if probe is None else probe
+            self.toggles.append(Toggle(self.now, self.relay, probe_value, in_window))
 
     def run(self, minutes: float, *, draw_per_minute: float = 0.0) -> None:
         """Advance in 0.1-minute ticks, stepping the controller whenever the probe changes and

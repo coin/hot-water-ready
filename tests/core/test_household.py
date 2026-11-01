@@ -337,4 +337,4 @@ def test_state_saved_before_per_member_reports_keeps_ready_sent() -> None:
     }
     state = ControllerState.from_dict(old)
     assert state.window is not None
-    assert state.window.ready_reported
+    assert state.all_told(state.window)

@@ -58,14 +58,12 @@ class Window:
     end: datetime
     members: frozenset[str]
     target: float
-    reported: frozenset[str] = frozenset()  # members already told the water is ready
     # Each member's own ready time in the window; rebuilt from the ready times every step.
     member_times: dict[str, datetime] = field(default_factory=dict, compare=False)
 
-    @property
-    def ready_reported(self) -> bool:
-        """Whether every member of the window has been told the water is ready."""
-        return self.members <= self.reported
+    def ready_for(self, member: str) -> tuple[str, datetime]:
+        """The (member, ready time) pair a "ready" message is about."""
+        return member, self.member_times.get(member, self.ready_at)
 
 
 @dataclass
@@ -74,12 +72,20 @@ class ControllerState:
 
     window: Window | None = None
     heating: bool = False
+    # (member, ready time) pairs already told the water is ready. Kept apart from the window,
+    # which can close and open again, so nobody is told twice (spec 4.9, 4.10).
+    told: frozenset[tuple[str, datetime]] = frozenset()
+
+    def all_told(self, window: Window) -> bool:
+        """Whether every member of the window has been told the water is ready."""
+        return all(window.ready_for(member) in self.told for member in window.members)
 
     def to_dict(self) -> dict[str, Any]:
         """Plain data for storage."""
         window = self.window
         return {
             "heating": self.heating,
+            "told": sorted([member, at.isoformat()] for member, at in self.told),
             "window": None
             if window is None
             else {
@@ -88,7 +94,6 @@ class ControllerState:
                 "end": window.end.isoformat(),
                 "members": sorted(window.members),
                 "target": window.target,
-                "reported": sorted(window.reported),
             },
         }
 
@@ -105,15 +110,21 @@ class ControllerState:
     def _parse(cls, data: object) -> ControllerState:
         if not isinstance(data, dict):
             raise TypeError(type(data).__name__)
+        told: set[tuple[str, datetime]] = set()
+        for pair in data.get("told", []):
+            if not isinstance(pair, list) or len(pair) != 2 or not isinstance(pair[0], str):
+                raise TypeError("told")
+            told.add((pair[0], _parse_aware_datetime(pair[1])))
         raw = data.get("window")
         window = None
         if raw is not None:
             ready_at = _parse_aware_datetime(raw["ready_at"])
             members = _parse_name_list(raw["members"])
+            # Saved by earlier versions, before "told" was kept apart from the window.
             if "reported" in raw:
-                reported = _parse_name_list(raw["reported"])
-            else:  # saved before ready was reported per member
-                reported = members if raw.get("ready_reported") is True else frozenset()
+                told |= {(member, ready_at) for member in _parse_name_list(raw["reported"])}
+            elif raw.get("ready_reported") is True:
+                told |= {(member, ready_at) for member in members}
             last = raw.get("last_ready_at")
             window = Window(
                 ready_at=ready_at,
@@ -121,9 +132,8 @@ class ControllerState:
                 end=_parse_aware_datetime(raw["end"]),
                 members=members,
                 target=float(raw["target"]),
-                reported=reported,
             )
-        return cls(window=window, heating=bool(data.get("heating", False)))
+        return cls(window=window, heating=bool(data.get("heating", False)), told=frozenset(told))
 
 
 def _parse_aware_datetime(raw: object) -> datetime:
@@ -189,6 +199,7 @@ class Controller:
             key=lambda o: o.at,
         )
         state = self.state
+        state.told = frozenset((m, at) for m, at in state.told if at > now - timedelta(days=1))
         self._close_if_done(now)
         if temperature is None:
             # No reading: hold what is happening; the fault guard decides when that ends.
@@ -221,7 +232,7 @@ class Controller:
         window = self.state.window
         if window is None or now < window.end:
             return
-        if window.ready_reported or not self.state.heating:
+        if self.state.all_told(window) or not self.state.heating:
             self._close()
 
     def _open_window(
@@ -278,7 +289,6 @@ class Controller:
             for member in occurrence.members:
                 window.member_times.setdefault(member, occurrence.at)
         window.members = frozenset(window.member_times)
-        window.reported &= window.members
         first, last = wanted[0].at, wanted[-1].at
         later_start = first > window.ready_at
         window.ready_at, window.last_ready_at, window.end = first, last, last + grace
@@ -330,14 +340,12 @@ class Controller:
             and temperature < target - _EPSILON
         ):
             state.heating = True
-        waiting = window.members - window.reported
+        waiting = {window.ready_for(member) for member in window.members} - state.told
         if waiting and temperature >= target - _EPSILON:
-            window.reported |= waiting
+            state.told |= waiting
             # One event per ready time, so each member is told about their own.
             by_time: dict[datetime, set[str]] = {}
-            for member in waiting:
-                by_time.setdefault(window.member_times.get(member, window.ready_at), set()).add(
-                    member
-                )
+            for member, at in waiting:
+                by_time.setdefault(at, set()).add(member)
             for at, members in sorted(by_time.items()):
                 events.append(ControllerEvent("ready", at, frozenset(members), temperature))

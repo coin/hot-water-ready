@@ -149,4 +149,4 @@ async def test_window_saved_before_per_member_reports_loads(
 
     assert data.controller is not None
     assert data.controller.window is not None
-    assert data.controller.window.ready_reported
+    assert data.controller.all_told(data.controller.window)
