@@ -195,15 +195,11 @@ class HeaterOptionsFlow(OptionsFlow):
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """The keep-heating-through gap and who may cancel heat now."""
         if user_input is not None:
-            data = {**self.config_entry.options, **user_input}
-            data.setdefault(CONF_CANCEL_PEOPLE, [])
-            if CONF_CANCEL_PEOPLE not in user_input:
-                data[CONF_CANCEL_PEOPLE] = []
+            # A cleared field is left out of user_input; it means nobody listed.
+            data = {**self.config_entry.options, CONF_CANCEL_PEOPLE: [], **user_input}
             return self.async_create_entry(data=data)
         options = self.config_entry.options
-        gap = self.config_entry.options.get(
-            CONF_KEEP_HEATING_GAP, Settings().keep_heating_gap_minutes
-        )
+        gap = options.get(CONF_KEEP_HEATING_GAP, Settings().keep_heating_gap_minutes)
         schema = probatio.Schema(
             {
                 probatio.Required(CONF_KEEP_HEATING_GAP, default=gap): selector.NumberSelector(

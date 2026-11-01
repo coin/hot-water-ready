@@ -168,6 +168,9 @@
     },
     "no_target": {
       "message": "Hot Water Ready found no phone to tell {name}: {message}"
+    },
+    "send_failed": {
+      "message": "Hot Water Ready could not reach {name}'s phones: {message}"
     }
   }
 }

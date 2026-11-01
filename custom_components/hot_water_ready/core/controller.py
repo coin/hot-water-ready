@@ -40,9 +40,9 @@ class ControllerEvent:
     """Something the household may be told about."""
 
     kind: Literal["heating", "ready", "heat_now_ready", "heat_now_timeout"]
-    ready_at: datetime
+    ready_at: datetime  # the ready time it is about; for heat now, when it was asked
     members: frozenset[str]
-    temperature: float
+    temperature: float | None  # None when there is no reading to report (a timeout)
     minutes: int = 0
 
 
@@ -58,6 +58,9 @@ class Window:
     end: datetime
     members: frozenset[str]
     target: float
+    # Whether the window itself wants the element on, apart from any heat-now request, so a
+    # cancelled request hands the relay back to what the window wants.
+    wants_heat: bool = False
     # Each member's own ready time in the window; rebuilt from the ready times every step.
     member_times: dict[str, datetime] = field(default_factory=dict, compare=False)
 
@@ -118,6 +121,7 @@ class ControllerState:
                 "end": window.end.isoformat(),
                 "members": sorted(window.members),
                 "target": window.target,
+                "wants_heat": window.wants_heat,
             },
         }
 
@@ -156,6 +160,7 @@ class ControllerState:
                 end=_parse_aware_datetime(raw["end"]),
                 members=members,
                 target=float(raw["target"]),
+                wants_heat=_parse_bool(raw.get("wants_heat", data.get("heating", False))),
             )
         raw_now = data.get("heat_now")
         heat_now = None
@@ -166,7 +171,7 @@ class ControllerState:
                 target=float(raw_now["target"]),
                 requesters=_parse_name_list(raw_now["requesters"]),
                 told=_parse_name_list(raw_now["told"]),
-                starting=bool(raw_now["starting"]),
+                starting=_parse_bool(raw_now["starting"]),
             )
         return cls(
             window=window,
@@ -183,6 +188,12 @@ def _parse_aware_datetime(raw: object) -> datetime:
     if moment.tzinfo is None:
         raise ValueError("naive datetime")
     return moment
+
+
+def _parse_bool(raw: object) -> bool:
+    if not isinstance(raw, bool):
+        raise TypeError("bool")
+    return raw
 
 
 def _parse_name_list(raw: object) -> frozenset[str]:
@@ -245,10 +256,10 @@ class Controller:
             heat_now.requesters |= {requester}
 
     def cancel_heat_now(self) -> None:
-        """Drop the heat-now request; a window that wants the heater keeps it."""
+        """Drop the heat-now request; the relay goes back to what an open window wants."""
         self.state.heat_now = None
-        if self.state.window is None:
-            self.state.heating = False
+        window = self.state.window
+        self.state.heating = window is not None and window.wants_heat
 
     def step(
         self, *, now: datetime, temperature: float | None, occurrences: Iterable[Occurrence]
@@ -323,9 +334,7 @@ class Controller:
             return
         waiting = heat_now.requesters - heat_now.told
         if waiting:
-            events.append(
-                ControllerEvent("heat_now_timeout", heat_now.started_at, waiting, float("nan"))
-            )
+            events.append(ControllerEvent("heat_now_timeout", heat_now.started_at, waiting, None))
         self.cancel_heat_now()
 
     # ------------------------------------------------------------------ windows
@@ -370,7 +379,7 @@ class Controller:
             member_times=dict.fromkeys(first.members, first.at),
         )
         if temperature < settings.target - _EPSILON:
-            self.state.heating = True
+            self.state.heating = self.state.window.wants_heat = True
             events.append(
                 ControllerEvent(
                     "heating", first.at, first.members, temperature, minutes=round(lead)
@@ -440,19 +449,26 @@ class Controller:
         settings = self.settings
         state = self.state
         target, margin = settings.target, settings.margin
-        for request in (state.window, state.heat_now):
+        window = state.window
+        for request in (window, state.heat_now):
             if request is not None and request.target != target:
                 request.target = target
                 if temperature < target - _EPSILON:
                     state.heating = True
+                    if request is window:
+                        window.wants_heat = True
         if state.heating and temperature >= target + margin - _EPSILON:
             state.heating = False
+            if window is not None:
+                window.wants_heat = False
         elif (
             not state.heating
             and temperature <= target - margin + _EPSILON
             and temperature < target - _EPSILON
         ):
             state.heating = True
+            if window is not None:
+                window.wants_heat = True
 
     def _tell_window(
         self, window: Window, temperature: float, events: list[ControllerEvent]

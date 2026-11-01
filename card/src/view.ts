@@ -203,17 +203,24 @@ export function awayLine(member: MemberSnapshot, context: Pick<ViewContext, "lan
 }
 
 export interface HeatNowAction {
-  action: "start" | "cancel" | "join";
+  command: "hot_water_ready/heat_now/start" | "hot_water_ready/heat_now/cancel";
   label: TextKey;
   primary: boolean;
 }
 
+const START = "hot_water_ready/heat_now/start";
+const CANCEL = "hot_water_ready/heat_now/cancel";
+
 /** "Aquecer agora"; "Cancelar" for who asked; "Avisar-me também" for anyone else (spec 4.6). */
 export function heatNowActions(heater: HeaterSnapshot): HeatNowAction[] {
   const request = heater.heat_now;
-  if (!request) return [{ action: "start", label: "heat_now.start", primary: true }];
-  if (request.asked) return [{ action: "cancel", label: "heat_now.cancel", primary: true }];
-  const actions: HeatNowAction[] = [{ action: "join", label: "heat_now.join", primary: true }];
-  if (request.can_cancel) actions.push({ action: "cancel", label: "heat_now.cancel", primary: false });
+  if (!request) {
+    return heater.can_ask_heat_now ? [{ command: START, label: "heat_now.start", primary: true }] : [];
+  }
+  if (request.asked) return [{ command: CANCEL, label: "heat_now.cancel", primary: true }];
+  const actions: HeatNowAction[] = heater.can_ask_heat_now
+    ? [{ command: START, label: "heat_now.join", primary: true }]
+    : [];
+  if (request.can_cancel) actions.push({ command: CANCEL, label: "heat_now.cancel", primary: false });
   return actions;
 }

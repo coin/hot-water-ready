@@ -257,6 +257,11 @@ async def ws_heat_now(
     if heater is None:
         connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "Heater not found")
         return
+    if not heater.can_ask_heat_now(connection.user):
+        connection.send_error(
+            msg["id"], websocket_api.ERR_UNAUTHORIZED, "Only members and admins may ask"
+        )
+        return
     await heater.async_heat_now(heater.requester_key(connection.user))
     connection.send_result(msg["id"])
 

@@ -65,7 +65,8 @@ def test_random_households_keep_the_rules(seed: int) -> None:
         )
 
     # A window closing (or the next one opening) may switch at the reading of the switch before;
-    # two switches at one reading, both with a window open, would be the band chattering.
+    # two switches at one reading, both while something asks for heat (a window or heat now),
+    # would be the band chattering.
     chatter = [
         (a.probe, b.at)
         for a, b in itertools.pairwise(cylinder.toggles)

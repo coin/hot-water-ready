@@ -41,6 +41,7 @@ const cold: HeaterSnapshot = {
   next_ready: null,
   is_admin: true,
   me: "m1",
+  can_ask_heat_now: true,
   heat_now: null,
   today: [],
   members: [tiago, maria],
@@ -309,24 +310,39 @@ describe("awayLine", () => {
 
 describe("heatNowActions", () => {
   it("offers to heat now when nothing is running", () => {
-    expect(heatNowActions(cold)).toEqual([{ action: "start", label: "heat_now.start", primary: true }]);
+    expect(heatNowActions(cold)).toEqual([
+      { command: "hot_water_ready/heat_now/start", label: "heat_now.start", primary: true },
+    ]);
   });
 
   it("offers to cancel to someone who asked", () => {
     const asked = { ...cold, heat_now: { requesters: ["m1"], asked: true, can_cancel: true } };
-    expect(heatNowActions(asked)).toEqual([{ action: "cancel", label: "heat_now.cancel", primary: true }]);
+    expect(heatNowActions(asked)).toEqual([
+      { command: "hot_water_ready/heat_now/cancel", label: "heat_now.cancel", primary: true },
+    ]);
   });
 
   it("offers to be told too to someone who did not ask", () => {
     const other = { ...cold, heat_now: { requesters: ["m2"], asked: false, can_cancel: false } };
-    expect(heatNowActions(other)).toEqual([{ action: "join", label: "heat_now.join", primary: true }]);
+    expect(heatNowActions(other)).toEqual([
+      { command: "hot_water_ready/heat_now/start", label: "heat_now.join", primary: true },
+    ]);
   });
 
   it("also offers an administrator to cancel someone else's request", () => {
     const other = { ...cold, heat_now: { requesters: ["m2"], asked: false, can_cancel: true } };
     expect(heatNowActions(other)).toEqual([
-      { action: "join", label: "heat_now.join", primary: true },
-      { action: "cancel", label: "heat_now.cancel", primary: false },
+      { command: "hot_water_ready/heat_now/start", label: "heat_now.join", primary: true },
+      { command: "hot_water_ready/heat_now/cancel", label: "heat_now.cancel", primary: false },
+    ]);
+  });
+
+  it("offers nothing to ask to someone who may not ask, but still lets them cancel if allowed", () => {
+    const viewer = { ...cold, can_ask_heat_now: false };
+    expect(heatNowActions(viewer)).toEqual([]);
+    const running = { ...viewer, heat_now: { requesters: ["m2"], asked: false, can_cancel: true } };
+    expect(heatNowActions(running)).toEqual([
+      { command: "hot_water_ready/heat_now/cancel", label: "heat_now.cancel", primary: false },
     ]);
   });
 });

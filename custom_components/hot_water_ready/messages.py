@@ -13,7 +13,6 @@ import logging
 
 from homeassistant.components import persistent_notification
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er, translation
 
 from .const import DOMAIN
@@ -62,7 +61,10 @@ def format_temperature(hass: HomeAssistant, value: float) -> str:
 async def async_send(
     hass: HomeAssistant, targets: Iterable[str], title: str, message: str
 ) -> list[str]:
-    """Send to every target; returns the ones that took it."""
+    """Send to every target; returns the ones that took it.
+
+    Any failure is caught per target, so one broken phone never stops the others.
+    """
     sent: list[str] = []
     for target in targets:
         try:
@@ -72,17 +74,32 @@ async def async_send(
                 {"entity_id": target, "title": title, "message": message},
                 blocking=True,
             )
-        except HomeAssistantError as err:
-            _LOGGER.warning("Could not notify %s: %s", target, err)
+        except Exception:
+            _LOGGER.warning("Could not notify %s", target, exc_info=True)
         else:
             sent.append(target)
     return sent
 
 
-async def async_nobody_to_tell(hass: HomeAssistant, who: str, title: str, message: str) -> None:
-    """Say, once, that `who` could not be reached, and what they would have been told."""
-    note = await async_message(hass, "no_target", {"name": who, "message": message})
-    _LOGGER.warning("Nobody to notify for %s; the message was: %s", who, message)
+async def async_nobody_to_tell(
+    hass: HomeAssistant,
+    key: str,
+    name: str,
+    title: str,
+    message: str,
+    *,
+    reason: str,
+    log: bool,
+) -> None:
+    """Show that `name` could not be reached, and what they would have been told.
+
+    `reason` is "no_target" (no phone found) or "send_failed" (every phone refused). The
+    persistent notification is one per person (keyed by `key`, not the name) and is replaced by
+    the latest message; the log warning is written only when `log` is set.
+    """
+    note = await async_message(hass, reason, {"name": name, "message": message})
+    if log:
+        _LOGGER.warning("Nobody to notify for %s (%s); the message was: %s", name, reason, message)
     persistent_notification.async_create(
-        hass, note, title=title, notification_id=f"{DOMAIN}_no_target_{who}"
+        hass, note, title=title, notification_id=f"{DOMAIN}_unreachable_{key}"
     )

@@ -126,3 +126,53 @@ def test_heat_now_state_round_trips() -> None:
     state = cylinder.controller.state
 
     assert type(state).from_dict(state.to_dict()) == state
+
+
+def test_cancelling_inside_a_window_that_is_not_heating_switches_off() -> None:
+    # The window is open with the water inside the band (41.5, not heating). Heat now heats
+    # it; cancelling hands the relay back to the window, which does not want it.
+    cylinder = _cylinder(42.5)
+    cylinder.occurrences = [Occurrence(NOON + timedelta(minutes=10), frozenset({"maria"}))]
+    cylinder.run(1)  # the window opens with the water ready, so it does not heat
+    assert cylinder.controller.state.window is not None
+    cylinder.water = 41.5  # cools inside the band: above the 41 restart point
+    cylinder.run(1)
+    assert not cylinder.relay
+    cylinder.heat_now("tiago")
+    assert cylinder.relay
+    cylinder.cancel_heat_now()
+
+    assert not cylinder.relay
+
+
+def test_heat_now_state_from_corrupt_data_is_refused() -> None:
+    import pytest  # noqa: PLC0415
+
+    from custom_components.hot_water_ready.core.controller import ControllerState  # noqa: PLC0415
+
+    good = {
+        "started_at": "2026-11-02T12:00:00+00:00",
+        "deadline": "2026-11-02T16:15:00+00:00",
+        "target": 42.0,
+        "requesters": ["tiago"],
+        "told": [],
+        "starting": False,
+    }
+    for bad in (
+        {**good, "starting": "false"},
+        {**good, "requesters": "tiago"},
+        {**good, "deadline": "2026-11-02T16:15:00"},
+        {k: v for k, v in good.items() if k != "target"},
+    ):
+        with pytest.raises(ValueError, match="controller state"):
+            ControllerState.from_dict({"heating": True, "heat_now": bad})
+
+
+def test_a_timeout_carries_no_temperature() -> None:
+    cylinder = _cylinder(30.0)
+    cylinder.heat_per_minute = 0.0
+    cylinder.heat_now("tiago")
+    cylinder.run(256)
+
+    ((_, timeout),) = [(at, e) for at, e in cylinder.events if e.kind == "heat_now_timeout"]
+    assert timeout.temperature is None

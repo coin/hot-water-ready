@@ -4,8 +4,10 @@ from datetime import timedelta
 from typing import Any
 
 from freezegun.api import FrozenDateTimeFactory
+from homeassistant.auth.const import GROUP_ID_USER
 from homeassistant.components import persistent_notification
 from homeassistant.core import Context, HomeAssistant, ServiceCall
+from homeassistant.exceptions import HomeAssistantError, Unauthorized
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 import pytest
 from pytest_homeassistant_custom_component.common import (
@@ -298,3 +300,58 @@ async def test_card_sees_who_asked_and_whether_it_may_cancel(
     snapshot = (await client.receive_json())["event"]
 
     assert snapshot["heat_now"] == {"requesters": [TIAGO], "asked": False, "can_cancel": False}
+
+
+@pytest.fixture
+async def stranger(hass: HomeAssistant) -> MockUser:
+    """A user who is not an admin and is no member's person."""
+    users = await hass.auth.async_get_group(GROUP_ID_USER)
+    assert users is not None
+    return MockUser(name="Visitor", groups=[users]).add_to_hass(hass)
+
+
+async def test_someone_who_is_not_a_member_may_not_ask(
+    hass: HomeAssistant,
+    heater: MockConfigEntry,
+    hass_ws_client: WebSocketGenerator,
+    stranger: MockUser,
+    sent: list[ServiceCall],
+) -> None:
+    _water(hass, 40.0)
+    with pytest.raises(Unauthorized):
+        await _press(hass, stranger)
+    reply = await _ws(
+        hass,
+        hass_ws_client,
+        {"type": "hot_water_ready/heat_now/start", "entry_id": heater.entry_id},
+        stranger,
+    )
+
+    assert reply["error"]["code"] == "unauthorized"
+    assert hass.states.get("sensor.cylinder_status").state == "waiting"
+
+
+async def test_phones_that_refuse_are_reported_as_such_and_logged_once(
+    hass: HomeAssistant,
+    heater: MockConfigEntry,
+    maria_user: MockUser,
+    phones: dict[str, str],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    async_mock_service(hass, "switch", "turn_on")
+    async_mock_service(hass, "switch", "turn_off")
+
+    async def refuse(call: ServiceCall) -> None:
+        raise HomeAssistantError("phone unreachable")
+
+    hass.services.async_register("notify", "send_message", refuse)
+    for _ in range(2):  # two requests, both unreachable
+        _water(hass, 40.0)
+        await _press(hass, maria_user)
+        _water(hass, 43.5)
+        await hass.async_block_till_done()
+
+    notes = persistent_notification._async_get_or_create_notifications(hass)
+    (note,) = (n for n in notes.values() if n["notification_id"].startswith("hot_water_ready"))
+    assert "could not reach Maria's phones" in note["message"]
+    assert caplog.text.count("Nobody to notify for Maria") == 1

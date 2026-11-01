@@ -71,6 +71,7 @@ describe("HeaterSubscription", () => {
       next_ready: null,
       is_admin: true,
       me: null,
+      can_ask_heat_now: true,
       heat_now: null,
       today: [],
       members: [],

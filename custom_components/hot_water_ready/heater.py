@@ -117,6 +117,7 @@ class Heater:
         self._data = data
         self._listeners: list[Listener] = []
         self.device_id = ""  # set once the heater's device is registered
+        self._unreachable: set[str] = set()  # warned about once, until a message gets through
         self._controller = Controller(self._settings(), data.controller)
 
     # ------------------------------------------------------------------ what it is
@@ -316,13 +317,10 @@ class Heater:
 
     def user_member_id(self, user: User) -> str | None:
         """The member whose person belongs to this user, if any."""
-        for member in self.members:
-            if member.person is None:
-                continue
-            person = self.hass.states.get(member.person)
-            if person is not None and person.attributes.get("user_id") == user.id:
-                return member.id
-        return None
+        person = self.person_of(user)
+        if person is None:
+            return None
+        return next((m.id for m in self.members if m.person == person), None)
 
     def can_edit(self, user: User | None, member_id: str) -> bool:
         """Admins edit everyone; a linked member edits only their own (spec 2).
@@ -357,9 +355,13 @@ class Heater:
 
     @property
     def heat_now_requesters(self) -> frozenset[str]:
-        """Who is waiting on the heat-now request; empty when there is none."""
+        """Who asked for heat now and will be told; empty when there is no request."""
         heat_now = self._controller.state.heat_now
-        return frozenset() if heat_now is None else heat_now.requesters
+        return frozenset() if heat_now is None else heat_now.requesters - {NOBODY}
+
+    def can_ask_heat_now(self, user: User | None) -> bool:
+        """Any member asks (spec 4.6); admins and automations may too."""
+        return user is None or user.is_admin or self.user_member_id(user) is not None
 
     def can_cancel_heat_now(self, user: User | None) -> bool:
         """Who asked and admins; the options can add a list of people, or everyone (spec 2)."""
@@ -372,7 +374,7 @@ class Heater:
             CONF_CANCEL_PEOPLE, []
         ):
             return True
-        return self.requester_key(user) in self.heat_now_requesters - {NOBODY}
+        return self.requester_key(user) in self.heat_now_requesters
 
     async def async_heat_now(self, requester: str) -> None:
         """Ask for hot water now, or join the request already running."""
@@ -411,7 +413,7 @@ class Heater:
 
     async def _async_tell(self, events: tuple[ControllerEvent, ...]) -> None:
         for event in events:
-            if event.kind == "heat_now_ready":
+            if event.kind == "heat_now_ready" and event.temperature is not None:
                 key = "heat_now_ready"
                 placeholders = {"temperature": format_temperature(self.hass, event.temperature)}
             elif event.kind == "heat_now_timeout":
@@ -427,8 +429,18 @@ class Heater:
         if found is None:
             return  # a virtual member with nobody chosen: not an error
         name, targets = found
-        if not await async_send(self.hass, targets, self.name, message):
-            await async_nobody_to_tell(self.hass, name, self.name, message)
+        if not targets:
+            reason = "no_target"
+        elif await async_send(self.hass, targets, self.name, message):
+            self._unreachable.discard(who)
+            return
+        else:
+            reason = "send_failed"
+        first_time = who not in self._unreachable
+        self._unreachable.add(who)
+        await async_nobody_to_tell(
+            self.hass, who, name, self.name, message, reason=reason, log=first_time
+        )
 
     # ------------------------------------------------------------------ running
 
@@ -478,7 +490,7 @@ class Heater:
         )
         self._apply(decision.relay_on)
         if decision.events:
-            self.hass.async_create_task(self._async_tell(decision.events), eager_start=False)
+            self.entry.async_create_task(self.hass, self._async_tell(decision.events))
         if self._controller.state.to_dict() != before:
             self._data.controller = self._controller.state
             self._store.async_delay_save(self._data)
@@ -546,11 +558,12 @@ class Heater:
             else {"at": next_ready.at.isoformat(), "members": sorted(next_ready.members)},
             "is_admin": user.is_admin,
             "me": me,
+            "can_ask_heat_now": self.can_ask_heat_now(user),
             "heat_now": None
             if self._controller.state.heat_now is None
             else {
-                "requesters": sorted(self.heat_now_requesters - {NOBODY}),
-                "asked": self.requester_key(user) in self.heat_now_requesters - {NOBODY},
+                "requesters": sorted(self.heat_now_requesters),
+                "asked": self.requester_key(user) in self.heat_now_requesters,
                 "can_cancel": self.can_cancel_heat_now(user),
             },
             "today": [

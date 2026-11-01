@@ -168,6 +168,9 @@
     },
     "no_target": {
       "message": "O Hot Water Ready não encontrou um telemóvel para avisar {name}: {message}"
+    },
+    "send_failed": {
+      "message": "O Hot Water Ready não conseguiu avisar os telemóveis de {name}: {message}"
     }
   }
 }

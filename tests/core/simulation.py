@@ -23,7 +23,7 @@ class Toggle:
     at: datetime
     on: bool
     probe: float
-    in_window: bool = True  # whether a window was still open after the switch
+    in_window: bool = True  # whether a window or heat now was still asking after the switch
 
 
 @dataclass
@@ -59,7 +59,8 @@ class Cylinder:
         if decision.relay_on is not None and decision.relay_on != self.relay:
             self.relay = decision.relay_on
             probe = self.probe
-            in_window = self.controller.state.window is not None
+            state = self.controller.state
+            in_window = state.window is not None or state.heat_now is not None
             probe_value = -1.0 if probe is None else probe
             self.toggles.append(Toggle(self.now, self.relay, probe_value, in_window))
 

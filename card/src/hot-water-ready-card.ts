@@ -224,9 +224,7 @@ export class HotWaterReadyCard extends LitElement {
               (item) => html`<button
                 class=${item.primary ? "primary" : "secondary"}
                 @click=${() => {
-                  void this._call({
-                    type: item.action === "cancel" ? "hot_water_ready/heat_now/cancel" : "hot_water_ready/heat_now/start",
-                  });
+                  void this._call({ type: item.command });
                 }}
               >
                 ${localize(this._language, item.label)}
