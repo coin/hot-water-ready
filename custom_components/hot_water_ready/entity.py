@@ -44,16 +44,21 @@ class HeaterEntity(Entity):
         self._attr_device_info = heater_device_info(heater)
 
     async def _async_calling_user(self) -> User | None:
-        """The user behind the current service call; None for automations and the system."""
+        """The user behind the current service call; None for automations and the system.
+
+        A user id that no longer resolves to a user is refused rather than treated as nobody.
+        """
         user_id = self._context.user_id if self._context else None
-        return None if user_id is None else await self.hass.auth.async_get_user(user_id)
+        if user_id is None:
+            return None
+        user = await self.hass.auth.async_get_user(user_id)
+        if user is None:
+            raise Unauthorized(context=self._context)
+        return user
 
     async def async_require_admin(self) -> None:
-        """Heater settings are for administrators (spec 2); calls without a user are allowed."""
-        if self._context and self._context.user_id is None:
-            return
-        user = await self._async_calling_user()
-        if user is None or not user.is_admin:
+        """Heater settings are for administrators (spec 2)."""
+        if not self.heater.can_change_settings(await self._async_calling_user()):
             raise Unauthorized(context=self._context)
 
     async def async_added_to_hass(self) -> None:
@@ -79,8 +84,5 @@ class MemberEntity(HeaterEntity):
 
     async def async_require_editor(self) -> None:
         """Admins change every member; a linked member only their own (spec 2)."""
-        if self._context and self._context.user_id is None:
-            return
-        user = await self._async_calling_user()
-        if user is None or not self.heater.can_edit(user, self.member_id):
+        if not self.heater.can_edit(await self._async_calling_user(), self.member_id):
             raise Unauthorized(context=self._context)

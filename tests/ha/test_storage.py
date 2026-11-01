@@ -105,3 +105,48 @@ async def test_corrupt_shapes_load_as_defaults(
 
     assert (data.target, data.margin, data.controller) == (42.0, 1.0, None)
     assert all(times == [] for times in data.ready_times.values())
+
+
+@pytest.mark.parametrize(
+    "away",
+    [{"on": "yes"}, {"on": True, "until": 20261104}, {"on": True, "until": "4 Nov"}, ["on"]],
+)
+async def test_invalid_away_is_dropped_on_load(
+    hass: HomeAssistant, hass_storage: dict[str, Any], away: Any
+) -> None:
+    hass_storage["hot_water_ready.entry1"] = {
+        "version": 1,
+        "minor_version": 1,
+        "key": "hot_water_ready.entry1",
+        "data": {"members": {"m1": {"ready_times": [], "away": away}}},
+    }
+    data = await HeaterStore(hass, "entry1").async_load()
+
+    assert "m1" not in data.away
+
+
+async def test_window_saved_before_per_member_reports_loads(
+    hass: HomeAssistant, hass_storage: dict[str, Any]
+) -> None:
+    hass_storage["hot_water_ready.entry1"] = {
+        "version": 1,
+        "minor_version": 1,
+        "key": "hot_water_ready.entry1",
+        "data": {
+            "controller": {
+                "heating": False,
+                "window": {
+                    "ready_at": "2026-11-02T07:00:00+00:00",
+                    "end": "2026-11-02T07:15:00+00:00",
+                    "members": ["m1"],
+                    "target": 42.0,
+                    "ready_reported": True,
+                },
+            }
+        },
+    }
+    data = await HeaterStore(hass, "entry1").async_load()
+
+    assert data.controller is not None
+    assert data.controller.window is not None
+    assert data.controller.window.ready_reported

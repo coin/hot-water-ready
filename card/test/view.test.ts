@@ -11,7 +11,9 @@ import {
   readyTimeRows,
   selectedMember,
   sheetIsComplete,
-  showsAvatars,
+  showsAvatarRow,
+  shownMember,
+  todayInHouse,
   type ViewContext,
 } from "../src/view";
 
@@ -160,10 +162,36 @@ describe("selectedMember", () => {
   });
 });
 
-describe("showsAvatars", () => {
-  it("shows the avatar row only when there is someone to switch to", () => {
-    expect(showsAvatars(cold)).toBe(true);
-    expect(showsAvatars({ ...cold, members: [tiago] })).toBe(false);
+describe("showsAvatarRow", () => {
+  it("always shows it to administrators, who add members from it", () => {
+    expect(showsAvatarRow({ ...cold, members: [tiago] })).toBe(true);
+  });
+
+  it("never shows it to a member, who sees their own list", () => {
+    expect(showsAvatarRow({ ...cold, is_admin: false, me: "m2" })).toBe(false);
+  });
+
+  it("shows it to anyone else only when there is someone to switch to", () => {
+    const viewer = { ...cold, is_admin: false, me: null };
+    expect(showsAvatarRow(viewer)).toBe(true);
+    expect(showsAvatarRow({ ...viewer, members: [tiago] })).toBe(false);
+  });
+});
+
+describe("shownMember", () => {
+  it("shows a member their own list whatever was picked", () => {
+    expect(shownMember({ ...cold, is_admin: false, me: "m2" }, "m1")?.id).toBe("m2");
+  });
+
+  it("shows an administrator the member picked", () => {
+    expect(shownMember(cold, "m2")?.id).toBe("m2");
+  });
+});
+
+describe("todayInHouse", () => {
+  it("is the house's date, for the earliest last day away", () => {
+    expect(todayInHouse({ ...pt, now: new Date("2026-11-02T23:30:00Z") })).toBe("2026-11-02");
+    expect(todayInHouse({ ...pt, now: new Date("2026-07-01T23:30:00Z") })).toBe("2026-07-02");
   });
 });
 
@@ -257,7 +285,7 @@ describe("houseToday", () => {
   });
 
   it("says when nobody else wants water today", () => {
-    expect(houseToday({ ...cold, me: "m1", today: [] }, pt, "m1")).toBe("Ninguém mais hoje");
+    expect(houseToday({ ...cold, me: "m1", today: [] }, pt, "m1")).toBe("Mais ninguém hoje");
     expect(houseToday({ ...cold, me: "m1", today: [] }, en, "m1")).toBe("Nobody else today");
   });
 });

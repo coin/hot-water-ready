@@ -54,16 +54,13 @@ class Window:
     """
 
     ready_at: datetime
+    last_ready_at: datetime
     end: datetime
     members: frozenset[str]
     target: float
-    last_ready_at: datetime | None = None
     reported: frozenset[str] = frozenset()  # members already told the water is ready
-
-    def __post_init__(self) -> None:
-        """A window starts as one ready time."""
-        if self.last_ready_at is None:
-            self.last_ready_at = self.ready_at
+    # Each member's own ready time in the window; rebuilt from the ready times every step.
+    member_times: dict[str, datetime] = field(default_factory=dict, compare=False)
 
     @property
     def ready_reported(self) -> bool:
@@ -87,12 +84,10 @@ class ControllerState:
             if window is None
             else {
                 "ready_at": window.ready_at.isoformat(),
+                "last_ready_at": window.last_ready_at.isoformat(),
                 "end": window.end.isoformat(),
                 "members": sorted(window.members),
                 "target": window.target,
-                "last_ready_at": None
-                if window.last_ready_at is None
-                else window.last_ready_at.isoformat(),
                 "reported": sorted(window.reported),
             },
         }
@@ -113,21 +108,25 @@ class ControllerState:
         raw = data.get("window")
         window = None
         if raw is not None:
-            ready_at = _aware(raw["ready_at"])
-            end = _aware(raw["end"])
+            ready_at = _parse_aware_datetime(raw["ready_at"])
+            members = _parse_name_list(raw["members"])
+            if "reported" in raw:
+                reported = _parse_name_list(raw["reported"])
+            else:  # saved before ready was reported per member
+                reported = members if raw.get("ready_reported") is True else frozenset()
             last = raw.get("last_ready_at")
             window = Window(
                 ready_at=ready_at,
-                end=end,
-                members=_names(raw["members"]),
+                last_ready_at=ready_at if last is None else _parse_aware_datetime(last),
+                end=_parse_aware_datetime(raw["end"]),
+                members=members,
                 target=float(raw["target"]),
-                last_ready_at=ready_at if last is None else _aware(last),
-                reported=_names(raw.get("reported", [])),
+                reported=reported,
             )
         return cls(window=window, heating=bool(data.get("heating", False)))
 
 
-def _aware(raw: object) -> datetime:
+def _parse_aware_datetime(raw: object) -> datetime:
     if not isinstance(raw, str):
         raise TypeError("datetime")
     moment = datetime.fromisoformat(raw)
@@ -136,7 +135,7 @@ def _aware(raw: object) -> datetime:
     return moment
 
 
-def _names(raw: object) -> frozenset[str]:
+def _parse_name_list(raw: object) -> frozenset[str]:
     if not isinstance(raw, list) or not all(isinstance(item, str) for item in raw):
         raise TypeError("list of names")
     return frozenset(raw)
@@ -180,11 +179,15 @@ class Controller:
     ) -> Decision:
         """Look at the house now and decide.
 
-        Everything is worked in UTC: adding minutes to a local time is wall-clock arithmetic in
-        Python, which is an hour out across a daylight-saving change.
+        `occurrences` must reach back to the open window's first ready time. Everything is worked
+        in UTC: adding minutes to a local time is wall-clock arithmetic in Python, which is an
+        hour out across a daylight-saving change.
         """
         now = now.astimezone(UTC)
-        occurrences = [Occurrence(o.at.astimezone(UTC), o.members) for o in occurrences]
+        ready_times = sorted(
+            (Occurrence(o.at.astimezone(UTC), o.members) for o in occurrences),
+            key=lambda o: o.at,
+        )
         state = self.state
         self._close_if_done(now)
         if temperature is None:
@@ -192,90 +195,56 @@ class Controller:
             return Decision(relay_on=state.heating and state.window is not None)
 
         events: list[ControllerEvent] = []
-        coming = self._coming(now, occurrences)
+        if state.window is not None:
+            self._follow_ready_times(state.window, now, temperature, ready_times)
         if state.window is None:
-            self._open_window(now, temperature, coming, events)
+            self._open_window(now, temperature, ready_times, events)
         if state.window is not None:
-            self._drop_withdrawn(state.window, occurrences)
-        if state.window is not None:
-            self._join_close_ones(state.window, temperature, coming)
+            self._join_close_ones(state.window, ready_times)
             self._band(state.window, temperature, events)
-            self._close_if_done(now)  # a late window closes the moment it is ready
+            self._close_if_done(now)  # a window past its end closes the moment it is ready
         else:
             state.heating = False
         return Decision(relay_on=state.heating, events=tuple(events))
 
+    # ------------------------------------------------------------------ windows
+
+    def _grace(self) -> timedelta:
+        return timedelta(minutes=self.settings.grace_minutes)
+
+    def _close(self) -> None:
+        self.state.window = None
+        self.state.heating = False
+
     def _close_if_done(self, now: datetime) -> None:
         """Close a window past its end, unless it is still heating towards ready (spec 4.2)."""
-        state = self.state
-        window = state.window
+        window = self.state.window
         if window is None or now < window.end:
             return
-        if window.ready_reported or not state.heating:
-            state.window = None
-            state.heating = False
-
-    def _coming(self, now: datetime, occurrences: Iterable[Occurrence]) -> list[Occurrence]:
-        """Ready times whose grace has not passed, soonest first."""
-        grace = timedelta(minutes=self.settings.grace_minutes)
-        return sorted((o for o in occurrences if o.at + grace > now), key=lambda o: o.at)
-
-    def _drop_withdrawn(self, window: Window, occurrences: list[Occurrence]) -> None:
-        """Keep only the members whose ready times are still wanted; with none left, close.
-
-        A ready time is withdrawn when it is switched off or removed, or its member goes away.
-        `occurrences` must reach back to the window's first ready time.
-        """
-        wanted: frozenset[str] = frozenset()
-        for occurrence in occurrences:
-            if window.ready_at <= occurrence.at <= (window.last_ready_at or window.ready_at):
-                wanted |= occurrence.members
-        if wanted:
-            window.members = wanted
-            window.reported &= wanted
-        else:
-            self.state.window = None
-            self.state.heating = False
-
-    def _join_close_ones(
-        self, window: Window, temperature: float, coming: list[Occurrence]
-    ) -> None:
-        """Take in the next ready times whose windows would overlap this one or start less than
-        the keep-heating-through gap after it ends: the heater keeps heating through (spec 4.1).
-        """
-        settings = self.settings
-        lead = timedelta(minutes=lead_minutes(settings, temperature))
-        gap = timedelta(minutes=settings.keep_heating_gap_minutes)
-        grace = timedelta(minutes=settings.grace_minutes)
-        last = window.last_ready_at or window.ready_at
-        for occurrence in coming:
-            if occurrence.at <= last:
-                if occurrence.at >= window.ready_at:
-                    window.members |= occurrence.members  # someone added at a time inside it
-                continue
-            if occurrence.at - lead - window.end >= gap:
-                break
-            window.members |= occurrence.members
-            window.last_ready_at = last = occurrence.at
-            window.end = occurrence.at + grace
+        if window.ready_reported or not self.state.heating:
+            self._close()
 
     def _open_window(
         self,
         now: datetime,
         temperature: float,
-        coming: list[Occurrence],
+        ready_times: list[Occurrence],
         events: list[ControllerEvent],
     ) -> None:
         settings = self.settings
-        grace = timedelta(minutes=settings.grace_minutes)
-        if not coming:
+        first = next((o for o in ready_times if o.at + self._grace() > now), None)
+        if first is None:
             return
-        first = coming[0]
         lead = lead_minutes(settings, temperature)
         if now < first.at - timedelta(minutes=lead):
             return
         self.state.window = Window(
-            ready_at=first.at, end=first.at + grace, members=first.members, target=settings.target
+            ready_at=first.at,
+            last_ready_at=first.at,
+            end=first.at + self._grace(),
+            members=first.members,
+            target=settings.target,
+            member_times=dict.fromkeys(first.members, first.at),
         )
         if temperature < settings.target - _EPSILON:
             self.state.heating = True
@@ -284,6 +253,61 @@ class Controller:
                     "heating", first.at, first.members, temperature, minutes=round(lead)
                 )
             )
+
+    def _follow_ready_times(
+        self, window: Window, now: datetime, temperature: float, ready_times: list[Occurrence]
+    ) -> None:
+        """Bring the window in line with the ready times as they are now.
+
+        A ready time can be switched off, removed or moved, or its member go away. The window
+        keeps the ones still wanted: those between its first and last ready time, plus any moved
+        earlier but not yet past. With none left it closes. When the first one goes and the next
+        would not have started yet, it closes too, and opens again when that one's lead says so.
+        """
+        grace = self._grace()
+        wanted = [
+            o
+            for o in ready_times
+            if o.at <= window.last_ready_at and (o.at >= window.ready_at or o.at + grace > now)
+        ]
+        if not wanted:
+            self._close()
+            return
+        window.member_times = {}
+        for occurrence in wanted:
+            for member in occurrence.members:
+                window.member_times.setdefault(member, occurrence.at)
+        window.members = frozenset(window.member_times)
+        window.reported &= window.members
+        first, last = wanted[0].at, wanted[-1].at
+        later_start = first > window.ready_at
+        window.ready_at, window.last_ready_at, window.end = first, last, last + grace
+        not_due_yet = now < first - timedelta(minutes=lead_minutes(self.settings, temperature))
+        if later_start and not self.state.heating and not_due_yet:
+            self._close()
+
+    def _join_close_ones(self, window: Window, ready_times: list[Occurrence]) -> None:
+        """Take in the next ready times that keep the heater heating through (spec 4.1).
+
+        One joins when its own window would start less than the keep-heating-through gap after
+        this one ends. Its start is judged with the water at the target, where it will be by
+        then, so the answer does not depend on how cold the water happens to be now.
+        """
+        settings = self.settings
+        lead = timedelta(minutes=lead_minutes(settings, settings.target))
+        gap = timedelta(minutes=settings.keep_heating_gap_minutes)
+        for occurrence in ready_times:
+            if occurrence.at <= window.last_ready_at:
+                continue
+            if occurrence.at - lead - window.end >= gap:
+                break
+            for member in occurrence.members:
+                window.member_times.setdefault(member, occurrence.at)
+            window.members |= occurrence.members
+            window.last_ready_at = occurrence.at
+            window.end = occurrence.at + self._grace()
+
+    # ------------------------------------------------------------------ band
 
     def _band(self, window: Window, temperature: float, events: list[ControllerEvent]) -> None:
         """Ready at the target; stop at target + margin; restart at target - margin.
@@ -309,4 +333,11 @@ class Controller:
         waiting = window.members - window.reported
         if waiting and temperature >= target - _EPSILON:
             window.reported |= waiting
-            events.append(ControllerEvent("ready", window.ready_at, waiting, temperature))
+            # One event per ready time, so each member is told about their own.
+            by_time: dict[datetime, set[str]] = {}
+            for member in waiting:
+                by_time.setdefault(window.member_times.get(member, window.ready_at), set()).add(
+                    member
+                )
+            for at, members in sorted(by_time.items()):
+                events.append(ControllerEvent("ready", at, frozenset(members), temperature))

@@ -17,7 +17,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 import probatio
 
 from .const import DOMAIN, signal_heater_updated
-from .heater import Heater, MemberNotFoundError, ReadyTimeNotFoundError
+from .heater import AwayDateInThePastError, Heater, MemberNotFoundError, ReadyTimeNotFoundError
 from .storage import ready_time_to_dict
 
 WEEKDAYS = probatio.All(
@@ -230,5 +230,11 @@ async def ws_set_away(
     heater: Heater,
 ) -> None:
     """Pause or resume a member's ready times, optionally until a date (the last day away)."""
-    await heater.async_set_away(msg["member_id"], msg["away"], msg.get("until"))
+    try:
+        await heater.async_set_away(msg["member_id"], msg["away"], msg.get("until"))
+    except AwayDateInThePastError:
+        connection.send_error(
+            msg["id"], websocket_api.ERR_INVALID_FORMAT, "The last day away is in the past"
+        )
+        return
     connection.send_result(msg["id"])

@@ -122,5 +122,18 @@
         }
       }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Heater settings",
+        "data": {
+          "keep_heating_gap_minutes": "Keep heating through gaps shorter than"
+        },
+        "data_description": {
+          "keep_heating_gap_minutes": "Ready times this close share one window and the heater keeps heating through, instead of letting the water cool in between."
+        }
+      }
+    }
   }
 }

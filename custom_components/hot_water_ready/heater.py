@@ -21,6 +21,7 @@ from homeassistant.util import dt as dt_util
 from .const import (
     COLOURS,
     CONF_COLOUR,
+    CONF_KEEP_HEATING_GAP,
     CONF_PERSON,
     CONF_RECIPIENTS,
     CONF_SWITCH,
@@ -48,6 +49,10 @@ class MemberNotFoundError(LookupError):
 
 class ReadyTimeNotFoundError(LookupError):
     """No ready time with that id for this member."""
+
+
+class AwayDateInThePastError(ValueError):
+    """An away's last day cannot be before today."""
 
 
 @dataclass(frozen=True)
@@ -139,7 +144,15 @@ class Heater:
         return self._data.margin
 
     def _settings(self) -> Settings:
-        return replace(Settings(), target=self._data.target, margin=self._data.margin)
+        options = self.entry.options
+        return replace(
+            Settings(),
+            target=self._data.target,
+            margin=self._data.margin,
+            keep_heating_gap_minutes=float(
+                options.get(CONF_KEEP_HEATING_GAP, Settings().keep_heating_gap_minutes)
+            ),
+        )
 
     @property
     def temperature(self) -> float | None:
@@ -187,8 +200,13 @@ class Heater:
         return self.occurrences(midnight, tomorrow)
 
     async def async_set_away(self, member_id: str, on: bool, until: date | None) -> None:
-        """Pause or resume a member's ready times; an end date ends the pause by itself."""
+        """Pause or resume a member's ready times; an end date ends the pause by itself.
+
+        `until` is the last day away and may not be in the past.
+        """
         self.member(member_id)
+        if on and until is not None and until < dt_util.now().date():
+            raise AwayDateInThePastError(until)
         self._data.away[member_id] = Away(on=on, until=until if on else None)
         await self._async_saved_and_stepped()
 
@@ -284,9 +302,18 @@ class Heater:
                 return member.id
         return None
 
-    def can_edit(self, user: User, member_id: str) -> bool:
-        """Admins edit everyone; a linked member edits only their own (spec 2)."""
+    def can_edit(self, user: User | None, member_id: str) -> bool:
+        """Admins edit everyone; a linked member edits only their own (spec 2).
+
+        No user means an automation or Home Assistant itself, which may do anything.
+        """
+        if user is None:
+            return True
         return user.is_admin or self.user_member_id(user) == member_id
+
+    def can_change_settings(self, user: User | None) -> bool:
+        """Heater settings are for administrators, automations and Home Assistant (spec 2)."""
+        return user is None or user.is_admin
 
     # ------------------------------------------------------------------ running
 

@@ -122,5 +122,18 @@
         }
       }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Definições do aquecedor",
+        "data": {
+          "keep_heating_gap_minutes": "Continuar a aquecer em intervalos menores do que"
+        },
+        "data_description": {
+          "keep_heating_gap_minutes": "Horários assim próximos partilham uma janela e o aquecedor continua a aquecer, em vez de deixar a água arrefecer entre eles."
+        }
+      }
+    }
   }
 }

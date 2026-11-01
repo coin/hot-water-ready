@@ -4,7 +4,7 @@ from dataclasses import replace
 from datetime import UTC, date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
-from custom_components.hot_water_ready.core.controller import Occurrence, Settings
+from custom_components.hot_water_ready.core.controller import ControllerState, Occurrence, Settings
 from custom_components.hot_water_ready.core.household import Away, MemberPlan, household_occurrences
 from custom_components.hot_water_ready.core.ready_times import ReadyTime
 
@@ -266,3 +266,75 @@ def test_window_drops_a_member_who_withdraws_and_keeps_the_rest() -> None:
     window = cylinder.controller.state.window
     assert window is not None
     assert window.members == frozenset({"maria"})
+
+
+def test_joining_does_not_depend_on_how_cold_the_water_is_now() -> None:
+    # 07:00 and 09:50 are far apart. Cold water at 04:20 gives a long lead, but whether the
+    # next window joins is judged with the water at target (where it will be), not as it is.
+    first, later = _at(2026, 11, 2, 7, 0), _at(2026, 11, 2, 9, 50)
+    cylinder = _cylinder(
+        20.0,
+        _at(2026, 11, 2, 4, 20),
+        [Occurrence(first, frozenset({"tiago"})), Occurrence(later, frozenset({"maria"}))],
+    )
+    cylinder.run(1)
+    window = cylinder.controller.state.window
+    assert window is not None
+    assert window.end == _at(2026, 11, 2, 7, 15)
+
+
+def test_someone_joining_is_told_ready_for_their_own_time() -> None:
+    first, second = _at(2026, 11, 2, 7, 0), _at(2026, 11, 2, 7, 30)
+    cylinder = _cylinder(
+        44.0,
+        _at(2026, 11, 2, 6, 59),
+        [Occurrence(first, frozenset({"a"})), Occurrence(second, frozenset({"b"}))],
+    )
+    cylinder.run(2)
+
+    readies = sorted((e.ready_at, sorted(e.members)) for _, e in cylinder.ready_events())
+    assert readies == [(first, ["a"]), (second, ["b"])]
+
+
+def test_moving_a_ready_time_earlier_inside_its_window_does_not_chatter() -> None:
+    seven = _at(2026, 11, 2, 7, 0)
+    cylinder = _cylinder(41.5, _at(2026, 11, 2, 6, 50), [Occurrence(seven, frozenset({"t"}))])
+    cylinder.run(1)
+    assert cylinder.relay
+    cylinder.occurrences = [Occurrence(_at(2026, 11, 2, 6, 55), frozenset({"t"}))]
+    cylinder.run(2)
+
+    assert [t.on for t in cylinder.toggles] == [True]
+
+
+def test_withdrawing_the_first_time_gives_back_the_later_start() -> None:
+    # Tiago 07:00 and Maria 07:40 share a window opened by Tiago's lead. Tiago withdraws before
+    # it heats: Maria's time alone starts later, so the window closes and reopens when due.
+    first, second = _at(2026, 11, 2, 7, 0), _at(2026, 11, 2, 7, 40)
+    cylinder = _cylinder(
+        42.5,
+        _at(2026, 11, 2, 6, 40),
+        [Occurrence(first, frozenset({"tiago"})), Occurrence(second, frozenset({"maria"}))],
+    )
+    cylinder.run(10)  # Tiago's window (lead 11.5 min from 42.5) opened at 06:48:30
+    assert cylinder.controller.state.window is not None
+    cylinder.occurrences = [Occurrence(second, frozenset({"maria"}))]
+    cylinder.run(1)
+
+    assert cylinder.controller.state.window is None
+
+
+def test_state_saved_before_per_member_reports_keeps_ready_sent() -> None:
+    old = {
+        "heating": False,
+        "window": {
+            "ready_at": "2026-11-02T07:00:00+00:00",
+            "end": "2026-11-02T07:15:00+00:00",
+            "members": ["tiago"],
+            "target": 42.0,
+            "ready_reported": True,
+        },
+    }
+    state = ControllerState.from_dict(old)
+    assert state.window is not None
+    assert state.window.ready_reported

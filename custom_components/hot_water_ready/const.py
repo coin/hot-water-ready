@@ -17,6 +17,9 @@ CONF_COLOUR: Final = "colour"
 CONF_RECIPIENTS: Final = "recipients"
 COLOURS: Final = ("blue", "green", "orange", "purple", "red", "teal", "pink", "brown")
 
+# Options
+CONF_KEEP_HEATING_GAP: Final = "keep_heating_gap_minutes"
+
 # Temperature band (number entities, kept in storage)
 DEFAULT_TARGET: Final = Settings().target
 DEFAULT_MARGIN: Final = Settings().margin

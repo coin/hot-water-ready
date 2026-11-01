@@ -8,6 +8,7 @@ from homeassistant.config_entries import (
     ConfigFlow,
     ConfigFlowResult,
     ConfigSubentryFlow,
+    OptionsFlow,
     SubentryFlowResult,
 )
 from homeassistant.const import CONF_NAME
@@ -18,6 +19,7 @@ import probatio
 from .const import (
     COLOURS,
     CONF_COLOUR,
+    CONF_KEEP_HEATING_GAP,
     CONF_PERSON,
     CONF_RECIPIENTS,
     CONF_SWITCH,
@@ -25,6 +27,7 @@ from .const import (
     DOMAIN,
     SUBENTRY_MEMBER,
 )
+from .core.controller import Settings
 
 USER_SCHEMA = probatio.Schema(
     {
@@ -54,6 +57,13 @@ class HotWaterReadyConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> dict[str, type[ConfigSubentryFlow]]:
         """Members are subentries of their heater."""
         return {SUBENTRY_MEMBER: MemberSubentryFlow}
+
+    @staticmethod
+    @callback
+    @override
+    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
+        """The heater's settings; the entry's update listener reloads it."""
+        return HeaterOptionsFlow()
 
     @override
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
@@ -93,7 +103,7 @@ def _member_schema(
         probatio.Required(CONF_NAME, description=suggested(CONF_NAME)): selector.TextSelector()
     }
     if virtual:
-        fields[probatio.Optional(CONF_RECIPIENTS, default=current.get(CONF_RECIPIENTS, []))] = (
+        fields[probatio.Optional(CONF_RECIPIENTS, description=suggested(CONF_RECIPIENTS))] = (
             selector.EntitySelector(selector.EntitySelectorConfig(domain="person", multiple=True))
         )
     else:
@@ -164,3 +174,29 @@ class MemberSubentryFlow(ConfigSubentryFlow):
                 entry, virtual=CONF_PERSON not in subentry.data, current=current
             ),
         )
+
+
+class HeaterOptionsFlow(OptionsFlow):
+    """Settings that rarely change (spec 3.1)."""
+
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """The keep-heating-through gap, for now."""
+        if user_input is not None:
+            return self.async_create_entry(data={**self.config_entry.options, **user_input})
+        gap = self.config_entry.options.get(
+            CONF_KEEP_HEATING_GAP, Settings().keep_heating_gap_minutes
+        )
+        schema = probatio.Schema(
+            {
+                probatio.Required(CONF_KEEP_HEATING_GAP, default=gap): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0,
+                        max=180,
+                        step=5,
+                        unit_of_measurement="min",
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
+                ),
+            }
+        )
+        return self.async_show_form(step_id="init", data_schema=schema)

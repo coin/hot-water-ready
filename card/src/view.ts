@@ -40,12 +40,7 @@ function nextDayKey(day: string): string {
 export function describeWhen(iso: string, context: ViewContext): string {
   const { language, timeZone, now } = context;
   const moment = new Date(iso);
-  const time = new Intl.DateTimeFormat(localeOf(language), {
-    timeZone,
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).format(moment);
+  const time = clock(iso, context);
   const today = dayKey(now, timeZone);
   if (dayKey(moment, timeZone) === today) return localize(language, "when.today", { time });
   if (dayKey(moment, timeZone) === nextDayKey(today)) return localize(language, "when.tomorrow", { time });
@@ -87,9 +82,21 @@ export function selectedMember(heater: HeaterSnapshot, picked: string | undefine
   return heater.members.find((member) => member.id === wanted) ?? heater.members[0];
 }
 
-/** The avatar row is only worth showing when there is someone to switch to. */
-export function showsAvatars(heater: HeaterSnapshot): boolean {
-  return heater.members.length > 1;
+/** Admins always (they add members from it); a member never; anyone else when there is a choice. */
+export function showsAvatarRow(heater: HeaterSnapshot): boolean {
+  const mode = viewMode(heater);
+  if (mode === "admin") return true;
+  return mode === "viewer" && heater.members.length > 1;
+}
+
+/** The member whose list is shown: a member always sees their own. */
+export function shownMember(heater: HeaterSnapshot, picked: string | undefined): MemberSnapshot | undefined {
+  return selectedMember(heater, viewMode(heater) === "member" ? undefined : picked);
+}
+
+/** Today's date in the house, "YYYY-MM-DD": the earliest last day away the card accepts. */
+export function todayInHouse(context: ViewContext): string {
+  return dayKey(context.now, context.timeZone);
 }
 
 export interface Sheet {

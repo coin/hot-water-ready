@@ -1,6 +1,7 @@
 // The Hot Water Ready card. Loaded by the integration on every dashboard (spec 6 and 8).
 
 import { LitElement, css, html, nothing, svg, type PropertyValues } from "lit";
+import { live } from "lit/directives/live.js";
 import { localize, weekdayLetters } from "./i18n";
 import { HeaterSubscription, fetchHeaters } from "./subscription";
 import type { CardConfig, Hass, HeaterSnapshot, MemberSnapshot } from "./types";
@@ -11,9 +12,10 @@ import {
   heaterView,
   houseToday,
   readyTimeRows,
-  selectedMember,
   sheetIsComplete,
-  showsAvatars,
+  showsAvatarRow,
+  shownMember,
+  todayInHouse,
   viewMode,
   type Sheet,
   type ViewContext,
@@ -133,14 +135,13 @@ export class HotWaterReadyCard extends LitElement {
       return html`<ha-card><div class="message">${localize(language, "card.loading")}</div></ha-card>`;
     }
     const mode = viewMode(heater);
-    // A member always sees their own list; admins and others pick from the avatars.
-    const member = selectedMember(heater, mode === "member" ? undefined : this._selected);
+    const member = shownMember(heater, this._selected);
     return html`
       <ha-card>
         ${this._renderTop(heater)}
         ${mode === "member"
           ? html`<div class="greeting">${greeting(heater, language)}</div>`
-          : this._renderAvatars(heater, member, mode === "admin")}
+          : this._renderAvatars(heater, member)}
         ${member ? this._renderList(member) : html`<div class="message">${localize(language, "members.none")}</div>`}
         ${member && this._sheet ? this._renderSheet(member, this._sheet) : nothing}
         ${member ? this._renderAway(member) : nothing}
@@ -162,19 +163,20 @@ export class HotWaterReadyCard extends LitElement {
           <input
             type="checkbox"
             class="switch"
-            .checked=${member.away.on}
+            .checked=${live(member.away.on)}
             @change=${(event: Event) => {
               void set((event.target as HTMLInputElement).checked, null);
             }}
           />
-          ${line || localize(language, "away.label")}
+          ${line || localize(language, "away.line")}
         </label>
         ${member.away.on
           ? html`<label class="until">
               ${localize(language, "away.until_label")}
               <input
                 type="date"
-                .value=${member.away.until ?? ""}
+                min=${todayInHouse(this._context)}
+                .value=${live(member.away.until ?? "")}
                 @change=${(event: Event) => {
                   void set(true, (event.target as HTMLInputElement).value || null);
                 }}
@@ -221,12 +223,9 @@ export class HotWaterReadyCard extends LitElement {
     `;
   }
 
-  private _renderAvatars(
-    heater: HeaterSnapshot,
-    selected: MemberSnapshot | undefined,
-    canAddMembers: boolean,
-  ): unknown {
-    if (!canAddMembers && !showsAvatars(heater)) return nothing;
+  private _renderAvatars(heater: HeaterSnapshot, selected: MemberSnapshot | undefined): unknown {
+    if (!showsAvatarRow(heater)) return nothing;
+    const canAddMembers = viewMode(heater) === "admin";
     return html`
       <div class="avatars" role="tablist">
         ${avatarViews(heater, selected?.id).map(
@@ -281,7 +280,7 @@ export class HotWaterReadyCard extends LitElement {
                       type="checkbox"
                       class="switch"
                       aria-label=${localize(language, "list.switch")}
-                      .checked=${row.enabled}
+                      .checked=${live(row.enabled)}
                       @change=${(event: Event) =>
                         this._call({
                           type: "hot_water_ready/ready_time/update",

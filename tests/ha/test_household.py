@@ -4,7 +4,7 @@ from datetime import timedelta
 from typing import Any
 
 from freezegun.api import FrozenDateTimeFactory
-from homeassistant.config_entries import SOURCE_USER, ConfigSubentry
+from homeassistant.config_entries import SOURCE_RECONFIGURE, SOURCE_USER, ConfigSubentry
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.exceptions import Unauthorized
@@ -263,3 +263,69 @@ async def test_going_away_stops_your_window(
     )
     await hass.async_block_till_done()
     assert len(off) == 1
+
+
+async def test_a_past_last_day_away_is_refused(
+    hass: HomeAssistant, heater: MockConfigEntry, hass_ws_client: WebSocketGenerator
+) -> None:
+    reply = await _send(
+        hass,
+        hass_ws_client,
+        {
+            "type": "hot_water_ready/away/set",
+            "entry_id": heater.entry_id,
+            "member_id": TIAGO,
+            "away": True,
+            "until": "2026-11-01",
+        },
+    )
+    assert reply["error"]["code"] == "invalid_format"
+    assert hass.states.get("switch.tiago_away").state == "off"
+
+
+async def test_automations_may_set_away(hass: HomeAssistant, heater: MockConfigEntry) -> None:
+    await hass.services.async_call(
+        "switch", "turn_on", {"entity_id": "switch.tiago_away"}, blocking=True, context=Context()
+    )
+    assert hass.states.get("switch.tiago_away").state == "on"
+
+
+async def test_keep_heating_gap_is_an_option(hass: HomeAssistant, heater: MockConfigEntry) -> None:
+    result = await hass.config_entries.options.async_init(heater.entry_id)
+    assert result["type"] is FlowResultType.FORM
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"keep_heating_gap_minutes": 20}
+    )
+    await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert heater.options["keep_heating_gap_minutes"] == 20
+    assert heater.runtime_data._controller.settings.keep_heating_gap_minutes == 20
+
+
+async def test_virtual_member_is_reconfigured_and_recipients_can_be_cleared(
+    hass: HomeAssistant, heater: MockConfigEntry
+) -> None:
+    result = await hass.config_entries.subentries.async_init(
+        (heater.entry_id, "member"), context={"source": SOURCE_USER}
+    )
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"next_step_id": "virtual"}
+    )
+    await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"name": "Global", "colour": "teal", "recipients": ["person.tiago"]}
+    )
+    await hass.async_block_till_done()
+    global_id = next(s.subentry_id for s in heater.subentries.values() if s.title == "Global")
+
+    result = await hass.config_entries.subentries.async_init(
+        (heater.entry_id, "member"),
+        context={"source": SOURCE_RECONFIGURE, "subentry_id": global_id},
+    )
+    assert "recipients" in {str(key) for key in result["data_schema"].schema}
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"name": "Global", "colour": "teal"}
+    )
+    await hass.async_block_till_done()
+
+    assert heater.subentries[global_id].data == {"colour": "teal", "recipients": []}
