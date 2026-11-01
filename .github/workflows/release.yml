@@ -23,6 +23,10 @@ jobs:
           version=$(jq -r .version custom_components/hot_water_ready/manifest.json)
           [ "v$version" = "$GITHUB_REF_NAME" ] \
             || { echo "Tag $GITHUB_REF_NAME does not match manifest version $version"; exit 1; }
+      - name: Check the manifest names its owner
+        run: |
+          ! grep -q OWNER custom_components/hot_water_ready/manifest.json             || { echo "manifest.json still has the OWNER placeholder"; exit 1; }
+          [ "$(jq '.codeowners | length' custom_components/hot_water_ready/manifest.json)" -gt 0 ]             || { echo "manifest.json has no codeowners"; exit 1; }
       - name: Build the card
         working-directory: card
         run: npm ci && npm run build
