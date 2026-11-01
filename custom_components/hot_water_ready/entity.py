@@ -17,9 +17,9 @@ class HeaterEntity(Entity):
         """Name the entity by its translation key on the heater's device."""
         self.heater = heater
         self._attr_translation_key = key
-        self._attr_unique_id = f"{heater.entry.entry_id}_{key}"
+        self._attr_unique_id = f"{heater.entry_id}_{key}"
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, heater.entry.entry_id)},
+            identifiers={(DOMAIN, heater.entry_id)},
             name=heater.name,
             manufacturer="Hot Water Ready",
             model="Heater",

@@ -49,3 +49,26 @@ async def test_subscribe_to_unknown_heater_fails(
 
     assert not msg["success"]
     assert msg["error"]["code"] == "not_found"
+
+
+async def test_subscription_survives_a_reload(
+    hass: HomeAssistant, heater: MockConfigEntry, hass_ws_client: WebSocketGenerator
+) -> None:
+    client = await hass_ws_client(hass)
+    await client.send_json_auto_id(
+        {"type": "hot_water_ready/subscribe", "entry_id": heater.entry_id}
+    )
+    await client.receive_json()
+    await client.receive_json()
+
+    assert await hass.config_entries.async_reload(heater.entry_id)
+    await hass.async_block_till_done()
+    assert (await client.receive_json())["event"]["temperature"] == 39.6
+
+    hass.states.async_set(SENSOR, "44.0", {"unit_of_measurement": "°C"})
+    await hass.async_block_till_done()
+
+    events = []
+    while not events or events[-1]["temperature"] != 44.0:
+        events.append((await client.receive_json())["event"])
+    assert events[-1]["status"] == "ready"

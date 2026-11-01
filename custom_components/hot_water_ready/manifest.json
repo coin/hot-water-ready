@@ -1,6 +1,7 @@
 {
   "domain": "hot_water_ready",
   "name": "Hot Water Ready",
+  "categories": ["climate.water_heaters"],
   "codeowners": [],
   "config_flow": true,
   "dependencies": ["frontend", "http", "lovelace", "websocket_api"],

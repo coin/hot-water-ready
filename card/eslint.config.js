@@ -12,7 +12,7 @@ export default tseslint.config(
   },
   {
     // Home Assistant's own signatures: the caller names the reply type.
-    files: ["src/types.ts"],
+    files: ["src/types.ts", "test/**"],
     rules: { "@typescript-eslint/no-unnecessary-type-parameters": "off" },
   },
 );

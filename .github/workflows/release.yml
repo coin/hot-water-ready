@@ -1,14 +1,17 @@
 name: Release
 
+# Push a tag named v<manifest version> (for example v0.1.0) and this publishes the GitHub release
+# with the packaged integration attached, which is what HACS installs (hacs.json zip_release).
+
 on:
-  release:
-    types: [published]
+  push:
+    tags: ["v*"]
 
 permissions:
   contents: write
 
 jobs:
-  package:
+  release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -18,14 +21,16 @@ jobs:
       - name: Check the tag matches the manifest version
         run: |
           version=$(jq -r .version custom_components/hot_water_ready/manifest.json)
-          [ "v$version" = "${{ github.event.release.tag_name }}" ] || [ "$version" = "${{ github.event.release.tag_name }}" ] \
-            || { echo "Tag ${{ github.event.release.tag_name }} does not match manifest version $version"; exit 1; }
+          [ "v$version" = "$GITHUB_REF_NAME" ] \
+            || { echo "Tag $GITHUB_REF_NAME does not match manifest version $version"; exit 1; }
       - name: Build the card
         working-directory: card
         run: npm ci && npm run build
       - name: Package the integration
-        run: cd custom_components/hot_water_ready && zip -r ../../hot_water_ready.zip . -x '__pycache__/*'
-      - name: Attach to the release
+        run: |
+          cd custom_components/hot_water_ready
+          zip -r ../../hot_water_ready.zip . -x '*__pycache__*'
+      - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ github.event.release.tag_name }}" hot_water_ready.zip --clobber
+        run: gh release create "$GITHUB_REF_NAME" hot_water_ready.zip --generate-notes --verify-tag

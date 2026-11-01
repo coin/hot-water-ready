@@ -20,17 +20,17 @@ from homeassistant.util.hass_dict import HassKey
 from .const import CARD_FILE, CARD_URL, DOMAIN
 
 _SERVED: HassKey[bool] = HassKey(f"{DOMAIN}_card_served")
-_LOADED: HassKey[str] = HassKey(f"{DOMAIN}_card_url")
+_CARD_URL_LOADED: HassKey[str] = HassKey(f"{DOMAIN}_card_url")
 MODULE_SUFFIX = "&load=module"
 
 
 async def async_load_card(hass: HomeAssistant) -> None:
     """Serve the card once per process and make every dashboard load it."""
-    if _LOADED in hass.data:
+    if _CARD_URL_LOADED in hass.data:
         return
     integration = await async_get_integration(hass, DOMAIN)
     url = f"{CARD_URL}?v={integration.version}"
-    hass.data[_LOADED] = url
+    hass.data[_CARD_URL_LOADED] = url
     if _SERVED not in hass.data:
         # A static route cannot be registered twice in one process.
         hass.data[_SERVED] = True
@@ -40,20 +40,21 @@ async def async_load_card(hass: HomeAssistant) -> None:
     add_extra_js_url(hass, f"{url}{MODULE_SUFFIX}")
     if (resources := await _storage_resources(hass)) is None:
         return
+    resource = {"res_type": "module", "url": url}
     items = _card_items(resources)
     if not items:
-        await resources.async_create_item({"res_type": "module", "url": url})
+        await resources.async_create_item(resource)
         return
     first, *extra = items
     if first["url"] != url:
-        await resources.async_update_item(first["id"], {"res_type": "module", "url": url})
+        await resources.async_update_item(first["id"], resource)
     for item in extra:
         await resources.async_delete_item(item["id"])
 
 
 async def async_unload_card(hass: HomeAssistant) -> None:
     """Stop loading the card; called when the last heater is removed."""
-    if (url := hass.data.pop(_LOADED, None)) is not None:
+    if (url := hass.data.pop(_CARD_URL_LOADED, None)) is not None:
         remove_extra_js_url(hass, f"{url}{MODULE_SUFFIX}")
     if (resources := await _storage_resources(hass)) is None:
         return

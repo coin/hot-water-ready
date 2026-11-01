@@ -2,7 +2,8 @@
 
 import { LitElement, css, html, nothing, svg, type PropertyValues } from "lit";
 import { localize } from "./i18n";
-import type { CardConfig, Hass, HeaterSnapshot, HeaterSummary } from "./types";
+import { HeaterSubscription, fetchHeaters } from "./subscription";
+import type { CardConfig, Hass, HeaterSnapshot } from "./types";
 import { heaterView } from "./view";
 
 const TAG = "hot-water-ready-card";
@@ -21,12 +22,18 @@ export class HotWaterReadyCard extends LitElement {
   private _config?: CardConfig;
   private _heater?: HeaterSnapshot;
   private _missing = false;
-  private _unsubscribe: Promise<() => Promise<void>> | undefined;
-  private _subscribedTo: string | undefined;
+  private readonly _subscription = new HeaterSubscription(
+    (snapshot) => {
+      this._heater = snapshot;
+      this._missing = false;
+    },
+    () => {
+      this._missing = true;
+    },
+  );
 
   static async getStubConfig(hass: Hass): Promise<CardConfig> {
-    const heaters = await hass.callWS<HeaterSummary[]>({ type: "hot_water_ready/heaters" });
-    const first = heaters[0];
+    const first = (await fetchHeaters(hass))[0];
     return first ? { type: `custom:${TAG}`, entry_id: first.entry_id } : { type: `custom:${TAG}` };
   }
 
@@ -44,49 +51,22 @@ export class HotWaterReadyCard extends LitElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    void this._subscribe();
+    this._follow();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this._unsubscribeNow();
+    this._subscription.stop();
   }
 
   protected override updated(changed: PropertyValues): void {
-    if (changed.has("hass") || changed.has("_config")) void this._subscribe();
+    if (changed.has("hass") || changed.has("_config")) this._follow();
   }
 
-  private _unsubscribeNow(): void {
-    const unsubscribe = this._unsubscribe;
-    this._unsubscribe = undefined;
-    this._subscribedTo = undefined;
-    void unsubscribe?.then((stop) => stop()).catch(() => undefined);
-  }
-
-  private async _subscribe(): Promise<void> {
-    const hass = this.hass;
-    if (!hass || !this._config || !this.isConnected) return;
-    let entryId = this._config.entry_id;
-    if (!entryId) {
-      const heaters = await hass.callWS<HeaterSummary[]>({ type: "hot_water_ready/heaters" });
-      entryId = heaters[0]?.entry_id;
-      this._missing = entryId === undefined;
-      if (!entryId) return;
+  private _follow(): void {
+    if (this.hass && this._config && this.isConnected) {
+      void this._subscription.follow(this.hass, this._config.entry_id);
     }
-    if (this._subscribedTo === entryId) return;
-    this._unsubscribeNow();
-    this._subscribedTo = entryId;
-    this._unsubscribe = hass.connection.subscribeMessage<HeaterSnapshot>(
-      (heater) => {
-        this._heater = heater;
-        this._missing = false;
-      },
-      { type: "hot_water_ready/subscribe", entry_id: entryId },
-    );
-    this._unsubscribe.catch(() => {
-      this._missing = true;
-      this._subscribedTo = undefined;
-    });
   }
 
   protected override render(): unknown {

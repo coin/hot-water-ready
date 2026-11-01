@@ -6,9 +6,10 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_track_state_change_event
 
-from .const import CONF_TEMPERATURE_SENSOR, DEFAULT_TARGET
+from .const import CONF_TEMPERATURE_SENSOR, DEFAULT_TARGET, signal_heater_updated
 from .core.status import Status, heater_status
 
 type Listener = Callable[[], None]
@@ -25,6 +26,15 @@ class Heater:
         self._listeners: list[Listener] = []
 
     @property
+    def entry_id(self) -> str:
+        """The config entry's id, which identifies the heater."""
+        return self.entry.entry_id
+
+    @property
+    def _sensor(self) -> str:
+        return str(self.entry.data[CONF_TEMPERATURE_SENSOR])
+
+    @property
     def name(self) -> str:
         """The heater's name, which is the entry title."""
         return self.entry.title
@@ -32,7 +42,7 @@ class Heater:
     @property
     def temperature(self) -> float | None:
         """The water temperature now, or None when the sensor has no number."""
-        state = self.hass.states.get(self.entry.data[CONF_TEMPERATURE_SENSOR])
+        state = self.hass.states.get(self._sensor)
         if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             return None
         try:
@@ -48,7 +58,7 @@ class Heater:
     def snapshot(self) -> dict[str, Any]:
         """Everything the card needs, as plain data."""
         return {
-            "entry_id": self.entry.entry_id,
+            "entry_id": self.entry_id,
             "name": self.name,
             "temperature": self.temperature,
             "target": self.target,
@@ -59,10 +69,9 @@ class Heater:
     def async_start(self) -> None:
         """Follow the temperature sensor until the entry unloads."""
         self.entry.async_on_unload(
-            async_track_state_change_event(
-                self.hass, [self.entry.data[CONF_TEMPERATURE_SENSOR]], self._on_change
-            )
+            async_track_state_change_event(self.hass, [self._sensor], self._on_change)
         )
+        self._notify()
 
     @callback
     def async_add_listener(self, listener: Listener) -> Callable[[], None]:
@@ -77,5 +86,14 @@ class Heater:
 
     @callback
     def _on_change(self, _event: Event[EventStateChangedData]) -> None:
+        self._notify()
+
+    @callback
+    def _notify(self) -> None:
+        """Tell this heater's entities, and the card subscriptions of its entry, to refresh.
+
+        Subscriptions follow the entry id rather than this object, so they outlive a reload.
+        """
         for listener in list(self._listeners):
             listener()
+        async_dispatcher_send(self.hass, signal_heater_updated(self.entry_id))
