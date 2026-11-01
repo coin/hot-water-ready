@@ -13,8 +13,10 @@ class Status(StrEnum):
     MANUAL = "manual"
 
 
-def heater_status(*, temperature: float | None, target: float) -> Status:
-    """Ready means the water is at or above the target (spec 4.4)."""
+def heater_status(*, temperature: float | None, target: float, heating: bool = False) -> Status:
+    """Heating while the element is wanted on; else ready at or above the target (spec 4.4)."""
+    if heating:
+        return Status.HEATING
     if temperature is not None and temperature >= target:
         return Status.READY
     return Status.WAITING

@@ -8,10 +8,12 @@ from homeassistant.helpers.typing import ConfigType
 
 from . import websocket
 from .const import DOMAIN
+from .entity import register_heater_device
 from .frontend import async_load_card, async_unload_card
 from .heater import Heater
+from .storage import HeaterStore
 
-PLATFORMS: list[Platform] = [Platform.SENSOR]
+PLATFORMS: list[Platform] = [Platform.NUMBER, Platform.SENSOR]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -27,20 +29,31 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 async def async_setup_entry(hass: HomeAssistant, entry: HotWaterReadyConfigEntry) -> bool:
     """Set up one heater."""
     await async_load_card(hass)
-    heater = Heater(hass, entry)
+    store = HeaterStore(hass, entry.entry_id)
+    heater = Heater(hass, entry, store, await store.async_load())
     entry.runtime_data = heater
-    heater.async_start()
+    register_heater_device(heater)
+    # Members are subentries: adding or removing one changes the entry, and a reload picks it
+    # up. Member reconfigure uses async_update_and_abort, so this listener is the only reload.
+    entry.async_on_unload(entry.add_update_listener(_async_reload))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    heater.async_start()
     return True
 
 
+async def _async_reload(hass: HomeAssistant, entry: HotWaterReadyConfigEntry) -> None:
+    await hass.config_entries.async_reload(entry.entry_id)
+
+
 async def async_unload_entry(hass: HomeAssistant, entry: HotWaterReadyConfigEntry) -> bool:
-    """Unload one heater."""
+    """Unload one heater, saving its state first."""
+    await entry.runtime_data.async_stop()
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: HotWaterReadyConfigEntry) -> None:
-    """Stop loading the card once no heater is left."""
+    """Delete the heater's storage; stop loading the card once no heater is left."""
+    await HeaterStore(hass, entry.entry_id).async_remove()
     others = [e for e in hass.config_entries.async_entries(DOMAIN) if e.entry_id != entry.entry_id]
     if not others:
         await async_unload_card(hass)

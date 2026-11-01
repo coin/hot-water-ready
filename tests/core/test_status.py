@@ -17,3 +17,12 @@ def test_water_below_target_is_waiting() -> None:
 
 def test_unknown_temperature_is_waiting() -> None:
     assert heater_status(temperature=None, target=42.0) is Status.WAITING
+
+
+def test_heating_shows_while_the_relay_is_wanted_on() -> None:
+    assert heater_status(temperature=40.0, target=42.0, heating=True) is Status.HEATING
+
+
+def test_heating_past_the_target_still_shows_heating() -> None:
+    # Ready is reported from 42; the element keeps going to 43 and the status says so.
+    assert heater_status(temperature=42.5, target=42.0, heating=True) is Status.HEATING

@@ -1,5 +1,7 @@
 """The integration serves its card and loads it without a resource added by hand (spec 8)."""
 
+import hashlib
+from pathlib import Path
 from typing import Any
 
 from homeassistant.components.frontend import DATA_EXTRA_MODULE_URL
@@ -10,13 +12,16 @@ from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
 
-from custom_components.hot_water_ready.const import CARD_URL, DOMAIN
+import custom_components.hot_water_ready
+from custom_components.hot_water_ready.const import CARD_FILE, CARD_URL, DOMAIN
 from custom_components.hot_water_ready.frontend import MODULE_SUFFIX
 
 
 async def _card_url(hass: HomeAssistant) -> str:
     integration = await async_get_integration(hass, DOMAIN)
-    return f"{CARD_URL}?v={integration.version}"
+    bundle = Path(custom_components.hot_water_ready.__file__).parent / CARD_FILE
+    digest = hashlib.sha256(bundle.read_bytes()).hexdigest()[:8]
+    return f"{CARD_URL}?v={integration.version}-{digest}"
 
 
 def _card_resources(hass: HomeAssistant) -> list[dict[str, Any]]:

@@ -20,7 +20,59 @@
       "already_configured": "This switch already belongs to a heater."
     }
   },
+  "config_subentries": {
+    "member": {
+      "initiate_flow": {
+        "user": "Add member"
+      },
+      "entry_type": "Member",
+      "step": {
+        "user": {
+          "title": "Add a member",
+          "description": "Someone the heater makes hot water ready for, linked to their person so they can set their own times and be told when the water is ready.",
+          "data": {
+            "name": "Name",
+            "person": "Person",
+            "colour": "Colour on the card"
+          }
+        },
+        "reconfigure": {
+          "title": "Change a member",
+          "data": {
+            "name": "Name",
+            "person": "Person",
+            "colour": "Colour on the card"
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "The member was changed."
+      }
+    }
+  },
+  "selector": {
+    "colour": {
+      "options": {
+        "blue": "Blue",
+        "green": "Green",
+        "orange": "Orange",
+        "purple": "Purple",
+        "red": "Red",
+        "teal": "Teal",
+        "pink": "Pink",
+        "brown": "Brown"
+      }
+    }
+  },
   "entity": {
+    "number": {
+      "target_temperature": {
+        "name": "Target temperature"
+      },
+      "margin": {
+        "name": "Margin"
+      }
+    },
     "sensor": {
       "status": {
         "name": "Status",
@@ -30,6 +82,14 @@
           "ready": "Ready",
           "fault": "Fault",
           "manual": "Manual"
+        }
+      },
+      "next_ready_time": {
+        "name": "Next ready time",
+        "state_attributes": {
+          "members": {
+            "name": "For"
+          }
         }
       }
     }

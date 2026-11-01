@@ -61,7 +61,18 @@ describe("HeaterSubscription", () => {
     const seen: HeaterSnapshot[] = [];
     const subscription = new HeaterSubscription((s) => seen.push(s), () => undefined);
     await subscription.follow(hass, "e1");
-    const snapshot: HeaterSnapshot = { ...cylinder, temperature: 40, target: 42, status: "waiting" };
+    const snapshot: HeaterSnapshot = {
+      ...cylinder,
+      temperature: 40,
+      target: 42,
+      margin: 1,
+      status: "waiting",
+      ready_in_minutes: null,
+      next_ready: null,
+      is_admin: true,
+      me: null,
+      members: [],
+    };
     hass.subscriptions[0]?.push(snapshot);
 
     expect(seen).toEqual([snapshot]);

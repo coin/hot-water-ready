@@ -2,13 +2,40 @@
 
 export type Status = "waiting" | "heating" | "ready" | "fault" | "manual";
 
-/** What `hot_water_ready/subscribe` sends for one heater. */
+export interface ReadyTimeSnapshot {
+  id: string;
+  /** "HH:MM", the house's wall-clock time. */
+  time: string;
+  /** Monday 0 to Sunday 6. */
+  weekdays: number[];
+  enabled: boolean;
+}
+
+export interface MemberSnapshot {
+  id: string;
+  name: string;
+  colour: string;
+  /** Whether the viewer may change this member's ready times (checked again on the server). */
+  can_edit: boolean;
+  /** ISO datetime of this member's next ready time. */
+  next_ready: string | null;
+  ready_times: ReadyTimeSnapshot[];
+}
+
+/** What `hot_water_ready/subscribe` sends for one heater, as seen by the viewer. */
 export interface HeaterSnapshot {
   entry_id: string;
   name: string;
   temperature: number | null;
   target: number;
+  margin: number;
   status: Status;
+  ready_in_minutes: number | null;
+  next_ready: { at: string; members: string[] } | null;
+  is_admin: boolean;
+  /** The viewer's own member id, if the viewer is a member. */
+  me: string | null;
+  members: MemberSnapshot[];
 }
 
 export interface HeaterSummary {
@@ -25,6 +52,7 @@ export interface CardConfig {
 export interface Hass {
   locale?: { language: string };
   language?: string;
+  config?: { time_zone?: string };
   connection: {
     subscribeMessage<T>(
       callback: (message: T) => void,

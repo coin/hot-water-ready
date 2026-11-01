@@ -7,6 +7,7 @@ one URL the resource could not recover a card the extra module lost. The card gu
 definition. Drop the resource branch once the minimum version is 2026.11.
 """
 
+import hashlib
 from pathlib import Path
 
 from homeassistant.components.frontend import add_extra_js_url, remove_extra_js_url
@@ -29,14 +30,15 @@ async def async_load_card(hass: HomeAssistant) -> None:
     if _CARD_URL_LOADED in hass.data:
         return
     integration = await async_get_integration(hass, DOMAIN)
-    url = f"{CARD_URL}?v={integration.version}"
+    card = Path(__file__).parent / CARD_FILE
+    digest = await hass.async_add_executor_job(_short_hash, card)
+    # The version for releases, the content hash so a rebuilt card is fetched without a bump.
+    url = f"{CARD_URL}?v={integration.version}-{digest}"
     hass.data[_CARD_URL_LOADED] = url
     if _SERVED not in hass.data:
         # A static route cannot be registered twice in one process.
         hass.data[_SERVED] = True
-        await hass.http.async_register_static_paths(
-            [StaticPathConfig(CARD_URL, str(Path(__file__).parent / CARD_FILE), True)]
-        )
+        await hass.http.async_register_static_paths([StaticPathConfig(CARD_URL, str(card), True)])
     add_extra_js_url(hass, f"{url}{MODULE_SUFFIX}")
     if (resources := await _storage_resources(hass)) is None:
         return
@@ -50,6 +52,10 @@ async def async_load_card(hass: HomeAssistant) -> None:
         await resources.async_update_item(first["id"], resource)
     for item in extra:
         await resources.async_delete_item(item["id"])
+
+
+def _short_hash(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()[:8]
 
 
 async def async_unload_card(hass: HomeAssistant) -> None:

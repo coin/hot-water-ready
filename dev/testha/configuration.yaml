@@ -40,3 +40,22 @@ template:
         device_class: temperature
         unit_of_measurement: "°C"
         state: "{{ states('input_number.fake_water_temperature') }}"
+
+# A simulated cylinder: while the fake relay is on the water warms 0.5 C every 30 s
+# (1 C/min, faster than a real element so trials are quick); off, it cools 0.02 C.
+automation:
+  - id: fake_cylinder_physics
+    alias: Fake cylinder physics
+    mode: single
+    triggers:
+      - trigger: time_pattern
+        seconds: "/30"
+    actions:
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.fake_water_temperature
+        data:
+          value: >-
+            {% set t = states('input_number.fake_water_temperature') | float(20) %}
+            {% if is_state('input_boolean.fake_relay', 'on') %}{{ [t + 0.5, 70] | min | round(1) }}
+            {% else %}{{ [t - 0.02, 5] | max | round(2) }}{% endif %}

@@ -1,10 +1,29 @@
-"""Base entity tied to the heater device."""
+"""Base entities: on the heater's device, or on a member's device."""
 
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
 
 from .const import DOMAIN
-from .heater import Heater
+from .heater import Heater, Member
+
+
+def heater_device_info(heater: Heater) -> DeviceInfo:
+    """The heater's own device."""
+    return DeviceInfo(
+        identifiers={(DOMAIN, heater.entry_id)},
+        name=heater.name,
+        manufacturer="Hot Water Ready",
+        model="Heater",
+    )
+
+
+def register_heater_device(heater: Heater) -> None:
+    """Create the heater's device before any entity, so member devices can point at it."""
+    device = dr.async_get(heater.hass).async_get_or_create(
+        config_entry_id=heater.entry_id, **heater_device_info(heater)
+    )
+    heater.device_id = device.id
 
 
 class HeaterEntity(Entity):
@@ -18,13 +37,25 @@ class HeaterEntity(Entity):
         self.heater = heater
         self._attr_translation_key = key
         self._attr_unique_id = f"{heater.entry_id}_{key}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, heater.entry_id)},
-            name=heater.name,
-            manufacturer="Hot Water Ready",
-            model="Heater",
-        )
+        self._attr_device_info = heater_device_info(heater)
 
     async def async_added_to_hass(self) -> None:
         """Refresh whenever the heater changes."""
         self.async_on_remove(self.heater.async_add_listener(self.async_write_ha_state))
+
+
+class MemberEntity(HeaterEntity):
+    """An entity of one member's device, linked to the heater's device."""
+
+    def __init__(self, heater: Heater, member: Member, key: str) -> None:
+        """Name the entity by its translation key on the member's device."""
+        super().__init__(heater, key)
+        self.member_id = member.id
+        self._attr_unique_id = f"{heater.entry_id}_{member.id}_{key}"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, f"{heater.entry_id}_{member.id}")},
+            name=member.name,
+            manufacturer="Hot Water Ready",
+            model="Member",
+            via_device_id=heater.device_id,
+        )

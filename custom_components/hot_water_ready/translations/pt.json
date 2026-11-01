@@ -20,7 +20,59 @@
       "already_configured": "Este interruptor já pertence a um aquecedor."
     }
   },
+  "config_subentries": {
+    "member": {
+      "initiate_flow": {
+        "user": "Acrescentar membro"
+      },
+      "entry_type": "Membro",
+      "step": {
+        "user": {
+          "title": "Acrescentar um membro",
+          "description": "Alguém para quem o aquecedor prepara água quente, ligado à sua pessoa para poder definir os seus horários e ser avisado quando a água estiver pronta.",
+          "data": {
+            "name": "Nome",
+            "person": "Pessoa",
+            "colour": "Cor no cartão"
+          }
+        },
+        "reconfigure": {
+          "title": "Alterar um membro",
+          "data": {
+            "name": "Nome",
+            "person": "Pessoa",
+            "colour": "Cor no cartão"
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "O membro foi alterado."
+      }
+    }
+  },
+  "selector": {
+    "colour": {
+      "options": {
+        "blue": "Azul",
+        "green": "Verde",
+        "orange": "Laranja",
+        "purple": "Roxo",
+        "red": "Vermelho",
+        "teal": "Azul-petróleo",
+        "pink": "Cor-de-rosa",
+        "brown": "Castanho"
+      }
+    }
+  },
   "entity": {
+    "number": {
+      "target_temperature": {
+        "name": "Temperatura alvo"
+      },
+      "margin": {
+        "name": "Margem"
+      }
+    },
     "sensor": {
       "status": {
         "name": "Estado",
@@ -30,6 +82,14 @@
           "ready": "Pronta",
           "fault": "Avaria",
           "manual": "Manual"
+        }
+      },
+      "next_ready_time": {
+        "name": "Próxima água pronta",
+        "state_attributes": {
+          "members": {
+            "name": "Para"
+          }
         }
       }
     }

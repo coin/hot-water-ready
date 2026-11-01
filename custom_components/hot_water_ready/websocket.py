@@ -1,15 +1,32 @@
-"""Websocket commands the card uses."""
+"""Websocket commands the card uses.
 
+Every command that changes something checks the calling user on the server (spec 2): admins
+edit every member, a linked member only their own.
+"""
+
+from collections.abc import Awaitable, Callable
+from datetime import time
+from functools import wraps
 from typing import Any
 
 from homeassistant.components import websocket_api
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 import probatio
 
 from .const import DOMAIN, signal_heater_updated
-from .heater import Heater
+from .heater import Heater, MemberNotFoundError, ReadyTimeNotFoundError
+from .storage import ready_time_to_dict
+
+WEEKDAYS = probatio.All(
+    [probatio.All(int, probatio.Range(min=0, max=6))], probatio.Length(min=1, max=7)
+)
+
+type Handler = Callable[
+    [HomeAssistant, websocket_api.ActiveConnection, dict[str, Any], Heater], Awaitable[None]
+]
 
 
 @callback
@@ -17,6 +34,9 @@ def async_register(hass: HomeAssistant) -> None:
     """Register the card's commands."""
     websocket_api.async_register_command(hass, ws_heaters)
     websocket_api.async_register_command(hass, ws_subscribe)
+    websocket_api.async_register_command(hass, ws_add_ready_time)
+    websocket_api.async_register_command(hass, ws_update_ready_time)
+    websocket_api.async_register_command(hass, ws_remove_ready_time)
 
 
 def _loaded_heaters(hass: HomeAssistant) -> list[Heater]:
@@ -36,6 +56,35 @@ def _loaded_heater(hass: HomeAssistant, entry_id: str) -> Heater | None:
         return None
     heater: Heater | None = getattr(entry, "runtime_data", None)
     return heater
+
+
+def _member_edit(handler: Handler) -> Callable[..., Awaitable[None]]:
+    """Find the heater and member, check the caller may edit that member, map errors."""
+
+    @wraps(handler)
+    async def wrapper(
+        hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    ) -> None:
+        heater = _loaded_heater(hass, msg["entry_id"])
+        if heater is None:
+            connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "Heater not found")
+            return
+        try:
+            heater.member(msg["member_id"])
+        except MemberNotFoundError:
+            connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "Member not found")
+            return
+        if not heater.can_edit(connection.user, msg["member_id"]):
+            connection.send_error(
+                msg["id"], websocket_api.ERR_UNAUTHORIZED, "You may only change your own times"
+            )
+            return
+        try:
+            await handler(hass, connection, msg, heater)
+        except ReadyTimeNotFoundError:
+            connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "Ready time not found")
+
+    return wrapper
 
 
 @websocket_api.websocket_command({probatio.Required("type"): f"{DOMAIN}/heaters"})
@@ -66,10 +115,92 @@ def ws_subscribe(
     @callback
     def send() -> None:
         if (heater := _loaded_heater(hass, entry_id)) is not None:
-            connection.send_event(msg["id"], heater.snapshot())
+            connection.send_event(msg["id"], heater.snapshot(connection.user))
 
     connection.subscriptions[msg["id"]] = async_dispatcher_connect(
         hass, signal_heater_updated(entry_id), send
     )
     connection.send_result(msg["id"])
     send()
+
+
+@websocket_api.websocket_command(
+    {
+        probatio.Required("type"): f"{DOMAIN}/ready_time/add",
+        probatio.Required("entry_id"): str,
+        probatio.Required("member_id"): str,
+        probatio.Required("time"): cv.time,
+        probatio.Required("weekdays"): WEEKDAYS,
+        probatio.Optional("enabled", default=True): bool,
+    }
+)
+@websocket_api.async_response
+@_member_edit
+async def ws_add_ready_time(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+    heater: Heater,
+) -> None:
+    """Add a ready time for a member."""
+    at: time = msg["time"]
+    ready = await heater.async_add_ready_time(
+        msg["member_id"],
+        at.replace(second=0, microsecond=0),
+        frozenset(msg["weekdays"]),
+        msg["enabled"],
+    )
+    connection.send_result(msg["id"], ready_time_to_dict(ready))
+
+
+@websocket_api.websocket_command(
+    {
+        probatio.Required("type"): f"{DOMAIN}/ready_time/update",
+        probatio.Required("entry_id"): str,
+        probatio.Required("member_id"): str,
+        probatio.Required("ready_time_id"): str,
+        probatio.Optional("time"): cv.time,
+        probatio.Optional("weekdays"): WEEKDAYS,
+        probatio.Optional("enabled"): bool,
+    }
+)
+@websocket_api.async_response
+@_member_edit
+async def ws_update_ready_time(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+    heater: Heater,
+) -> None:
+    """Change a ready time's time, weekdays or on/off."""
+    at: time | None = msg.get("time")
+    weekdays = msg.get("weekdays")
+    ready = await heater.async_update_ready_time(
+        msg["member_id"],
+        msg["ready_time_id"],
+        at=None if at is None else at.replace(second=0, microsecond=0),
+        weekdays=None if weekdays is None else frozenset(weekdays),
+        enabled=msg.get("enabled"),
+    )
+    connection.send_result(msg["id"], ready_time_to_dict(ready))
+
+
+@websocket_api.websocket_command(
+    {
+        probatio.Required("type"): f"{DOMAIN}/ready_time/remove",
+        probatio.Required("entry_id"): str,
+        probatio.Required("member_id"): str,
+        probatio.Required("ready_time_id"): str,
+    }
+)
+@websocket_api.async_response
+@_member_edit
+async def ws_remove_ready_time(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+    heater: Heater,
+) -> None:
+    """Remove a ready time."""
+    await heater.async_remove_ready_time(msg["member_id"], msg["ready_time_id"])
+    connection.send_result(msg["id"])
