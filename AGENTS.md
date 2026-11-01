@@ -7,6 +7,8 @@
   (WSL Ubuntu, venv `~/venvs/hwr`). Calling `wsl.exe ... bash -c '$VAR'` expands variables too early;
   put commands in a script instead.
 - Card checks: `cd card; npm run check`. After changing `card/src`, `npm run build` and commit the bundle.
-- Test HA: `dev/testha.sh` (Docker, http://localhost:8124); `python dev/ha_ws.py '<json>'` sends
-  websocket commands; `cd card; node browser-check.mjs firefox` reloads the test dashboard.
+- Test HA: `dev/testha.sh` (Docker, http://localhost:8124, a simulated cylinder heats while the
+  fake relay is on); `python dev/ha_ws.py '<json>'` sends websocket commands;
+  `cd card; node browser-check.mjs firefox` reloads the test dashboard. After a new card build,
+  load the dashboard twice: on 2026.10 the first load can come from a cached `index.html`.
 - Review rules: `CODING_STANDARDS.md`.

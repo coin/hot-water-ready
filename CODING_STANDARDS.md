@@ -17,11 +17,20 @@ Read by the reviewer. Mechanical rules live in the checks (`scripts/check`, `car
   stored record) is keyed by the entry id, never held on the runtime object, which a reload
   replaces.
 - Permissions are checked on the server against the calling user (spec section 2), never only
-  hidden in the card.
+  hidden in the card. That covers every write path: websocket commands, actions, and entity
+  services such as `number.set_value` or `switch.turn_on` (read the user from the entity's
+  context). A new write path without a test that a non-admin is refused is a finding.
 - Current APIs only: `runtime_data`, `ConfigEntry*` exceptions, `step_id` on every flow step,
   `Store` validated on load, `DeviceInfo` with keyword arguments.
+- "Validated on load" means every field read from storage, nested shapes included, goes through
+  a parser that turns anything unexpected into a default with a warning, and a test feeds it
+  corrupt shapes (wrong types, naive datetimes). Setup never crashes on a bad file.
+- Anything the heater switched on, it switches off when the entry unloads.
 
 ## Scheduling core
+
+- When version 1's behaviour and the spec differ, the spec wins. A test carried over from version
+  1 names the spec section it checks; a test that pins version 1 against the spec is a finding.
 
 - `core/` decides; the HA layer reads entities, calls services and stores state. A rule about
   when to heat or what to tell someone belongs in `core/` with a scenario test.
