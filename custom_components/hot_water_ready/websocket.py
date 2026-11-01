@@ -29,6 +29,11 @@ type Handler = Callable[
 ]
 
 
+def _to_minute(at: time) -> time:
+    """Ready times are whole minutes."""
+    return at.replace(second=0, microsecond=0)
+
+
 @callback
 def async_register(hass: HomeAssistant) -> None:
     """Register the card's commands."""
@@ -146,7 +151,7 @@ async def ws_add_ready_time(
     at: time = msg["time"]
     ready = await heater.async_add_ready_time(
         msg["member_id"],
-        at.replace(second=0, microsecond=0),
+        _to_minute(at),
         frozenset(msg["weekdays"]),
         msg["enabled"],
     )
@@ -178,7 +183,7 @@ async def ws_update_ready_time(
     ready = await heater.async_update_ready_time(
         msg["member_id"],
         msg["ready_time_id"],
-        at=None if at is None else at.replace(second=0, microsecond=0),
+        at=None if at is None else _to_minute(at),
         weekdays=None if weekdays is None else frozenset(weekdays),
         enabled=msg.get("enabled"),
     )

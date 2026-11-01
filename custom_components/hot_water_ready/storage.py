@@ -14,6 +14,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 
 from .const import DEFAULT_MARGIN, DEFAULT_TARGET, DOMAIN, MAX_MARGIN, MAX_TARGET, MIN_TARGET
+from .core.controller import ControllerState
 from .core.ready_times import ReadyTime
 
 _LOGGER = logging.getLogger(__name__)
@@ -29,7 +30,7 @@ class HeaterData:
     target: float = DEFAULT_TARGET
     margin: float = DEFAULT_MARGIN
     ready_times: dict[str, list[ReadyTime]] = field(default_factory=dict)
-    controller: dict[str, Any] = field(default_factory=dict)
+    controller: ControllerState | None = None
 
 
 def ready_time_to_dict(ready: ReadyTime) -> dict[str, Any]:
@@ -73,6 +74,25 @@ def _number(raw: object, default: float, low: float, high: float) -> float:
     return default
 
 
+def _mapping(raw: object, what: str) -> dict[str, Any]:
+    """`raw` when it is a mapping; an empty one otherwise, with a warning if it was not empty."""
+    if isinstance(raw, dict):
+        return raw
+    if raw:
+        _LOGGER.warning("Ignored stored %s that is not a mapping: %r", what, raw)
+    return {}
+
+
+def _controller(raw: object) -> ControllerState | None:
+    if not raw:
+        return None
+    try:
+        return ControllerState.from_dict(raw)
+    except ValueError as err:
+        _LOGGER.warning("Ignored the saved heating state: %s", err)
+        return None
+
+
 class HeaterStore:
     """Load and save one heater's data."""
 
@@ -82,17 +102,20 @@ class HeaterStore:
 
     async def async_load(self) -> HeaterData:
         """Read and validate; missing or bad parts fall back to defaults."""
-        raw = await self._store.async_load() or {}
-        settings = raw.get("settings") or {}
+        raw = _mapping(await self._store.async_load(), "stored data")
+        settings = _mapping(raw.get("settings"), "settings")
         data = HeaterData(
             target=_number(settings.get("target"), DEFAULT_TARGET, MIN_TARGET, MAX_TARGET),
             margin=_number(settings.get("margin"), DEFAULT_MARGIN, 0.0, MAX_MARGIN),
-            controller=raw.get("controller") or {},
+            controller=_controller(raw.get("controller")),
         )
-        members = raw.get("members") or {}
-        for member_id, member in members.items():
+        for member_id, member in _mapping(raw.get("members"), "members").items():
+            ready_times = _mapping(member, "member").get("ready_times") or []
+            if not isinstance(ready_times, list):
+                _LOGGER.warning("Ignored ready times that are not a list: %r", ready_times)
+                ready_times = []
             kept: list[ReadyTime] = []
-            for item in (member or {}).get("ready_times") or []:
+            for item in ready_times:
                 try:
                     kept.append(ready_time_from_dict(item))
                 except (KeyError, TypeError, ValueError) as err:
@@ -107,7 +130,7 @@ class HeaterStore:
                 member_id: {"ready_times": [ready_time_to_dict(r) for r in ready_times]}
                 for member_id, ready_times in data.ready_times.items()
             },
-            "controller": data.controller,
+            "controller": None if data.controller is None else data.controller.to_dict(),
         }
 
     async def async_save(self, data: HeaterData) -> None:

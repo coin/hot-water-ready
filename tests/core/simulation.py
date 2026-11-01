@@ -9,8 +9,8 @@ from datetime import datetime, timedelta
 
 from custom_components.hot_water_ready.core.controller import (
     Controller,
+    ControllerEvent,
     ControllerState,
-    Event,
     Occurrence,
     Settings,
 )
@@ -38,7 +38,7 @@ class Cylinder:
     relay: bool = False
     occurrences: list[Occurrence] = field(default_factory=list)
     toggles: list[Toggle] = field(default_factory=list)
-    events: list[tuple[datetime, Event]] = field(default_factory=list)
+    events: list[tuple[datetime, ControllerEvent]] = field(default_factory=list)
     controller: Controller = field(init=False)
 
     def __post_init__(self) -> None:
@@ -84,10 +84,10 @@ class Cylinder:
         saved = ControllerState.from_dict(self.controller.state.to_dict()) if keep_state else None
         self.controller = Controller(self.settings, saved)
 
-    def ready_events(self) -> list[tuple[datetime, Event]]:
+    def ready_events(self) -> list[tuple[datetime, ControllerEvent]]:
         """The "water is ready" events so far."""
         return [(at, event) for at, event in self.events if event.kind == "ready"]
 
-    def heating_events(self) -> list[tuple[datetime, Event]]:
+    def heating_events(self) -> list[tuple[datetime, ControllerEvent]]:
         """The "started heating for a window" events so far."""
         return [(at, event) for at, event in self.events if event.kind == "heating"]

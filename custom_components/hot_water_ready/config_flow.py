@@ -99,6 +99,10 @@ def _member_schema(entry: ConfigEntry, current: dict[str, Any] | None = None) ->
     )
 
 
+def _member_data(user_input: dict[str, Any]) -> dict[str, Any]:
+    return {CONF_PERSON: user_input[CONF_PERSON], CONF_COLOUR: user_input[CONF_COLOUR]}
+
+
 class MemberSubentryFlow(ConfigSubentryFlow):
     """Add or change a member of a heater."""
 
@@ -108,10 +112,7 @@ class MemberSubentryFlow(ConfigSubentryFlow):
         if user_input is not None:
             return self.async_create_entry(
                 title=user_input[CONF_NAME],
-                data={
-                    CONF_PERSON: user_input[CONF_PERSON],
-                    CONF_COLOUR: user_input[CONF_COLOUR],
-                },
+                data=_member_data(user_input),
             )
         return self.async_show_form(step_id="user", data_schema=_member_schema(entry))
 
@@ -126,10 +127,7 @@ class MemberSubentryFlow(ConfigSubentryFlow):
                 entry,
                 subentry,
                 title=user_input[CONF_NAME],
-                data={
-                    CONF_PERSON: user_input[CONF_PERSON],
-                    CONF_COLOUR: user_input[CONF_COLOUR],
-                },
+                data=_member_data(user_input),
             )
         current = {CONF_NAME: subentry.title, **subentry.data}
         return self.async_show_form(

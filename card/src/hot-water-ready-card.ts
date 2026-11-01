@@ -4,17 +4,20 @@ import { LitElement, css, html, nothing, svg, type PropertyValues } from "lit";
 import { localize, weekdayLetters } from "./i18n";
 import { HeaterSubscription, fetchHeaters } from "./subscription";
 import type { CardConfig, Hass, HeaterSnapshot, MemberSnapshot } from "./types";
-import { defaultMemberId, heaterView, readyTimeRows, type ViewContext } from "./view";
+import {
+  heaterView,
+  readyTimeRows,
+  selectedMember,
+  sheetIsComplete,
+  showsAvatars,
+  type Sheet,
+  type ViewContext,
+} from "./view";
 
 const TAG = "hot-water-ready-card";
 const RING_RADIUS = 38;
 const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
 const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
-
-interface Sheet {
-  time: string;
-  weekdays: number[];
-}
 
 export class HotWaterReadyCard extends LitElement {
   static override properties = {
@@ -89,32 +92,30 @@ export class HotWaterReadyCard extends LitElement {
     }
   }
 
-  private _member(heater: HeaterSnapshot): MemberSnapshot | undefined {
-    const id = this._selected ?? defaultMemberId(heater);
-    return heater.members.find((member) => member.id === id) ?? heater.members[0];
-  }
-
-  private async _call(message: Record<string, unknown>): Promise<void> {
-    if (!this.hass || !this._heater) return;
+  /** Send a command for this heater; true when it worked, else the error is shown. */
+  private async _call(message: Record<string, unknown>): Promise<boolean> {
+    if (!this.hass || !this._heater) return false;
     this._error = "";
     try {
       await this.hass.callWS({ entry_id: this._heater.entry_id, ...message });
+      return true;
     } catch (err) {
       const text = err instanceof Error ? err.message : (err as { message?: string }).message;
       this._error = localize(this._language, "card.error", { message: text ?? String(err) });
+      return false;
     }
   }
 
   private async _save(member: MemberSnapshot): Promise<void> {
     const sheet = this._sheet;
-    if (!sheet || !sheet.time || sheet.weekdays.length === 0) return;
-    this._sheet = undefined;
-    await this._call({
+    if (!sheet || !sheetIsComplete(sheet)) return;
+    const saved = await this._call({
       type: "hot_water_ready/ready_time/add",
       member_id: member.id,
       time: sheet.time,
       weekdays: [...sheet.weekdays].sort(),
     });
+    if (saved) this._sheet = undefined; // on an error the sheet stays, with what was typed
   }
 
   protected override render(): unknown {
@@ -126,7 +127,7 @@ export class HotWaterReadyCard extends LitElement {
     if (!heater) {
       return html`<ha-card><div class="message">${localize(language, "card.loading")}</div></ha-card>`;
     }
-    const member = this._member(heater);
+    const member = selectedMember(heater, this._selected);
     return html`
       <ha-card>
         ${this._renderTop(heater)} ${this._renderAvatars(heater, member)}
@@ -161,7 +162,7 @@ export class HotWaterReadyCard extends LitElement {
   }
 
   private _renderAvatars(heater: HeaterSnapshot, selected: MemberSnapshot | undefined): unknown {
-    if (heater.members.length < 2) return nothing;
+    if (!showsAvatars(heater)) return nothing;
     return html`
       <div class="avatars" role="tablist">
         ${heater.members.map(
@@ -281,7 +282,7 @@ export class HotWaterReadyCard extends LitElement {
         </div>
         <div class="actions">
           <button class="secondary" @click=${() => (this._sheet = undefined)}>${localize(language, "sheet.cancel")}</button>
-          <button class="primary" ?disabled=${!sheet.time || sheet.weekdays.length === 0} @click=${() => this._save(member)}>
+          <button class="primary" ?disabled=${!sheetIsComplete(sheet)} @click=${() => this._save(member)}>
             ${localize(language, "sheet.save")}
           </button>
         </div>

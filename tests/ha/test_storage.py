@@ -18,7 +18,7 @@ async def test_empty_store_gives_defaults(hass: HomeAssistant) -> None:
     assert data.target == 42.0
     assert data.margin == 1.0
     assert data.ready_times == {}
-    assert data.controller == {}
+    assert data.controller is None
 
 
 async def test_saved_data_loads_back(hass: HomeAssistant, hass_storage: dict[str, Any]) -> None:
@@ -79,3 +79,29 @@ async def test_invalid_settings_fall_back_to_defaults(
     data = await HeaterStore(hass, "entry1").async_load()
 
     assert (data.target, data.margin) == (42.0, 1.0)
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        ["not", "a", "mapping"],
+        {"settings": "hot", "members": [1, 2]},
+        {"members": {"m1": "x"}},
+        {"members": {"m1": {"ready_times": "07:00"}}},
+        {"controller": [1]},
+        {"controller": {"heating": True, "window": {"ready_at": "2026-11-02T07:00:00"}}},
+    ],
+)
+async def test_corrupt_shapes_load_as_defaults(
+    hass: HomeAssistant, hass_storage: dict[str, Any], raw: Any
+) -> None:
+    hass_storage["hot_water_ready.entry1"] = {
+        "version": 1,
+        "minor_version": 1,
+        "key": "hot_water_ready.entry1",
+        "data": raw,
+    }
+    data = await HeaterStore(hass, "entry1").async_load()
+
+    assert (data.target, data.margin, data.controller) == (42.0, 1.0, None)
+    assert all(times == [] for times in data.ready_times.values())

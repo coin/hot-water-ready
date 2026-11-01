@@ -19,6 +19,7 @@ from homeassistant.helpers.event import (
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    COLOURS,
     CONF_COLOUR,
     CONF_PERSON,
     CONF_SWITCH,
@@ -26,7 +27,7 @@ from .const import (
     SUBENTRY_MEMBER,
     signal_heater_updated,
 )
-from .core.controller import Controller, ControllerState, Event as CoreEvent, Occurrence, Settings
+from .core.controller import Controller, Occurrence, Settings, minutes_to_ready
 from .core.ready_times import ReadyTime, occurrences
 from .core.status import Status, heater_status
 from .storage import HeaterData, HeaterStore, ready_time_to_dict
@@ -62,7 +63,7 @@ class Member:
         return cls(
             id=subentry.subentry_id,
             name=subentry.title,
-            colour=str(subentry.data.get(CONF_COLOUR, "blue")),
+            colour=str(subentry.data.get(CONF_COLOUR, COLOURS[0])),
             person=subentry.data.get(CONF_PERSON),
         )
 
@@ -80,13 +81,7 @@ class Heater:
         self._data = data
         self._listeners: list[Listener] = []
         self.device_id = ""  # set once the heater's device is registered
-        try:
-            state = ControllerState.from_dict(data.controller) if data.controller else None
-        except (KeyError, TypeError, ValueError) as err:
-            _LOGGER.warning("Ignored unreadable saved controller state: %s", err)
-            state = None
-        self._controller = Controller(self._settings(), state)
-        self.events: list[CoreEvent] = []  # what happened, for notifications (ticket 05)
+        self._controller = Controller(self._settings(), data.controller)
 
     # ------------------------------------------------------------------ what it is
 
@@ -236,9 +231,12 @@ class Heater:
         await self._async_saved_and_stepped()
 
     async def _async_saved_and_stepped(self) -> None:
-        self._data.controller = self._controller.state.to_dict()
-        await self._store.async_save(self._data)
+        await self._async_save()
         self._step()
+
+    async def _async_save(self) -> None:
+        self._data.controller = self._controller.state
+        await self._store.async_save(self._data)
 
     # ------------------------------------------------------------------ permissions
 
@@ -270,9 +268,18 @@ class Heater:
         self._step()
 
     async def async_stop(self) -> None:
-        """Save what is pending before the entry unloads, so a reload resumes from it."""
-        self._data.controller = self._controller.state.to_dict()
-        await self._store.async_save(self._data)
+        """Before the entry unloads: switch off what this heater switched on, and save.
+
+        Nothing watches the relay once unloaded; a reload picks the saved state up again and
+        switches it back on if the window still wants it. (Stopping Home Assistant does not
+        unload entries, so a restart does not pass through here.)
+        """
+        relay = self.hass.states.get(self._switch)
+        if self.heating and relay is not None and relay.state == STATE_ON:
+            await self.hass.services.async_call(
+                "switch", "turn_off", {"entity_id": self._switch}, blocking=True
+            )
+        await self._async_save()
 
     @callback
     def _on_state_change(self, _event: Event[EventStateChangedData]) -> None:
@@ -292,11 +299,9 @@ class Heater:
             temperature=self.temperature,
             occurrences=self.occurrences(now - grace, now + HORIZON),
         )
-        self.events.extend(decision.events)
         self._apply(decision.relay_on)
-        after = self._controller.state.to_dict()
-        if after != before:
-            self._data.controller = after
+        if self._controller.state.to_dict() != before:
+            self._data.controller = self._controller.state
             self._store.async_delay_save(self._data)
         self._notify()
 
@@ -344,11 +349,10 @@ class Heater:
     def snapshot(self, user: User) -> dict[str, Any]:
         """Everything the card needs, as plain data, for this viewer."""
         temperature = self.temperature
-        settings = self._controller.settings
         next_ready = self.next_ready()
         ready_in = None
-        if self.heating and temperature is not None and temperature < self.target:
-            ready_in = round((self.target - temperature) * settings.rate_minutes_per_degree)
+        if self.heating:  # 0 means it is past the target and finishing: no estimate to show
+            ready_in = minutes_to_ready(self._controller.settings, temperature) or None
         me = self.user_member_id(user)
         return {
             "entry_id": self.entry_id,

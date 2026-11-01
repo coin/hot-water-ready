@@ -29,6 +29,13 @@ function dayKey(moment: Date, timeZone: string): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(moment);
 }
 
+/** The calendar day after a "YYYY-MM-DD" day; counted in days, so a 23 or 25-hour day is one. */
+function nextDayKey(day: string): string {
+  const next = new Date(`${day}T12:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + 1);
+  return next.toISOString().slice(0, 10);
+}
+
 /** "07:00", "07:00 de amanhã" or "07:30 de quinta-feira", in the house's time zone. */
 export function describeWhen(iso: string, context: ViewContext): string {
   const { language, timeZone, now } = context;
@@ -39,11 +46,9 @@ export function describeWhen(iso: string, context: ViewContext): string {
     minute: "2-digit",
     hourCycle: "h23",
   }).format(moment);
-  const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-  if (dayKey(moment, timeZone) === dayKey(now, timeZone)) return localize(language, "when.today", { time });
-  if (dayKey(moment, timeZone) === dayKey(tomorrow, timeZone)) {
-    return localize(language, "when.tomorrow", { time });
-  }
+  const today = dayKey(now, timeZone);
+  if (dayKey(moment, timeZone) === today) return localize(language, "when.today", { time });
+  if (dayKey(moment, timeZone) === nextDayKey(today)) return localize(language, "when.tomorrow", { time });
   const weekday = new Intl.DateTimeFormat(localeOf(language), { timeZone, weekday: "long" }).format(moment);
   return localize(language, "when.weekday", { time, weekday });
 }
@@ -76,9 +81,25 @@ export function heaterView(heater: HeaterSnapshot, context: ViewContext): Heater
   };
 }
 
-/** The member the card opens on: the viewer's own, else the first. */
-export function defaultMemberId(heater: HeaterSnapshot): string | undefined {
-  return heater.me ?? heater.members[0]?.id;
+/** The member shown: the one picked, else the viewer's own, else the first. */
+export function selectedMember(heater: HeaterSnapshot, picked: string | undefined): MemberSnapshot | undefined {
+  const wanted = picked ?? heater.me;
+  return heater.members.find((member) => member.id === wanted) ?? heater.members[0];
+}
+
+/** The avatar row is only worth showing when there is someone to switch to. */
+export function showsAvatars(heater: HeaterSnapshot): boolean {
+  return heater.members.length > 1;
+}
+
+export interface Sheet {
+  time: string;
+  weekdays: number[];
+}
+
+/** A new ready time needs a time and at least one day. */
+export function sheetIsComplete(sheet: Sheet): boolean {
+  return sheet.time !== "" && sheet.weekdays.length > 0;
 }
 
 export interface ReadyTimeRow {

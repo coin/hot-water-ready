@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { translations } from "../src/i18n";
 import type { HeaterSnapshot, MemberSnapshot } from "../src/types";
-import { defaultMemberId, heaterView, readyTimeRows, type ViewContext } from "../src/view";
+import {
+  heaterView,
+  readyTimeRows,
+  selectedMember,
+  sheetIsComplete,
+  showsAvatars,
+  type ViewContext,
+} from "../src/view";
 
 const tiago: MemberSnapshot = {
   id: "m1",
@@ -66,6 +73,16 @@ describe("heaterView", () => {
     expect(heaterView({ ...cold, next_ready: next }, en).headline).toBe("Ready at 07:30 on Thursday");
   });
 
+  it("knows tomorrow on the night the clocks go back (a 25-hour day)", () => {
+    // Sunday 25 October 2026 in Lisbon is 25 hours long: just after midnight, now + 24 h is
+    // still Sunday, yet Monday 07:00 is tomorrow. Once it is Monday, it is today.
+    const late: ViewContext = { ...pt, now: new Date("2026-10-26T00:30:00Z") };
+    const sunday: ViewContext = { ...pt, now: new Date("2026-10-25T00:10:00+01:00") };
+    const next = { at: "2026-10-26T07:00:00+00:00", members: ["m1"] };
+    expect(heaterView({ ...cold, next_ready: next }, sunday).headline).toBe("Pronta às 07:00 de amanhã");
+    expect(heaterView({ ...cold, next_ready: next }, late).headline).toBe("Pronta às 07:00");
+  });
+
   it("reads the time in the house's time zone, not the browser's", () => {
     // 07:00 UTC is 08:00 in Lisbon in summer.
     const summer: ViewContext = { ...pt, now: new Date("2026-07-01T05:00:00Z") };
@@ -113,17 +130,40 @@ describe("heaterView", () => {
   });
 });
 
-describe("defaultMemberId", () => {
+describe("selectedMember", () => {
   it("opens on the viewer's own member", () => {
-    expect(defaultMemberId({ ...cold, me: "m2" })).toBe("m2");
+    expect(selectedMember({ ...cold, me: "m2" }, undefined)?.id).toBe("m2");
   });
 
   it("opens on the first member for an admin who is not a member", () => {
-    expect(defaultMemberId({ ...cold, me: null })).toBe("m1");
+    expect(selectedMember({ ...cold, me: null }, undefined)?.id).toBe("m1");
+  });
+
+  it("keeps the member the viewer picked", () => {
+    expect(selectedMember(cold, "m2")?.id).toBe("m2");
+  });
+
+  it("falls back when the picked member was removed", () => {
+    expect(selectedMember(cold, "gone")?.id).toBe("m1");
   });
 
   it("has nothing to open without members", () => {
-    expect(defaultMemberId({ ...cold, me: null, members: [] })).toBeUndefined();
+    expect(selectedMember({ ...cold, me: null, members: [] }, undefined)).toBeUndefined();
+  });
+});
+
+describe("showsAvatars", () => {
+  it("shows the avatar row only when there is someone to switch to", () => {
+    expect(showsAvatars(cold)).toBe(true);
+    expect(showsAvatars({ ...cold, members: [tiago] })).toBe(false);
+  });
+});
+
+describe("sheetIsComplete", () => {
+  it("needs a time and at least one day", () => {
+    expect(sheetIsComplete({ time: "07:00", weekdays: [0] })).toBe(true);
+    expect(sheetIsComplete({ time: "", weekdays: [0] })).toBe(false);
+    expect(sheetIsComplete({ time: "07:00", weekdays: [] })).toBe(false);
   });
 });
 

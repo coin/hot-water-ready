@@ -9,7 +9,14 @@ from datetime import datetime, timedelta
 import itertools
 from zoneinfo import ZoneInfo
 
-from custom_components.hot_water_ready.core.controller import Occurrence, Settings
+import pytest
+
+from custom_components.hot_water_ready.core.controller import (
+    ControllerState,
+    Occurrence,
+    Settings,
+    minutes_to_ready,
+)
 
 from .simulation import Cylinder
 
@@ -154,13 +161,38 @@ def test_heating_carries_on_until_ready_even_when_the_lead_shrinks() -> None:
     assert cylinder.relay
 
 
-def test_window_closing_during_the_start_heat_turns_the_relay_off() -> None:
+def test_heating_carries_on_past_the_window_until_the_water_is_ready() -> None:
+    # Spec 4.2: once started it carries on until the water is ready, even past the grace. A
+    # heater that never gets there is the fault guard's business (not rising).
     cylinder = _cylinder(20.0, minutes_before=20)
-    cylinder.heat_per_minute = 0.05
+    cylinder.heat_per_minute = 0.1
     cylinder.run_until(SEVEN + timedelta(minutes=16))
+    assert cylinder.relay
+
+    cylinder.run_until(SEVEN + timedelta(minutes=240))
+    ((ready_at, ready),) = cylinder.ready_events()
+    assert ready_at > SEVEN + timedelta(minutes=15)
+    assert ready.temperature == 42.0
+    assert not cylinder.relay  # past the window, it stops once ready
+    assert _probe_at(cylinder, False) == 42.0
+
+
+def test_held_at_41_1_the_relay_stays_off() -> None:
+    cylinder = _cylinder(40.0, minutes_before=60)
+    cylinder.run_until(SEVEN - timedelta(minutes=10))  # stopped at 43 around 06:49
+    cylinder.water = 41.1
+    cylinder.run(5)
 
     assert not cylinder.relay
-    assert cylinder.ready_events() == []
+    cylinder.water = 41.0
+    cylinder.run(1)
+    assert cylinder.relay
+
+
+def test_minutes_to_ready_from_the_rate() -> None:
+    assert minutes_to_ready(Settings(), 40.0) == 14  # (42 - 40) x 7
+    assert minutes_to_ready(Settings(), 42.5) == 0
+    assert minutes_to_ready(Settings(), None) is None
 
 
 def test_target_raised_in_a_window_heats_to_the_new_band() -> None:
@@ -243,3 +275,23 @@ def test_state_round_trips_through_plain_data() -> None:
     state = cylinder.controller.state
 
     assert type(state).from_dict(state.to_dict()) == state
+
+
+def test_state_from_corrupt_data_is_refused() -> None:
+    for bad in (
+        [1],
+        {"heating": True, "window": "nonsense"},
+        {"heating": True, "window": {"ready_at": "2026-11-02T07:00:00"}},
+        {
+            "heating": True,
+            "window": {
+                "ready_at": "2026-11-02T07:00:00",  # naive: would break every comparison
+                "end": "2026-11-02T07:15:00",
+                "members": ["tiago"],
+                "target": 42,
+                "ready_reported": False,
+            },
+        },
+    ):
+        with pytest.raises(ValueError, match="controller state"):
+            ControllerState.from_dict(bad)

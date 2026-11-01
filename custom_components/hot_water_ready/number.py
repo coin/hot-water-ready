@@ -41,6 +41,7 @@ class TargetNumber(_BandNumber):
 
     async def async_set_native_value(self, value: float) -> None:
         """Change the target."""
+        await self.async_require_admin()
         await self.heater.async_set_band(target=value)
 
 
@@ -58,4 +59,5 @@ class MarginNumber(_BandNumber):
 
     async def async_set_native_value(self, value: float) -> None:
         """Change the margin."""
+        await self.async_require_admin()
         await self.heater.async_set_band(margin=value)

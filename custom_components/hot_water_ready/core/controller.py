@@ -35,7 +35,7 @@ class Occurrence:
 
 
 @dataclass(frozen=True)
-class Event:
+class ControllerEvent:
     """Something the household may be told about."""
 
     kind: Literal["heating", "ready"]
@@ -80,20 +80,35 @@ class ControllerState:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> ControllerState:
-        """Rebuild from `to_dict`'s output."""
+    def from_dict(cls, data: object) -> ControllerState:
+        """Rebuild from `to_dict`'s output; ValueError when it is not that."""
+        try:
+            return cls._parse(data)
+        except (AttributeError, KeyError, TypeError, ValueError) as err:
+            msg = f"Unreadable controller state: {err!r}"
+            raise ValueError(msg) from err
+
+    @classmethod
+    def _parse(cls, data: object) -> ControllerState:
+        if not isinstance(data, dict):
+            raise TypeError(type(data).__name__)
         raw = data.get("window")
-        window = (
-            None
-            if raw is None
-            else Window(
-                ready_at=datetime.fromisoformat(raw["ready_at"]),
-                end=datetime.fromisoformat(raw["end"]),
-                members=frozenset(raw["members"]),
+        window = None
+        if raw is not None:
+            ready_at = datetime.fromisoformat(raw["ready_at"])
+            end = datetime.fromisoformat(raw["end"])
+            if ready_at.tzinfo is None or end.tzinfo is None:
+                raise ValueError("naive datetime")
+            members = raw["members"]
+            if not isinstance(members, list) or not all(isinstance(m, str) for m in members):
+                raise TypeError("members")
+            window = Window(
+                ready_at=ready_at,
+                end=end,
+                members=frozenset(members),
                 target=float(raw["target"]),
                 ready_reported=bool(raw["ready_reported"]),
             )
-        )
         return cls(window=window, heating=bool(data.get("heating", False)))
 
 
@@ -102,7 +117,7 @@ class Decision:
     """The relay as the controller wants it, and what happened on this step."""
 
     relay_on: bool
-    events: tuple[Event, ...] = field(default=())
+    events: tuple[ControllerEvent, ...] = field(default=())
 
 
 def lead_minutes(settings: Settings, temperature: float) -> float:
@@ -113,6 +128,13 @@ def lead_minutes(settings: Settings, temperature: float) -> float:
     """
     lead = (settings.target - temperature) * settings.rate_minutes_per_degree
     return min(settings.lead_cap_minutes, max(0.0, lead + settings.lead_margin_minutes))
+
+
+def minutes_to_ready(settings: Settings, temperature: float | None) -> int | None:
+    """About how long heating from `temperature` to the target takes, by the rate."""
+    if temperature is None:
+        return None
+    return max(0, round((settings.target - temperature) * settings.rate_minutes_per_degree))
 
 
 class Controller:
@@ -128,28 +150,37 @@ class Controller:
     ) -> Decision:
         """Look at the house now and decide."""
         state = self.state
-        if state.window is not None and now >= state.window.end:
-            state.window = None
-            state.heating = False
+        self._close_if_done(now)
         if temperature is None:
             # No reading: hold what is happening; the fault guard decides when that ends.
             return Decision(relay_on=state.heating and state.window is not None)
 
-        events: list[Event] = []
+        events: list[ControllerEvent] = []
         if state.window is None:
             self._open_window(now, temperature, occurrences, events)
         if state.window is not None:
             self._band(state.window, temperature, events)
+            self._close_if_done(now)  # a late window closes the moment it is ready
         else:
             state.heating = False
         return Decision(relay_on=state.heating, events=tuple(events))
+
+    def _close_if_done(self, now: datetime) -> None:
+        """Close a window past its end, unless it is still heating towards ready (spec 4.2)."""
+        state = self.state
+        window = state.window
+        if window is None or now < window.end:
+            return
+        if window.ready_reported or not state.heating:
+            state.window = None
+            state.heating = False
 
     def _open_window(
         self,
         now: datetime,
         temperature: float,
         occurrences: Iterable[Occurrence],
-        events: list[Event],
+        events: list[ControllerEvent],
     ) -> None:
         settings = self.settings
         grace = timedelta(minutes=settings.grace_minutes)
@@ -166,10 +197,12 @@ class Controller:
         if temperature < settings.target - _EPSILON:
             self.state.heating = True
             events.append(
-                Event("heating", first.at, first.members, temperature, minutes=round(lead))
+                ControllerEvent(
+                    "heating", first.at, first.members, temperature, minutes=round(lead)
+                )
             )
 
-    def _band(self, window: Window, temperature: float, events: list[Event]) -> None:
+    def _band(self, window: Window, temperature: float, events: list[ControllerEvent]) -> None:
         """Ready at the target; stop at target + margin; restart at target - margin.
 
         A request that starts below the target (the window opening, or the target raised while
@@ -192,4 +225,4 @@ class Controller:
             state.heating = True
         if not window.ready_reported and temperature >= target - _EPSILON:
             window.ready_reported = True
-            events.append(Event("ready", window.ready_at, window.members, temperature))
+            events.append(ControllerEvent("ready", window.ready_at, window.members, temperature))

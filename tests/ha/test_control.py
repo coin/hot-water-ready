@@ -3,9 +3,12 @@
 from datetime import timedelta
 
 from freezegun.api import FrozenDateTimeFactory
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import Context, HomeAssistant, ServiceCall
+from homeassistant.exceptions import Unauthorized
+import pytest
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
+    MockUser,
     async_fire_time_changed,
     async_mock_service,
 )
@@ -157,12 +160,16 @@ async def test_restart_mid_heat_carries_on(
 
     assert await hass.config_entries.async_reload(heater.entry_id)
     await hass.async_block_till_done()
-    assert off == []
+    # Unloading switched the relay off; the reloaded heater resumes and switches it on again.
+    assert len(off) == 1
+    hass.states.async_set(SWITCH, "off")
+    await hass.async_block_till_done()
+    assert len(on) == 2
     assert hass.states.get("sensor.cylinder_status").state == "heating"
+    hass.states.async_set(SWITCH, "on")
     _water(hass, 43.0)
     await hass.async_block_till_done()
-    assert _calls(off) == ["turn_off"]
-    assert len(on) == 1
+    assert len(off) == 2
 
 
 async def test_next_ready_time_sensors(
@@ -210,3 +217,35 @@ async def test_target_and_margin_numbers_drive_the_band(
     await hass.async_block_till_done()
     assert len(off) == 1
     assert hass.states.get("number.cylinder_target_temperature").state == "45.0"
+
+
+async def test_removing_the_heater_switches_off_what_it_switched_on(
+    hass: HomeAssistant,
+    heater: MockConfigEntry,
+    hass_ws_client: WebSocketGenerator,
+) -> None:
+    async_mock_service(hass, "switch", "turn_on")
+    off = async_mock_service(hass, "switch", "turn_off")
+    _water(hass, 40.0)
+    await _add_ready_time(hass, hass_ws_client, heater, "05:20")
+    await hass.async_block_till_done()
+    hass.states.async_set(SWITCH, "on")
+    await hass.async_block_till_done()
+
+    assert await hass.config_entries.async_remove(heater.entry_id)
+    await hass.async_block_till_done()
+    assert len(off) == 1
+
+
+async def test_only_admins_change_the_band(
+    hass: HomeAssistant, heater: MockConfigEntry, maria_user: MockUser
+) -> None:
+    with pytest.raises(Unauthorized):
+        await hass.services.async_call(
+            "number",
+            "set_value",
+            {"entity_id": "number.cylinder_target_temperature", "value": 50},
+            blocking=True,
+            context=Context(user_id=maria_user.id),
+        )
+    assert heater.runtime_data.target == 42.0

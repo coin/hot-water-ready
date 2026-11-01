@@ -2,6 +2,8 @@
 
 from typing import Final
 
+from .core.controller import Settings
+
 DOMAIN: Final = "hot_water_ready"
 
 # Heater (config entry)
@@ -15,8 +17,8 @@ CONF_COLOUR: Final = "colour"
 COLOURS: Final = ("blue", "green", "orange", "purple", "red", "teal", "pink", "brown")
 
 # Temperature band (number entities, kept in storage)
-DEFAULT_TARGET: Final = 42.0
-DEFAULT_MARGIN: Final = 1.0
+DEFAULT_TARGET: Final = Settings().target
+DEFAULT_MARGIN: Final = Settings().margin
 MIN_TARGET: Final = 30.0
 MAX_TARGET: Final = 75.0
 MAX_MARGIN: Final = 5.0
