@@ -60,3 +60,6 @@ Read by the reviewer. Mechanical rules live in the checks (`scripts/check`, `car
   on purpose and expects the random households to catch it.
 - `async_mock_service(hass, "switch", ...)` registered before the entry is set up is replaced
   when setup loads the switch component; register it after setup.
+- Tests of what the heater sends to its element use the fakes in `tests/ha/fakes.py`, whose
+  services change the device's state as a real relay or thermostat does. A bare mock that
+  changes nothing hides commands sent twice or again every step.
