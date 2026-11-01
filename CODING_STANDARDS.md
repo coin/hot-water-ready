@@ -41,7 +41,8 @@ Read by the reviewer. Mechanical rules live in the checks (`scripts/check`, `car
   way.
 - A new controller rule gets a scenario test, and `tests/core/test_invariants.py` must still
   pass: it runs hundreds of random households and checks no chatter, nobody told twice, no relay
-  on without a window. When a rule adds something that must always hold, add it there.
+  on without a window. When a rule adds something that must always hold, add it there, with its
+  can-fail test.
 
 ## Card
 
@@ -54,3 +55,7 @@ Read by the reviewer. Mechanical rules live in the checks (`scripts/check`, `car
 - An assertion must be able to fail: `assert x is not None` after `x = a or b`, or a check on
   something the test itself just set, proves nothing. When a test passes on the first run,
   break the code it guards once and watch it fail.
+- A new invariant in `tests/core/test_invariants.py` comes with a test that breaks the controller
+  on purpose and expects the random households to catch it.
+- `async_mock_service(hass, "switch", ...)` registered before the entry is set up is replaced
+  when setup loads the switch component; register it after setup.
