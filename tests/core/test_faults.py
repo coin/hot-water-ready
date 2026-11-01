@@ -179,7 +179,7 @@ def test_relay_stuck_is_reported_only_and_clears_by_itself() -> None:
     run.tick(5.5, temperature=45.0, relay_on=False, power=2700.0)
     assert run.active == {Fault.RELAY_STUCK}
     assert not run.guard.blocks_heating
-    run.tick(0.5, temperature=45.0, relay_on=False, power=0.0)
+    run.tick(1.5, temperature=45.0, relay_on=False, power=0.0)  # a minute seen without power
 
     assert run.active == set()
 
@@ -214,3 +214,54 @@ def test_state_round_trips_and_refuses_corrupt_data() -> None:
     for bad in ({"active": ["melted"]}, {"active": "not_rising"}, {"run_start": "yesterday"}):
         with pytest.raises(ValueError, match="fault state"):
             FaultState.from_dict(bad)
+
+
+def test_a_dead_heater_letting_the_water_cool_is_not_rising() -> None:
+    # The relay is on but nothing heats; the water cools slowly. Small steady falls are not a
+    # shower, so the count does not restart and the fault comes at 30 min.
+    run = Run()
+    run.tick(31, temperature=38.0, relay_on=True, rise_per_minute=-0.01)
+
+    assert run.active == {Fault.NOT_RISING}
+
+
+def test_a_shower_after_some_rising_restarts_the_count() -> None:
+    # Rising slowly for 25 min (0.75 C), then a shower takes 0.35 C in two minutes: the count
+    # starts again there, so no fault at minute 32.
+    run = Run()
+    run.tick(25, temperature=35.0, relay_on=True, rise_per_minute=0.03)
+    run.tick(2, temperature=35.75, relay_on=True, rise_per_minute=-0.175)
+    run.tick(5, temperature=35.4, relay_on=True, rise_per_minute=0.03)
+
+    assert run.active == set()
+
+
+def test_a_restart_gives_the_sensor_time_to_come_back() -> None:
+    # Saved state from 20 min ago; Home Assistant starts and the sensor has no state yet.
+    run = Run()
+    run.tick(1, temperature=40.0, relay_on=False)
+    saved = FaultState.from_dict(run.guard.state.to_dict())
+    run.guard = FaultGuard(FaultSettings(), saved)
+    run.now += timedelta(minutes=20)
+    run.tick(4.5, temperature=None, relay_on=False)
+
+    assert run.active == set()
+
+
+def test_relay_stuck_clears_after_a_minute_of_no_power_not_one_reading() -> None:
+    run = Run(power_sensor=True)
+    run.tick(5.5, temperature=45.0, relay_on=False, power=2700.0)
+    run.tick(0.5, temperature=45.0, relay_on=False, power=0.0)
+    assert Fault.RELAY_STUCK in run.active
+    run.tick(1, temperature=45.0, relay_on=False, power=0.0)
+
+    assert run.active == set()
+
+
+def test_relay_stuck_clears_when_the_power_sensor_goes() -> None:
+    run = Run(power_sensor=True)
+    run.tick(5.5, temperature=45.0, relay_on=False, power=2700.0)
+    run.power_sensor = False
+    run.tick(0.5, temperature=45.0, relay_on=False)
+
+    assert run.active == set()

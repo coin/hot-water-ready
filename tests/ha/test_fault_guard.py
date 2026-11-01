@@ -124,7 +124,7 @@ async def test_heat_now_is_refused_with_the_reason_during_a_fault(
     hass.states.async_set(SENSOR, "unavailable")
     await _minutes(hass, freezer, 5.5)
 
-    with pytest.raises(HomeAssistantError, match="sensor_unavailable"):
+    with pytest.raises(HomeAssistantError, match="sensor gives no readings"):
         await hass.services.async_call(
             "button", "press", {"entity_id": "button.cylinder_heat_now"}, blocking=True
         )
@@ -134,7 +134,7 @@ async def test_heat_now_is_refused_with_the_reason_during_a_fault(
     )
     reply = await client.receive_json()
     assert reply["error"]["code"] == "refused"
-    assert "sensor_unavailable" in reply["error"]["message"]
+    assert "sensor gives no readings" in reply["error"]["message"]
 
 
 async def test_not_rising_is_fixed_through_repairs(
@@ -180,7 +180,7 @@ async def test_power_checks_need_a_power_sensor_and_relay_stuck_only_reports(
     assert _issue(hass, heater, "relay_stuck") is not None
     assert hass.states.get("sensor.cylinder_status").state == "fault"
     hass.states.async_set(POWER, "0", {"unit_of_measurement": "W"})
-    await _minutes(hass, freezer, 0.5)
+    await _minutes(hass, freezer, 1.5)  # a minute seen without power
     assert _issue(hass, heater, "relay_stuck") is None
 
 
@@ -235,8 +235,24 @@ async def test_fault_recipients_option_replaces_the_admins(
     hass: HomeAssistant,
     heater: MockConfigEntry,
     tiago_phone: str,
+    maria_user: MockUser,
     freezer: FrozenDateTimeFactory,
 ) -> None:
+    phone_entry = MockConfigEntry(domain="mobile_app", title="pixel_maria")
+    phone_entry.add_to_hass(hass)
+    device = dr.async_get(hass).async_get_or_create(
+        config_entry_id=phone_entry.entry_id, identifiers={("mobile_app", "pm")}, name="pm"
+    )
+    registry = er.async_get(hass)
+    tracker = registry.async_get_or_create(
+        "device_tracker", "mobile_app", "pm_tracker", device_id=device.id
+    ).entity_id
+    maria_phone = registry.async_get_or_create(
+        "notify", "mobile_app", "pm_notify", device_id=device.id
+    ).entity_id
+    hass.states.async_set(
+        "person.maria", "home", {"user_id": maria_user.id, "device_trackers": [tracker]}
+    )
     hass.config_entries.async_update_entry(heater, options={"fault_recipients": ["person.maria"]})
     await hass.async_block_till_done()
     sent = async_mock_service(hass, "notify", "send_message")
@@ -244,7 +260,52 @@ async def test_fault_recipients_option_replaces_the_admins(
     hass.states.async_set(SENSOR, "unavailable")
     await _minutes(hass, freezer, 5.5)
 
-    assert tiago_phone not in [c.data["entity_id"] for c in sent]
+    assert [c.data["entity_id"] for c in sent] == [maria_phone]
+
+
+async def test_only_admins_switch_automatic_control_back_on(
+    hass: HomeAssistant, heater: MockConfigEntry, maria_user: MockUser
+) -> None:
+    await heater.runtime_data.async_set_automatic(False)
+    with pytest.raises(Unauthorized):
+        await hass.services.async_call(
+            "switch",
+            "turn_on",
+            {"entity_id": "switch.cylinder_automatic_control"},
+            blocking=True,
+            context=Context(user_id=maria_user.id),
+        )
+    assert hass.states.get("switch.cylinder_automatic_control").state == "off"
+
+
+async def test_heat_now_is_refused_while_run_by_hand(
+    hass: HomeAssistant, heater: MockConfigEntry
+) -> None:
+    hass.config.language = "pt"
+    await heater.runtime_data.async_set_automatic(False)
+    with pytest.raises(HomeAssistantError, match="comandado manualmente"):
+        await hass.services.async_call(
+            "button", "press", {"entity_id": "button.cylinder_heat_now"}, blocking=True
+        )
+
+
+async def test_no_heating_message_while_a_fault_stops_heating(
+    hass: HomeAssistant,
+    heater: MockConfigEntry,
+    calls: dict[str, list[ServiceCall]],
+    tiago_phone: str,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    hass.states.async_set(SENSOR, "unavailable")
+    await _minutes(hass, freezer, 5.5)
+    calls["sent"].clear()
+    _water(hass, 38.0)  # one reading: the fault needs a minute of them to clear
+    from datetime import time  # noqa: PLC0415
+
+    await heater.runtime_data.async_add_ready_time(TIAGO, time(5, 20), frozenset({0}), True)
+    await hass.async_block_till_done()
+
+    assert [c for c in calls["sent"] if "heating" in c.data["message"]] == []
 
 
 async def test_issues_are_removed_with_the_heater(

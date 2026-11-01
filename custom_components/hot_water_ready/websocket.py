@@ -271,7 +271,7 @@ async def ws_heat_now(
     try:
         await heater.async_heat_now(heater.requester_key(connection.user))
     except HeatNowRefusedError as err:
-        connection.send_error(msg["id"], "refused", f"Heating is stopped by a fault: {err}")
+        connection.send_error(msg["id"], "refused", await heater.async_refusal_message(err))
         return
     connection.send_result(msg["id"])
 

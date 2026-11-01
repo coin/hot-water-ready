@@ -7,12 +7,14 @@
         "data": {
           "name": "Nome",
           "switch": "Interruptor do aquecedor",
-          "temperature_sensor": "Sensor de temperatura da água"
+          "temperature_sensor": "Sensor de temperatura da água",
+          "power_sensor": "Sensor de potência do aquecedor (opcional)"
         },
         "data_description": {
           "name": "Aparece no cartão e no dispositivo do aquecedor, por exemplo Cilindro.",
           "switch": "O relé ou a tomada inteligente que alimenta a resistência.",
-          "temperature_sensor": "Um sensor que mede a temperatura da água acumulada."
+          "temperature_sensor": "Um sensor que mede a temperatura da água acumulada.",
+          "power_sensor": "Com um sensor de potência, também se detectam um aquecedor que não consome e um relé preso ligado."
         }
       }
     },
@@ -204,7 +206,7 @@
       "message": "Duche pronto: a água está a {temperature} °C."
     },
     "fault_sensor_unavailable": {
-      "message": "{heater}: o sensor da temperatura da água está calado; o aquecimento parou."
+      "message": "{heater}: o sensor da temperatura da água não dá leituras; o aquecimento parou."
     },
     "fault_not_rising": {
       "message": "{heater}: a água não aquece; o aquecimento parou. Verifique o aquecedor."
@@ -213,16 +215,31 @@
       "message": "{heater}: o aquecedor não consome energia; o aquecimento parou. Verifique a resistência."
     },
     "fault_relay_stuck": {
-      "message": "{heater}: o aquecedor consome energia desligado. Verifique o relé."
+      "message": "{heater}: o aquecedor consome energia com o relé desligado. Verifique o relé."
     },
     "heat_now_refused": {
-      "message": "Não é possível aquecer agora enquanto uma avaria impede o aquecimento ({faults})."
+      "message": "Não é possível aquecer agora enquanto uma avaria impede o aquecimento: {faults}."
+    },
+    "fault_label_sensor_unavailable": {
+      "message": "o sensor da temperatura da água não dá leituras"
+    },
+    "fault_label_not_rising": {
+      "message": "a água não aquece"
+    },
+    "fault_label_no_consumption": {
+      "message": "o aquecedor não consome energia"
+    },
+    "fault_label_relay_stuck": {
+      "message": "o relé parece ter ficado ligado"
+    },
+    "heat_now_refused_manual": {
+      "message": "Não é possível aquecer agora com o controlo automático desligado: o aquecedor está a ser comandado manualmente."
     }
   },
   "issues": {
     "sensor_unavailable": {
-      "title": "{heater}: o sensor da temperatura da água está calado",
-      "description": "Há algum tempo que não há leituras do sensor da temperatura da água, por isso o aquecimento parou. Volta sozinho um minuto depois de as leituras regressarem."
+      "title": "{heater}: o sensor da temperatura da água não dá leituras",
+      "description": "Há algum tempo que o sensor da temperatura da água não dá leituras, por isso o aquecimento parou. Volta sozinho um minuto depois de as leituras regressarem."
     },
     "not_rising": {
       "title": "{heater}: a água não aquece",
@@ -247,8 +264,8 @@
       }
     },
     "relay_stuck": {
-      "title": "{heater}: o aquecedor consome energia desligado",
-      "description": "O aquecedor está a consumir energia com o relé desligado. O relé pode ter ficado ligado; verifique-o. Isto desaparece sozinho quando o consumo parar."
+      "title": "{heater}: o aquecedor consome energia com o relé desligado",
+      "description": "O aquecedor está a consumir energia com o relé desligado. O relé pode ter ficado ligado; verifique-o. Isto desaparece sozinho um minuto depois de o consumo parar."
     }
   }
 }

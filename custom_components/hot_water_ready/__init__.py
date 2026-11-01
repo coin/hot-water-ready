@@ -11,7 +11,7 @@ from .const import DOMAIN
 from .core.faults import Fault
 from .entity import register_heater_device
 from .frontend import async_load_card, async_unload_card
-from .heater import Heater
+from .heater import Heater, issue_id
 from .storage import HeaterStore
 
 PLATFORMS: list[Platform] = [
@@ -65,7 +65,7 @@ async def async_remove_entry(hass: HomeAssistant, entry: HotWaterReadyConfigEntr
     """
     await HeaterStore(hass, entry.entry_id).async_remove()
     for fault in Fault:
-        ir.async_delete_issue(hass, DOMAIN, f"{entry.entry_id}_{fault.value}")
+        ir.async_delete_issue(hass, DOMAIN, issue_id(entry.entry_id, fault))
     others = [e for e in hass.config_entries.async_entries(DOMAIN) if e.entry_id != entry.entry_id]
     if not others:
         await async_unload_card(hass)

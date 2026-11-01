@@ -7,12 +7,14 @@
         "data": {
           "name": "Name",
           "switch": "Heater switch",
-          "temperature_sensor": "Water temperature sensor"
+          "temperature_sensor": "Water temperature sensor",
+          "power_sensor": "Heater power sensor (optional)"
         },
         "data_description": {
           "name": "Shown on the card and on the heater's device, for example Cylinder.",
           "switch": "The relay or smart plug that powers the heating element.",
-          "temperature_sensor": "A sensor measuring the stored water's temperature."
+          "temperature_sensor": "A sensor measuring the stored water's temperature.",
+          "power_sensor": "With a power sensor, a heater that draws nothing and a relay stuck on are noticed too."
         }
       }
     },
@@ -216,7 +218,22 @@
       "message": "{heater}: the heater draws power while switched off. Check the relay."
     },
     "heat_now_refused": {
-      "message": "Heat now is not possible while heating is stopped by a fault ({faults})."
+      "message": "Heat now is not possible while a fault stops heating: {faults}."
+    },
+    "fault_label_sensor_unavailable": {
+      "message": "the water temperature sensor gives no readings"
+    },
+    "fault_label_not_rising": {
+      "message": "the water is not getting hotter"
+    },
+    "fault_label_no_consumption": {
+      "message": "the heater draws no power"
+    },
+    "fault_label_relay_stuck": {
+      "message": "the relay seems stuck on"
+    },
+    "heat_now_refused_manual": {
+      "message": "Heat now is not possible while automatic control is off: the heater is run by hand."
     }
   },
   "issues": {
@@ -248,7 +265,7 @@
     },
     "relay_stuck": {
       "title": "{heater}: the heater draws power while switched off",
-      "description": "The heater is drawing power although the relay is off. The relay may be stuck on; check it. This clears by itself when the power stops."
+      "description": "The heater is drawing power although the relay is off. The relay may be stuck on; check it. This clears by itself a minute after the power stops."
     }
   }
 }

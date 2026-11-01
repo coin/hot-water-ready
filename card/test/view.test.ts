@@ -360,7 +360,7 @@ describe("faultBanner", () => {
     const broken = { ...cold, faults: ["not_rising", "relay_stuck"] as HeaterSnapshot["faults"] };
     expect(faultBanner(broken, "pt")).toEqual([
       "Avaria: a água não aquece. O aquecimento parou; veja as Reparações.",
-      "Avaria: o aquecedor consome energia desligado. Verifique o relé.",
+      "Avaria: o aquecedor consome energia com o relé desligado. Verifique o relé.",
     ]);
   });
 });
@@ -368,5 +368,12 @@ describe("faultBanner", () => {
 describe("heatNowActions during a fault", () => {
   it("offers nothing to ask while a fault stops heating", () => {
     expect(heatNowActions({ ...cold, heat_now_blocked: true })).toEqual([]);
+  });
+
+  it("still lets someone cancel a request that was running when the fault came", () => {
+    const running = { ...cold, heat_now_blocked: true, heat_now: { requesters: ["m1"], asked: true, can_cancel: true } };
+    expect(heatNowActions(running)).toEqual([
+      { command: "hot_water_ready/heat_now/cancel", label: "heat_now.cancel", primary: true },
+    ]);
   });
 });

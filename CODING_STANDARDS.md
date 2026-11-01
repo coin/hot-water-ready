@@ -26,7 +26,8 @@ Read by the reviewer. Mechanical rules live in the checks (`scripts/check`, `car
 - "Validated on load" means every field read from storage, nested shapes included, goes through
   a parser that turns anything unexpected into a default with a warning, and a test feeds it
   corrupt shapes (wrong types, naive datetimes). Setup never crashes on a bad file.
-- Anything the heater switched on, it switches off when the entry unloads.
+- Anything the heater switched on, it switches off when the entry unloads. With automatic
+  control off the household runs the heater, and unloading leaves the relay as it is.
 
 ## Scheduling core
 

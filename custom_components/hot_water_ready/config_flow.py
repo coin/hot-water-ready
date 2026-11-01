@@ -52,6 +52,9 @@ USER_SCHEMA = probatio.Schema(
                 domain="sensor", device_class=SensorDeviceClass.TEMPERATURE
             )
         ),
+        probatio.Optional(CONF_POWER_SENSOR): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain="sensor", device_class=SensorDeviceClass.POWER)
+        ),
     }
 )
 
@@ -88,6 +91,7 @@ class HotWaterReadyConfigFlow(ConfigFlow, domain=DOMAIN):
                     CONF_SWITCH: user_input[CONF_SWITCH],
                     CONF_TEMPERATURE_SENSOR: user_input[CONF_TEMPERATURE_SENSOR],
                 },
+                options={CONF_POWER_SENSOR: user_input.get(CONF_POWER_SENSOR)},
             )
         return self.async_show_form(step_id="user", data_schema=USER_SCHEMA)
 

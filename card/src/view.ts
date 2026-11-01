@@ -213,15 +213,12 @@ const CANCEL = "hot_water_ready/heat_now/cancel";
 
 /** "Aquecer agora"; "Cancelar" for who asked; "Avisar-me também" for anyone else (spec 4.6). */
 export function heatNowActions(heater: HeaterSnapshot): HeatNowAction[] {
-  if (heater.heat_now_blocked) return [];
+  // During a fault nobody can ask, but a request already running can still be cancelled.
+  const canAsk = heater.can_ask_heat_now && !heater.heat_now_blocked;
   const request = heater.heat_now;
-  if (!request) {
-    return heater.can_ask_heat_now ? [{ command: START, label: "heat_now.start", primary: true }] : [];
-  }
+  if (!request) return canAsk ? [{ command: START, label: "heat_now.start", primary: true }] : [];
   if (request.asked) return [{ command: CANCEL, label: "heat_now.cancel", primary: true }];
-  const actions: HeatNowAction[] = heater.can_ask_heat_now
-    ? [{ command: START, label: "heat_now.join", primary: true }]
-    : [];
+  const actions: HeatNowAction[] = canAsk ? [{ command: START, label: "heat_now.join", primary: true }] : [];
   if (request.can_cancel) actions.push({ command: CANCEL, label: "heat_now.cancel", primary: false });
   return actions;
 }
