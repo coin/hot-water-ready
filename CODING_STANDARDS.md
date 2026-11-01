@@ -54,6 +54,9 @@ Read by the reviewer. Mechanical rules live in the checks (`scripts/check`, `car
 - Logic that decides what to show lives in plain modules with vitest tests; the Lit element
   only renders and wires events.
 - Theme variables only; no `ha-*` elements except `ha-card`.
+- The card has one stylesheet, so a class name means one thing in it. A new view's classes are
+  checked against the existing ones: the week's `today` met the "Casa hoje" line's `.today` and
+  its margins squeezed a column to 8px.
 
 ## Tests
 

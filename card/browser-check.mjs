@@ -1,4 +1,6 @@
-// Load a test HA dashboard several times in a real browser and report what the card shows.
+// Load a test HA dashboard several times in a real browser and report what the card shows, then
+// open each of its views (people, week, settings) at phone width and fail on anything that spills
+// past the card's edge or has its text cut.
 // Run from card/:  node browser-check.mjs [chromium|firefox|webkit] [dashboard path] [loads]
 // Needs the test HA from dev/testha.sh and `npx playwright install <browser>` once.
 import { readFileSync } from "node:fs";
@@ -9,7 +11,7 @@ const credentials = readFileSync(new URL("../dev/testha/config/test-credentials.
 const field = (name) => credentials.match(new RegExp(`^${name}: (.+)$`, "m"))[1].trim();
 
 const browser = await { chromium, firefox, webkit }[browserName].launch();
-const page = await browser.newPage();
+const page = await browser.newPage({ viewport: { width: 400, height: 1000 } }); // phone first
 await page.goto(`http://localhost:8124${path}`);
 await page.locator("input[name=username]").fill(field("username"));
 await page.locator("input[type=password]").fill(field("password"));
@@ -40,6 +42,48 @@ for (let n = 1; n <= Number(loads); n++) {
   if (result.card === "NO CARD" || result.errorCard) failures++;
   console.log(`${browserName} load ${n}: ${JSON.stringify(result)}`);
 }
-await browser.close();
 console.log(`${browserName}: ${Number(loads) - failures} of ${loads} loads showed the card`);
-process.exit(failures ? 1 : 0);
+
+// Elements placed past the card's edge, or with their text cut, outside a scroller made to scroll.
+const spills = () =>
+  page.locator("hot-water-ready-card").first().evaluate((card) => {
+    const edge = card.getBoundingClientRect();
+    const scrolls = (node) => {
+      for (let up = node.parentElement; up; up = up.parentElement) {
+        if (["auto", "scroll"].includes(getComputedStyle(up).overflowX)) return true;
+      }
+      return false;
+    };
+    const out = [];
+    for (const node of card.shadowRoot.querySelectorAll("*")) {
+      const box = node.getBoundingClientRect();
+      if (!box.width || scrolls(node)) continue;
+      const style = getComputedStyle(node);
+      // Text cut by its own box, unless an ellipsis says so on purpose.
+      const cut = style.overflowX !== "visible" && style.textOverflow !== "ellipsis" && node.scrollWidth > node.clientWidth + 1;
+      if (box.left < edge.left - 1 || box.right > edge.right + 1 || cut) {
+        const why = cut ? `cut: ${node.scrollWidth}px of text in ${node.clientWidth}px` : `${Math.round(box.left)}..${Math.round(box.right)}`;
+        out.push(`${node.tagName.toLowerCase()}.${[...node.classList].join(".")} ${why}`);
+      }
+    }
+    return out;
+  });
+
+const card = page.locator("hot-water-ready-card").first();
+const views = [["people", null], ["week", card.locator(".tab").nth(1)], ["settings", card.locator(".settings-button")]];
+let spilled = 0;
+for (const [name, open] of views) {
+  if (open) {
+    if (!(await open.count())) {
+      console.log(`${browserName} ${name}: not shown to this user`);
+      continue;
+    }
+    await open.click();
+    await page.waitForTimeout(500);
+  }
+  const found = await spills();
+  spilled += found.length;
+  console.log(`${browserName} ${name}: ${found.length ? `spills past the card: ${found.join(", ")}` : "fits"}`);
+}
+await browser.close();
+process.exit(failures || spilled ? 1 : 0);
