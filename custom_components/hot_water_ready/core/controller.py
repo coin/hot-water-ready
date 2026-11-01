@@ -5,11 +5,12 @@ answers whether the relay should be on, plus what happened (a window started hea
 became ready). Its state is plain data so it survives a restart.
 """
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
+from .cluster import ClusterTarget, Tank, cluster_target
 from .parsing import aware_datetime, flag, name_list, number
 
 # The probe reads in 0.1 C steps; compare with a little slack so 43.0 counts as reaching 43.
@@ -28,6 +29,11 @@ class Settings:
     grace_minutes: float = 15.0
     keep_heating_gap_minutes: float = 40.0
     solar_aware: bool = False  # apply the solar-aware lead (spec 4.3); off, it is only recorded
+    tank: Tank | None = None  # with it, a cluster the store cannot carry heats higher (spec 4.5)
+
+    def with_target(self, target: float) -> Settings:
+        """The same settings aiming at another target, such as a raised cluster's."""
+        return replace(self, target=target)
 
 
 @dataclass(frozen=True)
@@ -232,11 +238,6 @@ def solar_lead_minutes(
     return lead_minutes(replace(settings, rate_minutes_per_degree=1 / combined), temperature)
 
 
-def stop_point(settings: Settings) -> float:
-    """Where heating stops: target + margin (spec 4.4). A thermostat is set to this."""
-    return settings.target + settings.margin
-
-
 def joins(settings: Settings, window_end: datetime, ready_at: datetime) -> bool:
     """Whether a ready time joins a window ending at `window_end` (spec 4.1).
 
@@ -248,6 +249,17 @@ def joins(settings: Settings, window_end: datetime, ready_at: datetime) -> bool:
     return ready_at - lead - window_end < timedelta(minutes=settings.keep_heating_gap_minutes)
 
 
+def window_target(settings: Settings, ready_times: Sequence[Occurrence]) -> ClusterTarget:
+    """The target for a window serving these ready times: raised for a cluster (spec 4.5)."""
+    return cluster_target(
+        settings.tank,
+        settings.target,
+        showers=sum(len(o.members) for o in ready_times),
+        span_minutes=(ready_times[-1].at - ready_times[0].at).total_seconds() / 60,
+        month=ready_times[0].at.month,
+    )
+
+
 @dataclass(frozen=True)
 class PlannedWindow:
     """A heating window as the coming ready times make it, in UTC (spec 5, 6)."""
@@ -255,6 +267,9 @@ class PlannedWindow:
     start: datetime  # the first ready time less the lead
     end: datetime  # the last ready time plus the grace
     ready_times: tuple[Occurrence, ...]
+    target: float  # raised for a cluster the store cannot carry (spec 4.5)
+    needed: float  # what the store would have to be at
+    short: bool  # even the maximum temperature cannot carry it: the card warns
 
 
 def planned_windows(
@@ -267,7 +282,6 @@ def planned_windows(
     estimate, and the heater may start later when the water is warmer.
     """
     water = settings.target - settings.margin if temperature is None else temperature
-    lead = timedelta(minutes=lead_minutes(settings, water))
     grace = timedelta(minutes=settings.grace_minutes)
     windows: list[list[Occurrence]] = []
     for occurrence in sorted(
@@ -277,10 +291,32 @@ def planned_windows(
             windows[-1].append(occurrence)
         else:
             windows.append([occurrence])
-    return [
-        PlannedWindow(start=group[0].at - lead, end=group[-1].at + grace, ready_times=tuple(group))
-        for group in windows
-    ]
+    planned: list[PlannedWindow] = []
+    for group in windows:
+        cluster = window_target(settings, group)
+        lead = lead_minutes(settings.with_target(cluster.target), water)
+        planned.append(
+            PlannedWindow(
+                start=group[0].at - timedelta(minutes=lead),
+                end=group[-1].at + grace,
+                ready_times=tuple(group),
+                target=cluster.target,
+                needed=cluster.needed,
+                short=cluster.short,
+            )
+        )
+    return planned
+
+
+WARNING_AHEAD = timedelta(days=1)
+
+
+def next_warning(windows: Iterable[PlannedWindow], now: datetime) -> PlannedWindow | None:
+    """The first window not over yet, within a day, that even the cap cannot carry (spec 4.5)."""
+    for window in windows:
+        if window.end > now and window.short and window.end <= now + WARNING_AHEAD:
+            return window
+    return None
 
 
 def minutes_to_ready(settings: Settings, temperature: float | None) -> int | None:
@@ -367,7 +403,7 @@ class Controller:
                 self._tell_joiners(state.window, before, temperature, events)
         self._start_heat_now(temperature)
         if self._requested():
-            self._band(temperature)
+            self._band(temperature, self._served_target(ready_times))
             if state.window is not None:
                 self._tell_window(state.window, temperature, events)
                 self._close_if_done(now)  # a window past its end closes the moment it is ready
@@ -392,13 +428,52 @@ class Controller:
         return tuple(kept)
 
     def _lead(
-        self, temperature: float, ready_at: datetime, now: datetime, rise: float | None
+        self,
+        temperature: float,
+        ready_at: datetime,
+        now: datetime,
+        rise: float | None,
+        target: float,
     ) -> float:
-        """The lead the rule in use gives: version 1's, or the solar-aware one (spec 4.2, 4.3)."""
-        if not self.settings.solar_aware:
-            return lead_minutes(self.settings, temperature)
+        """The lead the rule in use gives to `target`: version 1's, or the solar-aware one."""
+        settings = self.settings.with_target(target)
+        if not settings.solar_aware:
+            return lead_minutes(settings, temperature)
         until = (ready_at - now).total_seconds() / 60
-        return solar_lead_minutes(self.settings, temperature, rise, until)
+        return solar_lead_minutes(settings, temperature, rise, until)
+
+    def target_now(self) -> float:
+        """The highest target asked for now: a raised cluster's, else the normal one."""
+        window = self.state.window
+        if window is None:
+            return self.settings.target
+        if self.state.heat_now is None:
+            return window.target
+        return max(window.target, self.settings.target)
+
+    def stop_point_now(self) -> float:
+        """Where heating stops now: the target asked for, plus the margin (spec 4.4, 4.5)."""
+        return self.target_now() + self.settings.margin
+
+    def _served_target(self, ready_times: list[Occurrence]) -> float | None:
+        """The open window's cluster target, from the ready times it serves now; None without."""
+        window = self.state.window
+        if window is None:
+            return None
+        served = [o for o in ready_times if window.ready_at <= o.at <= window.last_ready_at]
+        return window_target(self.settings, served).target if served else None
+
+    def _cluster(self, first: Occurrence, ready_times: list[Occurrence]) -> list[Occurrence]:
+        """`first` and the ready times after it that will join its window (spec 4.1)."""
+        grace = self._grace()
+        group = [first]
+        for occurrence in ready_times:
+            if occurrence.at <= group[-1].at:
+                continue
+            if not joins(self.settings, group[-1].at + grace, occurrence.at):
+                break
+            group.append(occurrence)
+        return group
 
     def _requested(self) -> bool:
         """Whether anything asks for hot water now: an open window or a heat-now request."""
@@ -463,11 +538,11 @@ class Controller:
         events: list[ControllerEvent],
         rise: float | None,
     ) -> None:
-        settings = self.settings
         first = next((o for o in ready_times if o.at + self._grace() > now), None)
         if first is None:
             return
-        lead = self._lead(temperature, first.at, now, rise)
+        target = window_target(self.settings, self._cluster(first, ready_times)).target
+        lead = self._lead(temperature, first.at, now, rise, target)
         if now < first.at - timedelta(minutes=lead):
             return
         self.state.window = Window(
@@ -475,13 +550,14 @@ class Controller:
             last_ready_at=first.at,
             end=first.at + self._grace(),
             members=first.members,
-            target=settings.target,
+            target=target,
             member_times=dict.fromkeys(first.members, first.at),
         )
-        if temperature < settings.target - _EPSILON:
+        if temperature < target - _EPSILON:
             self.state.heating = self.state.window.wants_heat = True
             # The sun was to do it and did not: the estimate is the heater's own lead.
-            minutes = round(lead or lead_minutes(settings, temperature))
+            heater_only = lead_minutes(self.settings.with_target(target), temperature)
+            minutes = round(lead or heater_only)
             events.append(
                 ControllerEvent("heating", first.at, first.members, temperature, minutes=minutes)
             )
@@ -538,7 +614,8 @@ class Controller:
         first, last = wanted[0].at, wanted[-1].at
         later_start = first > window.ready_at
         window.ready_at, window.last_ready_at, window.end = first, last, last + grace
-        not_due_yet = now < first - timedelta(minutes=self._lead(temperature, first, now, rise))
+        lead = self._lead(temperature, first, now, rise, window.target)
+        not_due_yet = now < first - timedelta(minutes=lead)
         if later_start and not self.state.heating and not_due_yet:
             self._close()
 
@@ -557,23 +634,31 @@ class Controller:
 
     # ------------------------------------------------------------------ band
 
-    def _band(self, temperature: float) -> None:
+    def _band(self, temperature: float, cluster_target: float | None) -> None:
         """Stop at target + margin; restart at target - margin.
 
-        A request that starts below the target (a window opening, heat now pressed, or the target
-        raised while one is running) heats straight to target + margin, even from inside the band.
+        The window's target is its cluster's (spec 4.5), heat now's the normal one, and the band
+        follows the higher of those asked for. A request that starts below its target (a window
+        opening, heat now pressed, or a target raised while one is running) heats straight to
+        target + margin, even from inside the band.
         """
         settings = self.settings
         state = self.state
-        target, margin = settings.target, settings.margin
+        margin = settings.margin
         window = state.window
-        for request in (window, state.heat_now):
-            if request is not None and request.target != target:
-                request.target = target
-                if temperature < target - _EPSILON:
+        heat_now = state.heat_now
+        requests: list[tuple[Window | HeatNow | None, float]] = [
+            (window, settings.target if cluster_target is None else cluster_target),
+            (heat_now, settings.target),
+        ]
+        for request, wanted in requests:
+            if request is not None and request.target != wanted:
+                request.target = wanted
+                if temperature < wanted - _EPSILON:
                     state.heating = True
                     if request is window:
                         window.wants_heat = True
+        target = self.target_now()
         if state.heating and temperature >= target + margin - _EPSILON:
             state.heating = False
             if window is not None:
@@ -590,7 +675,10 @@ class Controller:
     def _tell_window(
         self, window: Window, temperature: float, events: list[ControllerEvent]
     ) -> None:
-        """Ready at the target: tell each member of the window, once per ready time."""
+        """Ready at the target: tell each member of the window, once per ready time.
+
+        Ready is the normal target (spec 4.4), even while a raised cluster heats on above it.
+        """
         state = self.state
         waiting = {window.ready_for(member) for member in window.members} - state.told
         if waiting and temperature >= self.settings.target - _EPSILON:

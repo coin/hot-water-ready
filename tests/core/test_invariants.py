@@ -8,6 +8,7 @@ and the spec):
 - each member is told "heating" at most once per ready time;
 - the relay is never on without an open window or a heat-now request;
 - a heat-now request tells each person who asked once, at or above the target;
+- with a tank, the relay is never on above the highest temperature allowed plus the margin;
 - a restart at any moment, from the saved state, changes none of the above.
 
 Each rule also has a test that breaks the controller on purpose and expects the households to
@@ -25,6 +26,8 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
+from custom_components.hot_water_ready.core import controller
+from custom_components.hot_water_ready.core.cluster import ClusterTarget, Tank
 from custom_components.hot_water_ready.core.controller import (
     Controller,
     ControllerEvent,
@@ -54,7 +57,9 @@ def broken_rules(seed: int) -> list[str]:  # noqa: PLR0912 - one branch per rule
         Settings(),
         margin=rng.choice([0.0, 0.5, 1.0]),
         keep_heating_gap_minutes=rng.choice([0.0, 40.0]),
+        tank=rng.choice([None, Tank(80, 1500), Tank(150, 2000, max_temperature=48.0)]),
     )
+    ceiling = max(settings.target, settings.tank.max_temperature if settings.tank else 0.0)
     cylinder = Cylinder(now=START, water=rng.uniform(15, 48), settings=settings)
     cylinder.cool_per_minute = rng.uniform(0.0, 0.05)
     cylinder.occurrences = _household(rng)
@@ -86,11 +91,15 @@ def broken_rules(seed: int) -> list[str]:  # noqa: PLR0912 - one branch per rule
         state = cylinder.controller.state
         if cylinder.relay and state.window is None and state.heat_now is None:
             broken.append(f"relay on with nothing asking for it at {cylinder.now}")
+        probe = cylinder.probe
+        if cylinder.relay and probe is not None and probe > ceiling + settings.margin + 0.2:
+            broken.append(f"heated past the cap at {cylinder.now}")
 
-    # A window closing (or the next one opening) may switch at the reading of the switch before;
-    # two switches at one reading, both while something asks for heat, is the band chattering.
+    # A window closing (or the next one opening, perhaps with a raised target) may switch at the
+    # reading of the switch before; two switches at one reading for the same request is the band
+    # chattering.
     if any(
-        a.in_window and b.in_window and a.probe == b.probe
+        a.in_window and b.in_window and a.window == b.window and a.probe == b.probe
         for a, b in itertools.pairwise(cylinder.toggles)
     ):
         broken.append("chatter")
@@ -140,7 +149,7 @@ def test_heating_told_twice_is_caught() -> None:
 
 
 def test_chatter_is_caught() -> None:
-    def no_hysteresis(self: Controller, temperature: float) -> None:
+    def no_hysteresis(self: Controller, temperature: float, _window_target: float | None) -> None:
         # Stop at target + margin as usual, but switch back on at the very next reading that is
         # not above it: the band with no gap between its stop and restart points.
         target = self.settings.target + self.settings.margin
@@ -159,3 +168,11 @@ def test_relay_on_with_nothing_asking_is_caught() -> None:
 
     with _broken("_close", never_close):
         assert _caught("relay on with nothing asking") > 0
+
+
+def test_heating_past_the_cap_is_caught() -> None:
+    def uncapped(settings: Settings, _ready_times: object) -> ClusterTarget:
+        return ClusterTarget(target=70.0, needed=70.0, short=False)
+
+    with patch.object(controller, "window_target", uncapped):
+        assert _caught("heated past the cap") > 0

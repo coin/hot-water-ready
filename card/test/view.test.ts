@@ -18,6 +18,7 @@ import {
   shownMember,
   solarLine,
   todayInHouse,
+  clusterWarning,
   weekView,
   type ViewContext,
 } from "../src/view";
@@ -57,6 +58,7 @@ const cold: HeaterSnapshot = {
     solar: { windows: 0, on_time: 0, minutes_saved: 0, kwh: null, solar_windows: 0, solar_on_time: 0 },
   },
   week: null,
+  cluster_warning: null,
   today: [],
   members: [tiago, maria],
 };
@@ -540,5 +542,18 @@ describe("weekView", () => {
   it("splits a window across midnight and leaves the night part out", () => {
     const days = weekView(household, pt)?.days ?? [];
     expect(days[6]?.bars).toEqual([{ from: 1110 / 1140, length: 30 / 1140 }]);
+  });
+});
+
+describe("clusterWarning", () => {
+  it("is empty without a warning", () => {
+    expect(clusterWarning(cold, pt)).toBe("");
+  });
+
+  it("says when, what is needed and what the heater allows", () => {
+    const warning = { at: "2026-11-02T07:00:00+00:00", needed: 72, cap: 50 };
+    expect(clusterWarning({ ...cold, cluster_warning: warning }, pt)).toBe(
+      "Os duches a partir das 07:00 precisam da água a 72 °C, mas o aquecedor só aquece até 50 °C: os últimos podem sair menos quentes.",
+    );
   });
 });

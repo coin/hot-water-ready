@@ -222,6 +222,9 @@
           "keep_heating_gap_minutes": "Continuar a aquecer em intervalos menores do que",
           "solar_aware": "Usar a regra solar",
           "heating_rate": "Ritmo de aquecimento definido à mão (opcional)",
+          "tank_litres": "Volume do depósito (opcional)",
+          "element_watts": "Potência da resistência (opcional)",
+          "max_temperature": "Temperatura máxima para duches seguidos",
           "cancel_rule": "Quem pode cancelar o aquecer agora",
           "cancel_people": "Pessoas que também podem cancelar",
           "rich_notifications": "Substituir mensagens anteriores nos telemóveis",
@@ -236,7 +239,10 @@
           "power_sensor": "Com um sensor de potência, também se detectam um aquecedor que não consome e um relé preso ligado.",
           "fault_recipients": "Vazio: todos os administradores.",
           "solar_aware": "Desligada: o arranque é calculado só pelo aquecedor, e o resultado da regra solar fica apenas registado, para a comparação nas definições do cartão.",
-          "heating_rate": "Minutos para subir a água um grau. Vazio: aprendido com os aquecimentos do próprio aquecedor."
+          "heating_rate": "Minutos para subir a água um grau. Vazio: aprendido com os aquecimentos do próprio aquecedor.",
+          "tank_litres": "Com a potência da resistência, o aquecedor aquece mais quando o depósito à temperatura normal não chega para vários duches seguidos.",
+          "element_watts": "Também dá os kWh à comparação solar sem sensor de potência.",
+          "max_temperature": "50 °C é o limite para evitar queimaduras sem válvula misturadora; até 60 °C só com ela."
         },
         "sections": {
           "advanced": {

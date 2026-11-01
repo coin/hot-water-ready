@@ -9,6 +9,7 @@ import {
   SETTINGS_COMMAND,
   avatarViews,
   awayLine,
+  clusterWarning,
   faultBanner,
   greeting,
   heatNowActions,
@@ -158,6 +159,9 @@ export class HotWaterReadyCard extends LitElement {
       <ha-card>
         ${faultBanner(heater, language).map((line) => html`<div class="banner fault" role="alert">${line}</div>`)}
         ${heater.automatic ? nothing : html`<div class="banner manual">${localize(language, "manual")}</div>`}
+        ${heater.cluster_warning
+          ? html`<div class="banner warning" role="alert">${clusterWarning(heater, this._context)}</div>`
+          : nothing}
         ${this._renderTop(heater)}
         ${this._renderSettings(heater)}
         ${this._renderTabs(heater)}
@@ -1108,6 +1112,10 @@ export class HotWaterReadyCard extends LitElement {
     }
     .banner.fault {
       background: var(--hwr-fault);
+      color: var(--text-primary-color, #fff);
+    }
+    .banner.warning {
+      background: var(--hwr-heating);
       color: var(--text-primary-color, #fff);
     }
     .banner.manual {

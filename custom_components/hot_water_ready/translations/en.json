@@ -222,6 +222,9 @@
           "keep_heating_gap_minutes": "Keep heating through gaps shorter than",
           "solar_aware": "Use the solar-aware rule",
           "heating_rate": "Heating rate set by hand (optional)",
+          "tank_litres": "Tank volume (optional)",
+          "element_watts": "Element power (optional)",
+          "max_temperature": "Highest temperature for showers close together",
           "cancel_rule": "Who may cancel heat now",
           "cancel_people": "People who may also cancel",
           "rich_notifications": "Replace earlier messages on phones",
@@ -236,7 +239,10 @@
           "power_sensor": "With a power sensor, a heater that draws nothing and a relay stuck on are noticed too.",
           "fault_recipients": "Empty: every administrator.",
           "solar_aware": "Off: the start is worked out from the heater alone, and the solar-aware result is only recorded, for the comparison in the card's settings.",
-          "heating_rate": "Minutes to raise the water one degree. Empty: learned from the heater's own runs."
+          "heating_rate": "Minutes to raise the water one degree. Empty: learned from the heater's own runs.",
+          "tank_litres": "With the element power, lets the heater heat higher for showers close together that the tank at the normal target cannot carry.",
+          "element_watts": "Also gives the solar comparison its kWh without a power sensor.",
+          "max_temperature": "50 °C is the scald limit without a mixing valve; up to 60 °C only with one."
         },
         "sections": {
           "advanced": {

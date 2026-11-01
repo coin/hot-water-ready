@@ -25,6 +25,7 @@ class Toggle:
     on: bool
     probe: float
     in_window: bool = True  # whether a window or heat now was still asking after the switch
+    window: datetime | None = None  # the first ready time of the window asking, if any
 
 
 @dataclass
@@ -69,7 +70,8 @@ class Cylinder:
             state = self.controller.state
             in_window = state.window is not None or state.heat_now is not None
             probe_value = -1.0 if probe is None else probe
-            self.toggles.append(Toggle(self.now, self.relay, probe_value, in_window))
+            window = None if state.window is None else state.window.ready_at
+            self.toggles.append(Toggle(self.now, self.relay, probe_value, in_window, window))
 
     def heat_now(self, requester: str) -> None:
         """Someone presses "Aquecer agora"; Home Assistant steps at once."""

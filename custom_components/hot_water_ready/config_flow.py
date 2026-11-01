@@ -29,10 +29,12 @@ from .const import (
     CONF_CANCEL_RULE,
     CONF_CLIMATE,
     CONF_COLOUR,
+    CONF_ELEMENT_WATTS,
     CONF_FAULT_RECIPIENTS,
     CONF_HEATER_TYPE,
     CONF_HEATING_RATE,
     CONF_KEEP_HEATING_GAP,
+    CONF_MAX_TEMPERATURE,
     CONF_NOTIFY_TARGETS,
     CONF_PERSON,
     CONF_POWER_SENSOR,
@@ -40,7 +42,9 @@ from .const import (
     CONF_RICH_NOTIFICATIONS,
     CONF_SOLAR_AWARE,
     CONF_SWITCH,
+    CONF_TANK_LITRES,
     CONF_TEMPERATURE_SENSOR,
+    DEFAULT_MAX_TEMPERATURE,
     DOMAIN,
     HEATER_CLIMATE,
     HEATER_SWITCH,
@@ -285,6 +289,19 @@ class MemberSubentryFlow(ConfigSubentryFlow):
         )
 
 
+def _box(low: float, high: float, step: float, unit: str) -> selector.NumberSelector:
+    """A number typed into a box, with its unit."""
+    return selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=low,
+            max=high,
+            step=step,
+            unit_of_measurement=unit,
+            mode=selector.NumberSelectorMode.BOX,
+        )
+    )
+
+
 def _threshold_fields(current: dict[str, Any]) -> dict[Any, Any]:
     """The fault thresholds (spec 4.8), each a number with its unit."""
     defaults = FaultSettings()
@@ -325,6 +342,8 @@ class HeaterOptionsFlow(OptionsFlow):
                 CONF_FAULT_RECIPIENTS: [],
                 CONF_POWER_SENSOR: None,
                 CONF_HEATING_RATE: None,
+                CONF_TANK_LITRES: None,
+                CONF_ELEMENT_WATTS: None,
                 **user_input,
             }
             return self.async_create_entry(data=data)
@@ -347,15 +366,19 @@ class HeaterOptionsFlow(OptionsFlow):
                 probatio.Optional(
                     CONF_HEATING_RATE,
                     description={"suggested_value": options.get(CONF_HEATING_RATE)},
-                ): selector.NumberSelector(
-                    selector.NumberSelectorConfig(
-                        min=0.5,
-                        max=60,
-                        step=0.1,
-                        unit_of_measurement="min/°C",
-                        mode=selector.NumberSelectorMode.BOX,
-                    )
-                ),
+                ): _box(0.5, 60, 0.1, "min/°C"),
+                probatio.Optional(
+                    CONF_TANK_LITRES,
+                    description={"suggested_value": options.get(CONF_TANK_LITRES)},
+                ): _box(20, 1000, 5, "L"),
+                probatio.Optional(
+                    CONF_ELEMENT_WATTS,
+                    description={"suggested_value": options.get(CONF_ELEMENT_WATTS)},
+                ): _box(100, 10000, 50, "W"),
+                probatio.Required(
+                    CONF_MAX_TEMPERATURE,
+                    default=options.get(CONF_MAX_TEMPERATURE, DEFAULT_MAX_TEMPERATURE),
+                ): _box(40, 60, 1, "°C"),
                 probatio.Required(
                     CONF_CANCEL_RULE, default=options.get(CONF_CANCEL_RULE, CANCEL_REQUESTERS)
                 ): selector.SelectSelector(

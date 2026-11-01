@@ -424,3 +424,14 @@ function dayBars(day: string, windows: TimeSpan[], timeZone: string): WeekDay["b
   }
   return bars;
 }
+
+/** The warning for showers close together that the tank cannot carry (spec 4.5); "" without. */
+export function clusterWarning(heater: HeaterSnapshot, context: ViewContext): string {
+  const warning = heater.cluster_warning;
+  if (!warning) return "";
+  return localize(context.language, "cluster.warning", {
+    when: describeWhen(warning.at, context),
+    needed: formatNumber(warning.needed, context.language, 0),
+    cap: formatNumber(warning.cap, context.language, 1),
+  });
+}

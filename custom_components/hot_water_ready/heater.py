@@ -34,10 +34,12 @@ from .const import (
     CONF_CANCEL_RULE,
     CONF_CLIMATE,
     CONF_COLOUR,
+    CONF_ELEMENT_WATTS,
     CONF_FAULT_RECIPIENTS,
     CONF_HEATER_TYPE,
     CONF_HEATING_RATE,
     CONF_KEEP_HEATING_GAP,
+    CONF_MAX_TEMPERATURE,
     CONF_NOTIFY_TARGETS,
     CONF_PERSON,
     CONF_POWER_SENSOR,
@@ -45,12 +47,15 @@ from .const import (
     CONF_RICH_NOTIFICATIONS,
     CONF_SOLAR_AWARE,
     CONF_SWITCH,
+    CONF_TANK_LITRES,
     CONF_TEMPERATURE_SENSOR,
+    DEFAULT_MAX_TEMPERATURE,
     DOMAIN,
     HEATER_CLIMATE,
     SUBENTRY_MEMBER,
     signal_heater_updated,
 )
+from .core.cluster import Tank
 from .core.comparison import Recorder, Verdict, verdict
 from .core.controller import (
     Controller,
@@ -61,9 +66,9 @@ from .core.controller import (
     Settings,
     lead_minutes,
     minutes_to_ready,
+    next_warning,
     planned_windows,
     solar_lead_minutes,
-    stop_point,
 )
 from .core.faults import BLOCKING, RESOLVABLE, Fault, FaultGuard, FaultSettings
 from .core.household import Away, MemberPlan, household_occurrences
@@ -279,7 +284,17 @@ class Heater:
                 options.get(CONF_KEEP_HEATING_GAP, Settings().keep_heating_gap_minutes)
             ),
             solar_aware=self.solar_aware,
+            tank=self._tank(),
         )
+
+    def _tank(self) -> Tank | None:
+        """The tank, when both its volume and its element's power are set (spec 3.1, 4.5)."""
+        options = self.entry.options
+        litres, watts = options.get(CONF_TANK_LITRES), options.get(CONF_ELEMENT_WATTS)
+        if not litres or not watts:
+            return None
+        cap = options.get(CONF_MAX_TEMPERATURE, DEFAULT_MAX_TEMPERATURE)
+        return Tank(litres=float(litres), element_watts=float(watts), max_temperature=float(cap))
 
     def leads(self) -> Leads | None:
         """For the next ready time, from the water now: both rules' leads.
@@ -300,8 +315,17 @@ class Heater:
 
     def solar_verdict(self) -> Verdict:
         """The solar comparison over the last 30 days (spec 7)."""
-        # Ticket 10 brings the element power option; until then kWh need a power sensor.
-        return verdict(self._recorder.state.records, now=dt_util.now(), element_power_w=None)
+        watts = self.entry.options.get(CONF_ELEMENT_WATTS)
+        return verdict(
+            self._recorder.state.records,
+            now=dt_util.now(),
+            element_power_w=float(watts) if watts else None,
+        )
+
+    def cluster_warning(self) -> PlannedWindow | None:
+        """The next cluster, within a day, that even the maximum temperature cannot carry."""
+        now = dt_util.utcnow()
+        return next_warning(self.windows_between(now - timedelta(hours=6), now + HORIZON), now)
 
     def comparison_records(self) -> list[dict[str, Any]]:
         """The per-window record of the last year, as plain data, for the diagnostics."""
@@ -803,7 +827,7 @@ class Heater:
             relay_on=element,
             element_off=self.actuator.told_off(self.hass),
             power=self._number(self._power_sensor),
-            target=self.target,
+            target=self._controller.target_now(),
         )
         if self.automatic:
             self._apply(decision.relay_on and not self._guard.blocks_heating)
@@ -871,7 +895,7 @@ class Heater:
 
     def _setpoint(self) -> float:
         """What a heating thermostat is set to: the stop point, in Home Assistant's unit."""
-        stop = stop_point(self._controller.settings)
+        stop = self._controller.stop_point_now()
         unit = self.hass.config.units.temperature_unit
         return TemperatureConverter.convert(stop, UnitOfTemperature.CELSIUS, unit)
 
@@ -944,7 +968,8 @@ class Heater:
         next_ready = self.next_ready()
         ready_in = None
         if self.heating:  # 0 means it is past the target and finishing: no estimate to show
-            ready_in = minutes_to_ready(self._controller.settings, temperature) or None
+            settings = self._controller.settings.with_target(self._controller.target_now())
+            ready_in = minutes_to_ready(settings, temperature) or None
         me = self.user_member_id(user)
         return {
             "entry_id": self.entry_id,
@@ -973,6 +998,13 @@ class Heater:
             },
             "settings": self._settings_snapshot() if user.is_admin else None,
             "week": self._week() if user.is_admin else None,
+            "cluster_warning": None
+            if (warning := self.cluster_warning()) is None
+            else {
+                "at": dt_util.as_local(warning.ready_times[0].at).isoformat(),
+                "needed": round(warning.needed),
+                "cap": warning.target,
+            },
             "today": [
                 {"member": member_id, "at": occurrence.at.isoformat()}
                 for occurrence in self.today()

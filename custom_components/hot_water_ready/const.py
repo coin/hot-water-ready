@@ -2,6 +2,7 @@
 
 from typing import Final
 
+from .core.cluster import MAX_TEMPERATURE
 from .core.controller import Settings
 
 DOMAIN: Final = "hot_water_ready"
@@ -32,6 +33,10 @@ CONF_FAULT_RECIPIENTS: Final = "fault_recipients"
 CONF_ADVANCED: Final = "advanced"  # a collapsed section holding the fault thresholds
 CONF_SOLAR_AWARE: Final = "solar_aware"
 CONF_HEATING_RATE: Final = "heating_rate"  # minutes per degree, set by hand
+CONF_TANK_LITRES: Final = "tank_litres"
+CONF_ELEMENT_WATTS: Final = "element_watts"
+CONF_MAX_TEMPERATURE: Final = "max_temperature"
+DEFAULT_MAX_TEMPERATURE: Final = MAX_TEMPERATURE
 CANCEL_REQUESTERS: Final = "requesters"  # who asked, and admins (default)
 CANCEL_PEOPLE: Final = "people"  # also the people listed
 CANCEL_EVERYONE: Final = "everyone"

@@ -83,6 +83,11 @@ export interface HeaterSnapshot {
     /** When the heater may heat. */
     windows: TimeSpan[];
   } | null;
+  /**
+   * The next cluster, within a day, that even the maximum temperature cannot carry (spec 4.5):
+   * when it starts, the store temperature it needs, and the cap.
+   */
+  cluster_warning: { at: string; needed: number; cap: number } | null;
   /** Everyone's ready times today, earliest first. */
   today: { member: string; at: string }[];
   members: MemberSnapshot[];
