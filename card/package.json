@@ -1,0 +1,27 @@
+{
+  "name": "hot-water-ready-card",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "The Hot Water Ready dashboard card, served by the integration.",
+  "scripts": {
+    "build": "node build.mjs",
+    "check-built": "node build.mjs --check",
+    "lint": "eslint .",
+    "types": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "npm run lint && npm run types && npm run test && npm run check-built"
+  },
+  "dependencies": {
+    "lit": "3.3.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "esbuild": "0.28.2",
+    "eslint": "10.14.0",
+    "playwright": "1.64.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vitest": "5.0.5"
+  }
+}

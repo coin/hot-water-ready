@@ -1,0 +1,13 @@
+{
+  "domain": "hot_water_ready",
+  "name": "Hot Water Ready",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": ["frontend", "http", "lovelace", "websocket_api"],
+  "documentation": "https://github.com/OWNER/hot-water-ready",
+  "integration_type": "device",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/OWNER/hot-water-ready/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

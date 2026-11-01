@@ -1,0 +1,58 @@
+[project]
+name = "hot-water-ready"
+version = "0.1.0"
+description = "Home Assistant integration that makes hot water ready when the household wants it."
+requires-python = ">=3.14.2"
+license = "MIT"
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+extend-exclude = ["card"]
+
+[tool.ruff.lint]
+select = [
+  "E", "F", "W", "I", "UP", "B", "SIM", "C4", "RUF", "ASYNC", "PT", "PL", "TID", "ANN",
+  "N", "S", "LOG", "G", "DTZ",
+]
+ignore = [
+  "PLR2004",  # magic values read fine in scheduling rules and tests
+  "PLR0913",
+  "RUF012",   # Home Assistant entities declare _attr_ defaults as plain class attributes
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["custom_components", "tests"]
+known-third-party = ["homeassistant", "pytest_homeassistant_custom_component"]
+combine-as-imports = true
+force-sort-within-sections = true
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ANN", "S101", "PLR0915", "DTZ"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+warn_unreachable = true
+explicit_package_bases = true
+mypy_path = "."
+packages = ["custom_components.hot_water_ready"]
+
+[[tool.mypy.overrides]]
+# Home Assistant re-exports names from its packages without __all__, as its own code relies on.
+module = ["homeassistant.*"]
+implicit_reexport = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider"
+
+[tool.coverage.run]
+source = ["custom_components/hot_water_ready"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true

@@ -1,0 +1,42 @@
+# Throwaway Home Assistant for trying Hot Water Ready with fake heater entities.
+# Started by dev/testha.sh; the runtime state lives in dev/testha/config (git-ignored).
+default_config:
+
+logger:
+  default: warning
+  logs:
+    custom_components.hot_water_ready: debug
+
+input_boolean:
+  fake_relay:
+    name: Fake relay
+
+input_number:
+  fake_water_temperature:
+    name: Fake water temperature
+    min: 5
+    max: 70
+    step: 0.1
+    unit_of_measurement: "°C"
+    mode: box
+    initial: 39.6
+
+template:
+  - switch:
+      - name: Fake heater relay
+        unique_id: fake_heater_relay
+        state: "{{ is_state('input_boolean.fake_relay', 'on') }}"
+        turn_on:
+          - action: input_boolean.turn_on
+            target:
+              entity_id: input_boolean.fake_relay
+        turn_off:
+          - action: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.fake_relay
+  - sensor:
+      - name: Fake water temperature
+        unique_id: fake_water_temperature
+        device_class: temperature
+        unit_of_measurement: "°C"
+        state: "{{ states('input_number.fake_water_temperature') }}"

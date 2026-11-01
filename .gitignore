@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+card/node_modules/
+dist/
+gh-login.log
+dev/testha/config/

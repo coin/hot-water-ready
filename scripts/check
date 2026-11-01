@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Run the Python checks CI runs.
+#
+#   scripts/check            lint, format, types, tests, core coverage
+#   scripts/check lint       ruff check and ruff format --check
+#   scripts/check types      mypy --strict
+#   scripts/check test ARGS  pytest with ARGS (one file: scripts/check test tests/core/test_x.py)
+#
+# Home Assistant does not run on Windows; from Windows use scripts\wsl-check.ps1.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+PY="${HWR_PYTHON:-python}"
+if [ -z "${HWR_PYTHON:-}" ] && [ -x "$HOME/venvs/hwr/bin/python" ]; then PY="$HOME/venvs/hwr/bin/python"; fi
+
+lint() { "$PY" -m ruff check . && "$PY" -m ruff format --check .; }
+types() { "$PY" -m mypy; }
+tests() { "$PY" -m pytest "$@"; }
+
+case "${1:-all}" in
+  lint) lint ;;
+  types) types ;;
+  test) shift; tests "$@" ;;
+  all)
+    lint
+    types
+    tests --cov --cov-report=term-missing:skip-covered -q
+    "$PY" -m coverage report --include='custom_components/hot_water_ready/core/*' --fail-under=90
+    ;;
+  *) echo "unknown command: $1" >&2; exit 2 ;;
+esac

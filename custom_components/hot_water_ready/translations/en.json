@@ -1,0 +1,37 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add a water heater",
+        "description": "Choose the switch that turns the heater on and the sensor that measures the water.",
+        "data": {
+          "name": "Name",
+          "switch": "Heater switch",
+          "temperature_sensor": "Water temperature sensor"
+        },
+        "data_description": {
+          "name": "Shown on the card and on the heater's device, for example Cylinder.",
+          "switch": "The relay or smart plug that powers the heating element.",
+          "temperature_sensor": "A sensor measuring the stored water's temperature."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "This switch already belongs to a heater."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "waiting": "Waiting",
+          "heating": "Heating",
+          "ready": "Ready",
+          "fault": "Fault",
+          "manual": "Manual"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "17 5 * * 1"  # weekly: the next Home Assistant beta
+  workflow_dispatch:
+
+jobs:
+  hassfest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: home-assistant/actions/hassfest@master
+
+  hacs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: hacs/action@main
+        with:
+          category: integration
+
+  python:
+    name: python (${{ matrix.ha }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Pinned on push; the weekly run also tries the newest pre-release.
+        ha: ${{ github.event_name == 'schedule' && fromJSON('["pinned", "beta"]') || fromJSON('["pinned"]') }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+      - name: Install
+        run: |
+          uv venv -p 3.14 .venv
+          uv pip install -p .venv/bin/python -r requirements_test.txt
+          if [ "${{ matrix.ha }}" = beta ]; then
+            uv pip install -p .venv/bin/python --prerelease allow -U pytest-homeassistant-custom-component
+          fi
+      - name: Lint, types, tests, coverage
+        run: HWR_PYTHON=.venv/bin/python scripts/check
+
+  card:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: card
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: card/package-lock.json
+      - run: npm ci
+      - run: npm run check

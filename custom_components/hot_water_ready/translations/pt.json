@@ -1,0 +1,37 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Acrescentar um aquecedor de água",
+        "description": "Escolha o interruptor que liga o aquecedor e o sensor que mede a água.",
+        "data": {
+          "name": "Nome",
+          "switch": "Interruptor do aquecedor",
+          "temperature_sensor": "Sensor de temperatura da água"
+        },
+        "data_description": {
+          "name": "Aparece no cartão e no dispositivo do aquecedor, por exemplo Cilindro.",
+          "switch": "O relé ou a tomada inteligente que alimenta a resistência.",
+          "temperature_sensor": "Um sensor que mede a temperatura da água acumulada."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Este interruptor já pertence a um aquecedor."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Estado",
+        "state": {
+          "waiting": "Em espera",
+          "heating": "A aquecer",
+          "ready": "Pronta",
+          "fault": "Avaria",
+          "manual": "Manual"
+        }
+      }
+    }
+  }
+}
