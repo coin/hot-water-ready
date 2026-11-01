@@ -3,6 +3,8 @@
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+import pytest
+
 from custom_components.hot_water_ready.core.faults import (
     Fault,
     FaultGuard,
@@ -265,3 +267,40 @@ def test_relay_stuck_clears_when_the_power_sensor_goes() -> None:
     run.tick(0.5, temperature=45.0, relay_on=False)
 
     assert run.active == set()
+
+
+# --------------------------------------------------------------------------- random heaters
+
+
+def _dead_or_healthy(seed: int) -> tuple[bool, set[Fault]]:
+    """A random heater for 40 min with the relay on: True if it is dead, and the faults raised."""
+    import random  # noqa: PLC0415
+
+    rng = random.Random(seed)
+    dead = rng.random() < 0.5
+    # Dead: flat or cooling slowly. Healthy: at least 0.05 C/min, as slow as a big tank in winter.
+    rate = rng.uniform(-0.03, 0.02) if dead else rng.uniform(0.05, 0.3)
+    run = Run()
+    run.tick(40, temperature=rng.uniform(20, 38), relay_on=True, rise_per_minute=rate)
+    return dead, run.active
+
+
+@pytest.mark.parametrize("seed", range(100))
+def test_dead_heaters_are_caught_and_healthy_ones_are_not(seed: int) -> None:
+    dead, active = _dead_or_healthy(seed)
+
+    assert (Fault.NOT_RISING in active) == dead, f"seed {seed}"
+
+
+def test_the_dead_heater_check_can_fail() -> None:
+    # Restart the count at every fall, as the spec's words read literally: cooling heaters slip
+    # through, and the random check above must notice.
+    from unittest.mock import patch  # noqa: PLC0415
+
+    with patch("custom_components.hot_water_ready.core.faults.SHOWER_DROP", 0.0):
+        missed = [
+            seed
+            for seed in range(100)
+            if _dead_or_healthy(seed)[0] and not _dead_or_healthy(seed)[1]
+        ]
+    assert missed
