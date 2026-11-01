@@ -9,7 +9,8 @@
 - Card checks: `cd card; npm run check`. After changing `card/src`, `npm run build` and commit the bundle.
 - Test HA: `dev/testha.sh` (Docker, http://localhost:8124, a simulated cylinder heats while the
   fake relay is on); `python dev/ha_ws.py '<json>'` sends websocket commands;
-  `cd card; node browser-check.mjs firefox` reloads the test dashboard. After a new card build,
+  `cd card; node browser-check.mjs firefox` reloads the test dashboard (a dashboard path such as
+  `/hwr-test/0` passed from Git Bash is rewritten into a Windows path: run it from PowerShell). After a new card build,
   load the dashboard twice: on 2026.10 the first load can come from a cached `index.html`.
 - Portuguese on-screen text: `python scripts/lint-pt-strings.py` runs the owner's PT-PT lint over
   `translations/pt.json` and the card's `pt` strings (the lint lives outside the repo, not in CI).

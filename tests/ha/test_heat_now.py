@@ -18,7 +18,7 @@ from pytest_homeassistant_custom_component.common import (
 )
 from pytest_homeassistant_custom_component.typing import WebSocketGenerator
 
-from .conftest import MARIA, MARIA_PERSON, SENSOR, SWITCH, TIAGO, TIAGO_PERSON
+from .conftest import MARIA, MARIA_PERSON, SENSOR, SWITCH, TIAGO, TIAGO_PERSON, access_token
 
 
 def _phone(hass: HomeAssistant, name: str, person: str, user_id: str) -> str:
@@ -81,8 +81,7 @@ async def _ws(
 ) -> dict[str, Any]:
     kwargs = {}
     if user is not None:
-        refresh = await hass.auth.async_create_refresh_token(user, "https://example.com/")
-        kwargs["access_token"] = hass.auth.async_create_access_token(refresh)
+        kwargs["access_token"] = await access_token(hass, user)
     client = await ws(hass, **kwargs)
     await client.send_json_auto_id(message)
     reply: dict[str, Any] = await client.receive_json()
@@ -291,8 +290,7 @@ async def test_card_sees_who_asked_and_whether_it_may_cancel(
 ) -> None:
     _water(hass, 40.0)
     await _press(hass, hass_admin_user)
-    refresh = await hass.auth.async_create_refresh_token(maria_user, "https://example.com/")
-    client = await hass_ws_client(hass, access_token=hass.auth.async_create_access_token(refresh))
+    client = await hass_ws_client(hass, access_token=await access_token(hass, maria_user))
     await client.send_json_auto_id(
         {"type": "hot_water_ready/subscribe", "entry_id": heater.entry_id}
     )

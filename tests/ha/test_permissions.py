@@ -15,7 +15,7 @@ from pytest_homeassistant_custom_component.typing import WebSocketGenerator
 
 from custom_components.hot_water_ready.const import DOMAIN
 
-from .conftest import TIAGO
+from .conftest import TIAGO, access_token
 
 READ_ONLY = {f"{DOMAIN}/heaters", f"{DOMAIN}/subscribe"}
 
@@ -56,8 +56,7 @@ async def test_a_stranger_is_refused(
     users = await hass.auth.async_get_group(GROUP_ID_USER)
     assert users is not None
     stranger = MockUser(name="Visitor", groups=[users]).add_to_hass(hass)
-    refresh = await hass.auth.async_create_refresh_token(stranger, "https://example.com/")
-    client = await hass_ws_client(hass, access_token=hass.auth.async_create_access_token(refresh))
+    client = await hass_ws_client(hass, access_token=await access_token(hass, stranger))
     await client.send_json_auto_id(
         {"type": command, "entry_id": heater.entry_id, **MESSAGES[command]}
     )

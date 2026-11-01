@@ -45,6 +45,16 @@ def local(clock: str, day: int = 2) -> datetime:
     return datetime(2026, 11, day, hour, minute, tzinfo=dt_util.get_default_time_zone())
 
 
+async def access_token(hass: HomeAssistant, user: MockUser) -> str:
+    """An access token for `user`, issued now.
+
+    Tokens last 30 minutes, and the `hass_client` and `hass_ws_client` fixtures issue theirs
+    before a test moves the clock: a test that moves it further gets 401 unless it asks here.
+    """
+    refresh = await hass.auth.async_create_refresh_token(user, "https://hwr.test/")
+    return hass.auth.async_create_access_token(refresh)
+
+
 @pytest.fixture
 def heater_data() -> dict[str, Any]:
     """Entry data for a relay and a temperature sensor."""

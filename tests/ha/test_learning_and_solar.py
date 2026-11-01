@@ -19,7 +19,7 @@ from pytest_homeassistant_custom_component.components.diagnostics import (
 )
 from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
 
-from .conftest import MARIA_PERSON, SENSOR, SWITCH, TIAGO, TIAGO_PERSON, local
+from .conftest import MARIA_PERSON, SENSOR, SWITCH, TIAGO, TIAGO_PERSON, access_token, local
 from .fakes import FakeRelay
 
 RATE = "sensor.cylinder_learned_heating_rate"
@@ -84,8 +84,7 @@ def diagnostics(
     """
 
     async def download(entry: MockConfigEntry) -> JsonObjectType:
-        refresh = await hass.auth.async_create_refresh_token(hass_admin_user, "https://hwr.test/")
-        token = hass.auth.async_create_access_token(refresh)
+        token = await access_token(hass, hass_admin_user)
         return await get_diagnostics_for_config_entry(hass, lambda: hass_client(token), entry)
 
     return download

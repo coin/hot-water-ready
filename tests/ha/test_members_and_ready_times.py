@@ -11,7 +11,7 @@ from pytest_homeassistant_custom_component.typing import WebSocketGenerator
 
 from custom_components.hot_water_ready.const import DOMAIN
 
-from .conftest import MARIA, TIAGO, TIAGO_PERSON
+from .conftest import MARIA, TIAGO, TIAGO_PERSON, access_token
 
 
 async def test_admin_adds_a_linked_member(
@@ -157,8 +157,7 @@ async def test_member_edits_only_their_own_ready_times(
     hass_access_token: str,
     maria_user: MockUser,
 ) -> None:
-    refresh = await hass.auth.async_create_refresh_token(maria_user, "https://example.com/")
-    maria_token = hass.auth.async_create_access_token(refresh)
+    maria_token = await access_token(hass, maria_user)
 
     own = await _send(
         hass,

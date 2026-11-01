@@ -6,6 +6,8 @@ from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry, MockUser
 from pytest_homeassistant_custom_component.typing import WebSocketGenerator
 
+from .conftest import access_token
+
 
 async def _snapshot(
     hass: HomeAssistant, ws: WebSocketGenerator, entry: MockConfigEntry, **kwargs: Any
@@ -56,8 +58,7 @@ async def test_a_member_does_not_see_the_settings(
     hass_ws_client: WebSocketGenerator,
     maria_user: MockUser,
 ) -> None:
-    refresh = await hass.auth.async_create_refresh_token(maria_user, "https://example.com/")
-    token = hass.auth.async_create_access_token(refresh)
+    token = await access_token(hass, maria_user)
 
     snapshot = await _snapshot(hass, hass_ws_client, heater, access_token=token)
 
@@ -91,8 +92,7 @@ async def test_a_member_may_not_change_the_settings(
     hass_ws_client: WebSocketGenerator,
     maria_user: MockUser,
 ) -> None:
-    refresh = await hass.auth.async_create_refresh_token(maria_user, "https://example.com/")
-    client = await hass_ws_client(hass, access_token=hass.auth.async_create_access_token(refresh))
+    client = await hass_ws_client(hass, access_token=await access_token(hass, maria_user))
     await client.send_json_auto_id(
         {"type": "hot_water_ready/settings/set", "entry_id": heater.entry_id, "target": 50}
     )

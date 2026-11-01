@@ -17,7 +17,7 @@ from pytest_homeassistant_custom_component.common import (
 )
 from pytest_homeassistant_custom_component.typing import WebSocketGenerator
 
-from .conftest import MARIA, TIAGO
+from .conftest import MARIA, TIAGO, access_token
 
 
 async def _send(
@@ -39,8 +39,7 @@ async def _snapshot(
 
 
 async def _maria_token(hass: HomeAssistant, maria_user: MockUser) -> str:
-    refresh = await hass.auth.async_create_refresh_token(maria_user, "https://example.com/")
-    return hass.auth.async_create_access_token(refresh)
+    return await access_token(hass, maria_user)
 
 
 async def test_admin_adds_a_virtual_member(hass: HomeAssistant, heater: MockConfigEntry) -> None:

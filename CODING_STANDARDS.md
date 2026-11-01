@@ -26,6 +26,10 @@ Read by the reviewer. Mechanical rules live in the checks (`scripts/check`, `car
 - "Validated on load" means every field read from storage, nested shapes included, goes through
   a parser that turns anything unexpected into a default with a warning, and a test feeds it
   corrupt shapes (wrong types, naive datetimes). Setup never crashes on a bad file.
+- A step never runs inside another. A task that calls services from a step is created with
+  `eager_start=False`: HA starts tasks eagerly, a switch can write its new state before the
+  first `await` returns, and its state listener then runs the next step inside the half-done
+  one (ticket 08 found the heater's own commands doing this).
 - Anything the heater switched on, it switches off when the entry unloads. With automatic
   control off the household runs the heater, and unloading leaves the relay as it is.
 
@@ -62,4 +66,9 @@ Read by the reviewer. Mechanical rules live in the checks (`scripts/check`, `car
   when setup loads the switch component; register it after setup.
 - Tests of what the heater sends to its element use the fakes in `tests/ha/fakes.py`, whose
   services change the device's state as a real relay or thermostat does. A bare mock that
-  changes nothing hides commands sent twice or again every step.
+  changes nothing hides commands sent twice or again every step. They write their state
+  synchronously, as the quickest real switches do, which is what exposes a step run inside a
+  step.
+- A test that moves the clock more than 30 minutes and then talks to HA over HTTP or the
+  websocket needs a token issued after the move: `access_token(hass, user)` in
+  `tests/ha/conftest.py`. The fixtures' own tokens expire and give 401.
