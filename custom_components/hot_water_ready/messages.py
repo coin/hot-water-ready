@@ -58,22 +58,59 @@ def format_temperature(hass: HomeAssistant, value: float) -> str:
     return text.replace(".", ",") if hass.config.language.startswith("pt") else text
 
 
+async def async_call_mobile_app_action(
+    hass: HomeAssistant, *, device_id: str, title: str, message: str, data: dict[str, str]
+) -> None:
+    """Send through the mobile_app device action, which takes rich options such as a tag."""
+    from homeassistant.components.mobile_app import device_action  # noqa: PLC0415
+
+    await device_action.async_call_action_from_config(
+        hass,
+        {
+            "domain": "mobile_app",
+            "device_id": device_id,
+            "type": "notify",
+            "title": title,
+            "message": message,
+            "data": data,
+        },
+        {},
+        None,
+    )
+
+
 async def async_send(
-    hass: HomeAssistant, targets: Iterable[str], title: str, message: str
+    hass: HomeAssistant,
+    targets: Iterable[str],
+    title: str,
+    message: str,
+    *,
+    tag: str | None = None,
 ) -> list[str]:
     """Send to every target; returns the ones that took it.
 
-    Any failure is caught per target, so one broken phone never stops the others.
+    With a `tag`, phones from the mobile_app integration get the message through its device
+    action, so a later message with the same tag replaces the earlier one on the phone (spec
+    4.9, "behind a setting"). Any failure is caught per target, so one broken phone never stops
+    the others: a notify platform may raise anything.
     """
+    registry = er.async_get(hass)
     sent: list[str] = []
     for target in targets:
+        entry = registry.async_get(target)
+        rich = tag and entry is not None and entry.platform == "mobile_app" and entry.device_id
         try:
-            await hass.services.async_call(
-                "notify",
-                "send_message",
-                {"entity_id": target, "title": title, "message": message},
-                blocking=True,
-            )
+            if rich and entry is not None and entry.device_id and tag:
+                await async_call_mobile_app_action(
+                    hass, device_id=entry.device_id, title=title, message=message, data={"tag": tag}
+                )
+            else:
+                await hass.services.async_call(
+                    "notify",
+                    "send_message",
+                    {"entity_id": target, "title": title, "message": message},
+                    blocking=True,
+                )
         except Exception:
             _LOGGER.warning("Could not notify %s", target, exc_info=True)
         else:

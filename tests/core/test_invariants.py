@@ -5,6 +5,7 @@ and the spec):
 - the relay never chatters: inside a window, each switch needs a different probe reading than
   the one before;
 - each member is told "ready" at most once per ready time, and only at or above the target;
+- each member is told "heating" at most once per ready time;
 - the relay is never on without an open window or a heat-now request;
 - a heat-now request tells each person who asked once, at or above the target;
 - a restart at any moment, from the saved state, changes none of the above.
@@ -78,6 +79,8 @@ def test_random_households_keep_the_rules(seed: int) -> None:
     ]
     assert len(told) == len(set(told)), f"seed {seed}: told twice {told}"
     assert all(e.temperature >= settings.target for _, e in cylinder.ready_events()), f"seed {seed}"
+    heating = [(m, e.ready_at) for _, e in cylinder.heating_events() for m in e.members]
+    assert len(heating) == len(set(heating)), f"seed {seed}: told heating twice {heating}"
     now_told = [e for _, e in cylinder.events if e.kind == "heat_now_ready"]
     assert all(e.temperature >= settings.target for e in now_told), f"seed {seed}"
     per_request = [(m, e.ready_at) for e in now_told for m in e.members]

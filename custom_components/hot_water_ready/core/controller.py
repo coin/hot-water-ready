@@ -6,7 +6,7 @@ became ready). Its state is plain data so it survives a restart.
 """
 
 from collections.abc import Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
@@ -91,6 +91,8 @@ class ControllerState:
     # (member, ready time) pairs already told the water is ready. Kept apart from the window,
     # which can close and open again, so nobody is told twice (spec 4.9, 4.10).
     told: frozenset[tuple[str, datetime]] = frozenset()
+    # (member, ready time) pairs already told the water is heating, for the same reason.
+    told_heating: frozenset[tuple[str, datetime]] = frozenset()
 
     def all_told(self, window: Window) -> bool:
         """Whether every member of the window has been told the water is ready."""
@@ -113,6 +115,7 @@ class ControllerState:
                 "starting": heat_now.starting,
             },
             "told": sorted([member, at.isoformat()] for member, at in self.told),
+            "told_heating": sorted([member, at.isoformat()] for member, at in self.told_heating),
             "window": None
             if window is None
             else {
@@ -138,11 +141,8 @@ class ControllerState:
     def _parse(cls, data: object) -> ControllerState:
         if not isinstance(data, dict):
             raise TypeError(type(data).__name__)
-        told: set[tuple[str, datetime]] = set()
-        for pair in data.get("told", []):
-            if not isinstance(pair, list) or len(pair) != 2 or not isinstance(pair[0], str):
-                raise TypeError("told")
-            told.add((pair[0], _parse_aware_datetime(pair[1])))
+        told = _parse_pairs(data.get("told", []))
+        told_heating = _parse_pairs(data.get("told_heating", []))
         raw = data.get("window")
         window = None
         if raw is not None:
@@ -178,6 +178,7 @@ class ControllerState:
             heating=bool(data.get("heating", False)),
             heat_now=heat_now,
             told=frozenset(told),
+            told_heating=frozenset(told_heating),
         )
 
 
@@ -188,6 +189,17 @@ def _parse_aware_datetime(raw: object) -> datetime:
     if moment.tzinfo is None:
         raise ValueError("naive datetime")
     return moment
+
+
+def _parse_pairs(raw: object) -> set[tuple[str, datetime]]:
+    if not isinstance(raw, list):
+        raise TypeError("pairs")
+    pairs: set[tuple[str, datetime]] = set()
+    for pair in raw:
+        if not isinstance(pair, list) or len(pair) != 2 or not isinstance(pair[0], str):
+            raise TypeError("pair")
+        pairs.add((pair[0], _parse_aware_datetime(pair[1])))
+    return pairs
 
 
 def _parse_bool(raw: object) -> bool:
@@ -276,7 +288,9 @@ class Controller:
             key=lambda o: o.at,
         )
         state = self.state
-        state.told = frozenset((m, at) for m, at in state.told if at > now - timedelta(days=1))
+        recent = now - timedelta(days=1)
+        state.told = frozenset((m, at) for m, at in state.told if at > recent)
+        state.told_heating = frozenset((m, at) for m, at in state.told_heating if at > recent)
         self._close_if_done(now)
         events: list[ControllerEvent] = []
         self._time_out_heat_now(now, events)
@@ -284,12 +298,16 @@ class Controller:
             # No reading: hold what is happening; the fault guard decides when that ends.
             return Decision(relay_on=state.heating and self._requested(), events=tuple(events))
 
+        before = None if state.window is None else state.window.members
         if state.window is not None:
             self._follow_ready_times(state.window, now, temperature, ready_times)
         if state.window is None:
             self._open_window(now, temperature, ready_times, events)
+            before = None if state.window is None else state.window.members
         if state.window is not None:
             self._join_close_ones(state.window, ready_times)
+            if before is not None:
+                self._tell_joiners(state.window, before, temperature, events)
         self._start_heat_now(temperature)
         if self._requested():
             self._band(temperature)
@@ -299,7 +317,22 @@ class Controller:
             self._tell_heat_now(temperature, events)
         else:
             state.heating = False
-        return Decision(relay_on=state.heating, events=tuple(events))
+        return Decision(relay_on=state.heating, events=self._once(events))
+
+    def _once(self, events: list[ControllerEvent]) -> tuple[ControllerEvent, ...]:
+        """Drop "heating" messages for anyone already told it about the same ready time."""
+        kept: list[ControllerEvent] = []
+        for event in events:
+            if event.kind != "heating":
+                kept.append(event)
+                continue
+            members = frozenset(
+                m for m in event.members if (m, event.ready_at) not in self.state.told_heating
+            )
+            self.state.told_heating |= {(m, event.ready_at) for m in members}
+            if members:
+                kept.append(replace(event, members=members))
+        return tuple(kept)
 
     def _requested(self) -> bool:
         """Whether anything asks for hot water now: an open window or a heat-now request."""
@@ -384,6 +417,26 @@ class Controller:
                 ControllerEvent(
                     "heating", first.at, first.members, temperature, minutes=round(lead)
                 )
+            )
+
+    def _tell_joiners(
+        self,
+        window: Window,
+        before: frozenset[str],
+        temperature: float,
+        events: list[ControllerEvent],
+    ) -> None:
+        """Members whose ready times join a window already heating are told it is heating."""
+        joined = window.members - before
+        if not joined or not window.wants_heat:
+            return
+        minutes = round(lead_minutes(self.settings, temperature))
+        by_time: dict[datetime, set[str]] = {}
+        for member in joined:
+            by_time.setdefault(window.member_times.get(member, window.ready_at), set()).add(member)
+        for at, members in sorted(by_time.items()):
+            events.append(
+                ControllerEvent("heating", at, frozenset(members), temperature, minutes=minutes)
             )
 
     def _follow_ready_times(

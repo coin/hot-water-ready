@@ -28,6 +28,7 @@ from .const import (
     CONF_NOTIFY_TARGETS,
     CONF_PERSON,
     CONF_RECIPIENTS,
+    CONF_RICH_NOTIFICATIONS,
     CONF_SWITCH,
     CONF_TEMPERATURE_SENSOR,
     DOMAIN,
@@ -219,6 +220,10 @@ class HeaterOptionsFlow(OptionsFlow):
                         translation_key=CONF_CANCEL_RULE,
                     )
                 ),
+                probatio.Required(
+                    CONF_RICH_NOTIFICATIONS,
+                    default=options.get(CONF_RICH_NOTIFICATIONS, False),
+                ): selector.BooleanSelector(),
                 probatio.Optional(
                     CONF_CANCEL_PEOPLE,
                     description={"suggested_value": options.get(CONF_CANCEL_PEOPLE, [])},

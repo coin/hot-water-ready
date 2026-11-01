@@ -22,6 +22,7 @@ COLOURS: Final = ("blue", "green", "orange", "purple", "red", "teal", "pink", "b
 CONF_KEEP_HEATING_GAP: Final = "keep_heating_gap_minutes"
 CONF_CANCEL_RULE: Final = "cancel_rule"
 CONF_CANCEL_PEOPLE: Final = "cancel_people"
+CONF_RICH_NOTIFICATIONS: Final = "rich_notifications"
 CANCEL_REQUESTERS: Final = "requesters"  # who asked, and admins (default)
 CANCEL_PEOPLE: Final = "people"  # also the people listed
 CANCEL_EVERYONE: Final = "everyone"

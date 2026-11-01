@@ -29,8 +29,10 @@ from .const import (
     CONF_NOTIFY_TARGETS,
     CONF_PERSON,
     CONF_RECIPIENTS,
+    CONF_RICH_NOTIFICATIONS,
     CONF_SWITCH,
     CONF_TEMPERATURE_SENSOR,
+    DOMAIN,
     SUBENTRY_MEMBER,
     signal_heater_updated,
 )
@@ -354,6 +356,11 @@ class Heater:
         return self.user_member_id(user) or self.person_of(user) or NOBODY
 
     @property
+    def _rich(self) -> bool:
+        """Whether mobile_app phones get rich options (a replacing tag); off by default."""
+        return bool(self.entry.options.get(CONF_RICH_NOTIFICATIONS, False))
+
+    @property
     def heat_now_requesters(self) -> frozenset[str]:
         """Who asked for heat now and will be told; empty when there is no request."""
         heat_now = self._controller.state.heat_now
@@ -412,26 +419,37 @@ class Heater:
         return member.name, targets
 
     async def _async_tell(self, events: tuple[ControllerEvent, ...]) -> None:
+        """Turn what happened into messages for the people it concerns (spec 4.9)."""
         for event in events:
-            if event.kind == "heat_now_ready" and event.temperature is not None:
-                key = "heat_now_ready"
-                placeholders = {"temperature": format_temperature(self.hass, event.temperature)}
-            elif event.kind == "heat_now_timeout":
-                key, placeholders = "heat_now_timeout", {}
-            else:
-                continue  # scheduled windows are told from ticket 05
+            key, placeholders = self._message_for(event)
             message = await async_message(self.hass, key, placeholders)
+            # One tag per person and ready time: "Duche pronto" replaces "a aquecer" on the phone.
             for who in sorted(event.members - {NOBODY}):
-                await self._async_tell_one(who, message)
+                tag = f"{DOMAIN}_{self.entry_id}_{who}_{event.ready_at.timestamp():.0f}"
+                await self._async_tell_one(who, message, tag)
 
-    async def _async_tell_one(self, who: str, message: str) -> None:
+    def _message_for(self, event: ControllerEvent) -> tuple[str, dict[str, str]]:
+        temperature = (
+            "" if event.temperature is None else format_temperature(self.hass, event.temperature)
+        )
+        match event.kind:
+            case "heating":
+                return "window_heating", {"heater": self.name, "minutes": str(event.minutes)}
+            case "ready" | "heat_now_ready":
+                return "ready", {"temperature": temperature}
+            case "heat_now_timeout":
+                return "heat_now_timeout", {}
+
+    async def _async_tell_one(self, who: str, message: str, tag: str) -> None:
         found = self.recipients(who)
         if found is None:
             return  # a virtual member with nobody chosen: not an error
         name, targets = found
         if not targets:
             reason = "no_target"
-        elif await async_send(self.hass, targets, self.name, message):
+        elif await async_send(
+            self.hass, targets, self.name, message, tag=tag if self._rich else None
+        ):
             self._unreachable.discard(who)
             return
         else:
@@ -490,8 +508,10 @@ class Heater:
         )
         self._apply(decision.relay_on)
         if decision.events:
+            # Who was told is on disk before the messages go, so a restart never repeats one.
+            self.entry.async_create_task(self.hass, self._async_save())
             self.entry.async_create_task(self.hass, self._async_tell(decision.events))
-        if self._controller.state.to_dict() != before:
+        elif self._controller.state.to_dict() != before:
             self._data.controller = self._controller.state
             self._store.async_delay_save(self._data)
         self._notify()

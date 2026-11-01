@@ -163,7 +163,8 @@ def test_close_showers_share_one_window_and_heat_through() -> None:
     cylinder.run(12, draw_per_minute=0.4)  # Tiago's shower cools it below 41
     cylinder.run_until(_at(2026, 11, 2, 7, 56))
 
-    assert len(cylinder.heating_events()) == 1
+    # One window: Tiago is told it is heating when it opens, Maria when her time joins it.
+    assert [sorted(e.members) for _, e in cylinder.heating_events()] == [["tiago"], ["maria"]]
     window = cylinder.controller.state.window
     assert window is None or window.members == frozenset({"tiago", "maria"})
     # It restarted at 41 between the two showers: the window stayed open through the gap.
@@ -338,3 +339,16 @@ def test_state_saved_before_per_member_reports_keeps_ready_sent() -> None:
     state = ControllerState.from_dict(old)
     assert state.window is not None
     assert state.all_told(state.window)
+
+
+def test_a_window_that_closes_and_reopens_does_not_say_heating_twice() -> None:
+    seven = _at(2026, 11, 2, 7, 0)
+    cylinder = _cylinder(38.0, _at(2026, 11, 2, 6, 20), [Occurrence(seven, frozenset({"t"}))])
+    cylinder.run(2)
+    cylinder.occurrences = []  # switched off: the window closes
+    cylinder.run(2)
+    cylinder.occurrences = [Occurrence(seven, frozenset({"t"}))]  # and on again
+    cylinder.run(2)
+
+    assert cylinder.relay
+    assert len(cylinder.heating_events()) == 1

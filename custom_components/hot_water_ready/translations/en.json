@@ -150,19 +150,18 @@
         "data": {
           "keep_heating_gap_minutes": "Keep heating through gaps shorter than",
           "cancel_rule": "Who may cancel heat now",
-          "cancel_people": "People who may also cancel"
+          "cancel_people": "People who may also cancel",
+          "rich_notifications": "Replace earlier messages on phones"
         },
         "data_description": {
           "keep_heating_gap_minutes": "Ready times this close share one window and the heater keeps heating through, instead of letting the water cool in between.",
-          "cancel_people": "Used when the rule is \"those who asked, admins and these people\"."
+          "cancel_people": "Used when the rule is \"those who asked, admins and these people\".",
+          "rich_notifications": "On phones with the Home Assistant app, \"ready\" replaces \"heating\" instead of arriving as a second message."
         }
       }
     }
   },
   "exceptions": {
-    "heat_now_ready": {
-      "message": "Hot water ready: the water is at {temperature} °C."
-    },
     "heat_now_timeout": {
       "message": "The water did not get hot in time; the heat-now request has ended. Check the heater."
     },
@@ -171,6 +170,12 @@
     },
     "send_failed": {
       "message": "Hot Water Ready could not reach {name}'s phones: {message}"
+    },
+    "window_heating": {
+      "message": "{heater} heating: water ready in about {minutes} min."
+    },
+    "ready": {
+      "message": "Hot water ready: the water is at {temperature} °C."
     }
   }
 }
