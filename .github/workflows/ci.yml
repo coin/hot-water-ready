@@ -2,10 +2,12 @@ name: CI
 
 on:
   push:
+    branches: ["**"]  # a tag runs CI through release.yml instead
   pull_request:
   schedule:
     - cron: "17 5 * * 1"  # weekly: the next Home Assistant beta
   workflow_dispatch:
+  workflow_call:  # release.yml runs every job here before it publishes
 
 jobs:
   hassfest:

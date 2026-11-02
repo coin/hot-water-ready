@@ -2,6 +2,8 @@ name: Release
 
 # Push a tag named v<manifest version> (for example v0.1.0) and this publishes the GitHub release
 # with the packaged integration attached, which is what HACS installs (hacs.json zip_release).
+# Nothing is published unless every CI job passes on the tagged commit: v0.1.0 went out with
+# hassfest and the HACS validation failing, because the two workflows ran side by side.
 
 on:
   push:
@@ -11,7 +13,11 @@ permissions:
   contents: write
 
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
   release:
+    needs: ci
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

@@ -8,7 +8,10 @@
   put commands in a script instead.
 - Card checks: `cd card; npm run check`. After changing `card/src`, `npm run build` and commit the bundle.
 - Test HA: `dev/testha.sh` (Docker, http://localhost:8124, a simulated cylinder heats while the
-  fake relay is on); `python dev/ha_ws.py '<json>'` sends websocket commands;
+  fake relay is on). The card is already on the **HWR test** dashboard, http://localhost:8124/hwr-test/0;
+  send the owner there. From Git Bash, run the script through WSL with `MSYS_NO_PATHCONV=1`.
+  A release through HACS: `dev/testha.sh --hacs`, `python dev/hacs-install.py [vX.Y.Z]`, then
+  `dev/testha.sh` again. `python dev/ha_ws.py '<json>'` sends websocket commands;
   `cd card; node browser-check.mjs firefox` reloads the test dashboard, then opens each view at
   phone width and fails on anything past the card's edge or cut; run it after a layout change (a
   dashboard path such as `/hwr-test/0` passed from Git Bash is rewritten into a Windows path:
@@ -20,4 +23,7 @@
   once per clone. Never commit past it.
 - Every check reformats with ruff, so text copied from earlier output goes stale: read a file
   again before editing it.
+- GitHub: https://github.com/coin/hot-water-ready. hassfest and the HACS validation run only
+  there, so after a push wait on the run: `gh run watch <id> -R coin/hot-water-ready --exit-status`.
+  A `v*` tag runs all of CI, then publishes the release.
 - Review rules: `CODING_STANDARDS.md`.
