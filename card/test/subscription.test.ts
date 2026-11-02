@@ -68,6 +68,8 @@ describe("HeaterSubscription", () => {
       margin: 1,
       status: "waiting",
       ready_in_minutes: null,
+      next_heat_start: null,
+      solar_aware: false,
       next_ready: null,
       is_admin: true,
       me: null,

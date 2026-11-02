@@ -6,7 +6,7 @@ from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry, MockUser
 from pytest_homeassistant_custom_component.typing import WebSocketGenerator
 
-from .conftest import access_token
+from .conftest import MARIA_PERSON, access_token
 
 
 async def _snapshot(
@@ -40,6 +40,7 @@ async def test_an_admin_sees_the_settings_and_the_solar_comparison(
 
     assert snapshot["settings"] == {
         "cancel_rule": "requesters",
+        "cancel_people": [],
         "solar_aware": False,
         "solar": {
             "windows": 0,
@@ -75,6 +76,33 @@ async def test_an_admin_changes_each_setting(
     heater_now = heater.runtime_data  # a new one: the cancel rule is an option, so it reloaded
     assert (heater_now.target, heater_now.margin, heater_now.automatic) == (45.0, 1.5, False)
     assert heater.options["cancel_rule"] == "everyone"
+
+
+async def test_an_admin_sets_the_people_who_may_cancel(
+    hass: HomeAssistant,
+    heater: MockConfigEntry,
+    hass_ws_client: WebSocketGenerator,
+    maria_user: MockUser,
+) -> None:
+    reply = await _set(
+        hass, hass_ws_client, heater, cancel_rule="people", cancel_people=[MARIA_PERSON]
+    )
+
+    assert reply["success"]
+    assert heater.options["cancel_rule"] == "people"
+    assert heater.options["cancel_people"] == [MARIA_PERSON]
+    assert (await _snapshot(hass, hass_ws_client, heater))["settings"]["cancel_people"] == [
+        MARIA_PERSON
+    ]
+
+
+async def test_only_existing_people_go_on_the_list(
+    hass: HomeAssistant, heater: MockConfigEntry, hass_ws_client: WebSocketGenerator
+) -> None:
+    for people in (["person.nobody"], ["switch.cylinder"]):
+        reply = await _set(hass, hass_ws_client, heater, cancel_people=people)
+        assert reply["success"] is False, people
+    assert heater.options.get("cancel_people", []) == []
 
 
 async def test_values_out_of_range_are_refused(

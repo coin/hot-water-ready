@@ -8,11 +8,15 @@ export interface ViewContext {
   /** The house's time zone (Home Assistant's), which ready times are in. */
   timeZone: string;
   now: Date;
+  /** Home Assistant's people, entity id to name: who asked for heat now, who may cancel. */
+  people?: Record<string, string>;
 }
 
 export interface HeaterView {
   temperature: string;
   target: string;
+  /** The status in capitals, as a badge (mockup A). */
+  badge: string;
   headline: string;
   subline: string;
   /** Ring fill, 0 to 1. */
@@ -59,18 +63,60 @@ function headlineOf(heater: HeaterSnapshot, context: ViewContext): string {
   return localize(language, `status.${heater.status}`);
 }
 
+function membersById(heater: HeaterSnapshot): Map<string, MemberSnapshot> {
+  return new Map(heater.members.map((member) => [member.id, member]));
+}
+
+/** Member ids and person entities by name. */
+function namesOf(heater: HeaterSnapshot, ids: string[], context: ViewContext): string[] {
+  const members = membersById(heater);
+  return ids.map((id) => members.get(id)?.name ?? context.people?.[id] ?? id);
+}
+
+/** Home Assistant's people, entity id to name, from its states. */
+export function peopleOf(states: Record<string, { attributes: { friendly_name?: string } }> | undefined): Record<string, string> {
+  const people: Record<string, string> = {};
+  for (const [id, state] of Object.entries(states ?? {})) {
+    if (id.startsWith("person.")) people[id] = state.attributes.friendly_name ?? id;
+  }
+  return people;
+}
+
+/** "Maria", "Maria e Ana", "Tiago, Maria e Ana". */
+function joinNames(names: string[], language: string): string {
+  if (names.length < 2) return names.join("");
+  return `${names.slice(0, -1).join(", ")}${localize(language, "names.and")}${names.at(-1) ?? ""}`;
+}
+
+/** Under the headline: who asked while heating for them, when heating starts, or the next time. */
+function sublineOf(heater: HeaterSnapshot, context: ViewContext): string {
+  const { language } = context;
+  const requesters = heater.heat_now?.requesters ?? [];
+  if (heater.status === "heating" && requesters.length > 0) {
+    const names = namesOf(heater, requesters, context);
+    return names.length === 1
+      ? localize(language, "subline.asked_by_one", { name: names[0] ?? "" })
+      : localize(language, "subline.asked_by_many", { names: joinNames(names, language) });
+  }
+  if (heater.status === "waiting" && heater.next_heat_start) {
+    const key = heater.solar_aware ? "subline.starts_at_solar" : "subline.starts_at";
+    return localize(language, key, { when: describeWhen(heater.next_heat_start, context) });
+  }
+  if (heater.status === "ready" && heater.next_ready) {
+    return localize(language, "subline.next_at", { when: describeWhen(heater.next_ready.at, context) });
+  }
+  return "";
+}
+
 export function heaterView(heater: HeaterSnapshot, context: ViewContext): HeaterView {
   const { language } = context;
   const { temperature, target } = heater;
-  const subline =
-    heater.status === "ready" && heater.next_ready
-      ? localize(language, "subline.next_at", { when: describeWhen(heater.next_ready.at, context) })
-      : "";
   return {
     temperature: temperature === null ? "–" : `${formatNumber(temperature, language, 1)}°`,
     target: localize(language, "ring.target", { target: formatNumber(target, language, 1) }),
+    badge: localize(language, `status.${heater.status}`).toLocaleUpperCase(localeOf(language)),
     headline: headlineOf(heater, context),
-    subline,
+    subline: sublineOf(heater, context),
     fill: temperature === null || target <= 0 ? 0 : Math.min(1, Math.max(0, temperature / target)),
     tone: heater.status,
   };
@@ -102,6 +148,11 @@ export function todayInHouse(context: ViewContext): string {
 export interface Sheet {
   time: string;
   weekdays: number[];
+}
+
+/** A new ready time starts at 07:00 on weekdays (mockup A). */
+export function newSheet(): Sheet {
+  return { time: "07:00", weekdays: [0, 1, 2, 3, 4] };
 }
 
 /** A new ready time needs a time and at least one day. */
@@ -175,12 +226,36 @@ function clock(iso: string, context: ViewContext): string {
   }).format(new Date(iso));
 }
 
-/** "Tiago 07:00 · José 07:30": everyone else's ready times today, read-only. */
-export function houseToday(heater: HeaterSnapshot, context: ViewContext, exceptMemberId: string): string {
-  const names = new Map(heater.members.map((member) => [member.id, member.name]));
-  const others = heater.today.filter((entry) => entry.member !== exceptMemberId);
-  if (others.length === 0) return localize(context.language, "today.nobody");
-  return others.map((entry) => `${names.get(entry.member) ?? "?"} ${clock(entry.at, context)}`).join(" · ");
+export interface TodayChip {
+  name: string;
+  time: string;
+  colour: string;
+  /** The viewer's own time, shown as "Você". */
+  mine: boolean;
+}
+
+/** "Casa hoje": the house's ready times today, the member's own as "Você" (mockup A). */
+export function houseTodayChips(heater: HeaterSnapshot, context: ViewContext, memberId: string): TodayChip[] {
+  const members = membersById(heater);
+  return heater.today.map((entry) => {
+    const mine = entry.member === memberId;
+    const member = members.get(entry.member);
+    return {
+      name: mine ? localize(context.language, "today.you") : (member?.name ?? "?"),
+      time: clock(entry.at, context),
+      colour: member?.colour ?? "",
+      mine,
+    };
+  });
+}
+
+/** Over an admin's view of a member's list: their name and "3 horários", or what a virtual member is. */
+export function listHeader(member: MemberSnapshot, language: string): { name: string; note: string } {
+  const count = member.ready_times.length;
+  let note = localize(language, "list.count", { count });
+  if (member.virtual) note = localize(language, "list.virtual");
+  else if (count === 1) note = localize(language, "list.count_one");
+  return { name: member.name, note };
 }
 
 /** "4 de Novembro" or "4 November". Portuguese months are capitalised (spelling before 1990). */
@@ -203,23 +278,41 @@ export function awayLine(member: MemberSnapshot, context: Pick<ViewContext, "lan
 }
 
 export interface HeatNowAction {
-  command: "hot_water_ready/heat_now/start" | "hot_water_ready/heat_now/cancel";
+  /** The websocket message the button sends; a cancel says whether it is everyone's request. */
+  message: { type: typeof START } | { type: typeof CANCEL; all: boolean };
   label: TextKey;
+  values: Record<string, string>;
   primary: boolean;
 }
 
 const START = "hot_water_ready/heat_now/start";
 const CANCEL = "hot_water_ready/heat_now/cancel";
 
-/** "Aquecer agora"; "Cancelar" for who asked; "Avisar-me também" for anyone else (spec 4.6). */
-export function heatNowActions(heater: HeaterSnapshot): HeatNowAction[] {
-  // During a fault nobody can ask, but a request already running can still be cancelled.
-  const canAsk = heater.can_ask_heat_now && !heater.heat_now_blocked;
+/**
+ * "Aquecer agora"; "Cancelar" withdraws the viewer's own request; "Avisar-me também" joins
+ * someone else's; "Cancelar pedido de Maria e Ana" ends everyone's, for who may (spec 2, 4.6).
+ */
+export function heatNowActions(heater: HeaterSnapshot, context: ViewContext): HeatNowAction[] {
+  // Nobody can ask during a fault or while the heater is run by hand (the server refuses), but a
+  // request already running can still be cancelled.
+  const canAsk = heater.can_ask_heat_now && !heater.heat_now_blocked && heater.automatic;
+  const ask = (label: TextKey): HeatNowAction => ({ message: { type: START }, label, values: {}, primary: true });
   const request = heater.heat_now;
-  if (!request) return canAsk ? [{ command: START, label: "heat_now.start", primary: true }] : [];
-  if (request.asked) return [{ command: CANCEL, label: "heat_now.cancel", primary: true }];
-  const actions: HeatNowAction[] = canAsk ? [{ command: START, label: "heat_now.join", primary: true }] : [];
-  if (request.can_cancel) actions.push({ command: CANCEL, label: "heat_now.cancel", primary: false });
+  if (!request) return canAsk ? [ask("heat_now.start")] : [];
+  const actions: HeatNowAction[] = [];
+  if (request.asked) {
+    actions.push({ message: { type: CANCEL, all: false }, label: "heat_now.cancel", values: {}, primary: true });
+  } else if (canAsk) {
+    actions.push(ask("heat_now.join"));
+  }
+  const othersAsked = request.requesters.length > (request.asked ? 1 : 0);
+  const cancelAll = { message: { type: CANCEL, all: true }, primary: false } as const;
+  if (request.can_cancel_all && othersAsked) {
+    const names = joinNames(namesOf(heater, request.requesters, context), context.language);
+    actions.push({ ...cancelAll, label: "heat_now.cancel_all", values: { names } });
+  } else if (request.can_cancel_all && !request.asked) {
+    actions.push({ ...cancelAll, label: "heat_now.cancel", values: {} }); // an automation's request
+  }
   return actions;
 }
 
@@ -261,13 +354,18 @@ export interface SettingsView {
   band: string;
   automatic: boolean;
   cancel: { rule: CancelRule; label: TextKey; selected: boolean }[];
+  /** Whether the "people" rule is chosen, so the sheet shows its list. */
+  listsPeople: boolean;
+  /** Under that rule, Home Assistant's people and whether each may cancel. */
+  people: { id: string; name: string; on: boolean }[];
   solar: string;
   /** Checks this heater cannot have, such as "not rising" on a thermostat that never says. */
   notes: string[];
 }
 
 /** The settings sheet (spec 6), for an administrator only. */
-export function settingsView(heater: HeaterSnapshot, language: string): SettingsView | undefined {
+export function settingsView(heater: HeaterSnapshot, context: ViewContext): SettingsView | undefined {
+  const { language } = context;
   const settings = heater.settings;
   if (!heater.is_admin || !settings) return undefined;
   return {
@@ -279,9 +377,21 @@ export function settingsView(heater: HeaterSnapshot, language: string): Settings
     }),
     automatic: heater.automatic,
     cancel: CANCEL_RULES.map((rule) => ({ rule, label: `cancel.${rule}`, selected: rule === settings.cancel_rule })),
+    listsPeople: settings.cancel_rule === "people",
+    people:
+      settings.cancel_rule === "people"
+        ? Object.entries(context.people ?? {})
+            .map(([id, name]) => ({ id, name, on: settings.cancel_people.includes(id) }))
+            .sort((a, b) => a.name.localeCompare(b.name))
+        : [],
     solar: solarLine(settings, language),
     notes: heater.not_rising_checked ? [] : [localize(language, "note.not_rising_skipped")],
   };
+}
+
+/** The people who may cancel once one box is ticked or cleared. */
+export function cancelPeopleWith(people: SettingsView["people"], id: string, on: boolean): string[] {
+  return people.filter((person) => (person.id === id ? on : person.on)).map((person) => person.id);
 }
 
 /** The solar comparison sentence (spec 7), and how the rule did where it was applied. */
@@ -339,6 +449,8 @@ export interface WeekRow {
 
 export interface WeekView {
   days: WeekDay[];
+  /** Hour labels beside the heating bars, at their fraction of the 05h to 24h day. */
+  hours: { label: string; at: number }[];
   rows: WeekRow[];
   showers: number;
   windows: number;
@@ -366,6 +478,10 @@ export function weekView(heater: HeaterSnapshot, context: ViewContext): WeekView
       label: labels[index] ?? key,
       today: key === week.today,
       bars: dayBars(key, week.windows, context.timeZone),
+    })),
+    hours: [6, 12, 18, 24].map((hour) => ({
+      label: `${String(hour).padStart(2, "0")}h`,
+      at: (hour * 60 - DAY_START) / (DAY_END - DAY_START),
     })),
     rows,
     showers: perDay.reduce((sum, count) => sum + count, 0),

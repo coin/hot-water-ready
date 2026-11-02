@@ -335,6 +335,9 @@
     },
     "settings_admin_only": {
       "message": "Only an administrator may change the settings."
+    },
+    "person_not_found": {
+      "message": "That person does not exist in Home Assistant."
     }
   },
   "issues": {

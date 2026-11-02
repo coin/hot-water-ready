@@ -9,7 +9,9 @@
 - Card checks: `cd card; npm run check`. After changing `card/src`, `npm run build` and commit the bundle.
 - Test HA: `dev/testha.sh` (Docker, http://localhost:8124, a simulated cylinder heats while the
   fake relay is on). The card is already on the **HWR test** dashboard, http://localhost:8124/hwr-test/0;
-  send the owner there. From Git Bash, run the script through WSL with `MSYS_NO_PATHCONV=1`.
+  send the owner there. Run the script from Git Bash as `MSYS_NO_PATHCONV=1 bash dev/testha.sh`,
+  never through WSL: Rancher Desktop then mounts proxies of the folders, which a restart drops,
+  and Home Assistant comes back on an empty config.
   A release through HACS: `dev/testha.sh --hacs`, `python dev/hacs-install.py [vX.Y.Z]`, then
   `dev/testha.sh` again. `python dev/ha_ws.py '<json>'` sends websocket commands;
   `cd card; node browser-check.mjs firefox` reloads the test dashboard, then opens each view at

@@ -32,6 +32,8 @@ export type CancelRule = "requesters" | "people" | "everyone";
 /** The settings sheet, sent to administrators only. */
 export interface AdminSettings {
   cancel_rule: CancelRule;
+  /** The person entities the "people" rule adds. */
+  cancel_people: string[];
   /** Whether the solar-aware rule is applied; off, it is only recorded (spec 4.3). */
   solar_aware: boolean;
   /**
@@ -57,6 +59,10 @@ export interface HeaterSnapshot {
   margin: number;
   status: Status;
   ready_in_minutes: number | null;
+  /** When heating is planned to start next, within two days; null when nothing is planned. */
+  next_heat_start: string | null;
+  /** Whether the solar-aware rule is applied (spec 4.3). */
+  solar_aware: boolean;
   next_ready: { at: string; members: string[] } | null;
   is_admin: boolean;
   /** The viewer's own member id, if the viewer is a member. */
@@ -71,8 +77,12 @@ export interface HeaterSnapshot {
   automatic: boolean;
   /** Whether this viewer may ask for heat now (members and admins). */
   can_ask_heat_now: boolean;
-  /** The heat-now request, if one is running: who asked, and what this viewer may do. */
-  heat_now: { requesters: string[]; asked: boolean; can_cancel: boolean } | null;
+  /**
+   * The heat-now request, if one is running. `requesters` are member ids or person entities (an
+   * automation's request names nobody); `asked` is whether the viewer is one of them, and
+   * `can_cancel_all` whether they may cancel everyone's (spec 2). Who asked may always withdraw.
+   */
+  heat_now: { requesters: string[]; asked: boolean; can_cancel_all: boolean } | null;
   /** The settings sheet; null unless the viewer is an administrator. */
   settings: AdminSettings | null;
   /** This week, Monday to Sunday, for the Semana tab; null unless the viewer is an administrator. */
@@ -114,6 +124,7 @@ export interface Hass {
   locale?: { language: string };
   language?: string;
   config?: { time_zone?: string };
+  states?: Record<string, { attributes: { friendly_name?: string } }>;
   connection: {
     subscribeMessage<T>(
       callback: (message: T) => void,

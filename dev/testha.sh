@@ -5,6 +5,12 @@
 # HACS can install a release into the config instead (see dev/hacs-install.py); run the script
 # again without --hacs to go back to the checkout.
 set -euo pipefail
+if grep -qi microsoft /proc/version 2>/dev/null; then
+  # Docker Desktop and Rancher mount proxies of WSL paths, which a container restart drops: Home
+  # Assistant then starts on an empty config. Windows paths from Git Bash stay mounted.
+  echo "Run this from Git Bash: MSYS_NO_PATHCONV=1 bash dev/testha.sh" >&2
+  exit 1
+fi
 here="$(cd "$(dirname "$0")" && pwd -W 2>/dev/null || pwd)"
 mount=(-v "$here/../custom_components/hot_water_ready:/config/custom_components/hot_water_ready:ro")
 if [ "${1:-}" = "--hacs" ]; then

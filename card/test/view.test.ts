@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { translations } from "../src/i18n";
-import type { HeaterSnapshot, MemberSnapshot } from "../src/types";
+import type { AdminSettings, HeaterSnapshot, MemberSnapshot } from "../src/types";
 import {
   avatarViews,
   faultBanner,
@@ -8,7 +8,11 @@ import {
   awayLine,
   greeting,
   heaterView,
-  houseToday,
+  houseTodayChips,
+  listHeader,
+  newSheet,
+  cancelPeopleWith,
+  peopleOf,
   viewMode,
   readyTimeRows,
   selectedMember,
@@ -35,6 +39,13 @@ const tiago: MemberSnapshot = {
 };
 const maria: MemberSnapshot = { ...tiago, id: "m2", name: "Maria", colour: "green", can_edit: false };
 
+const settingsOff: AdminSettings = {
+  cancel_rule: "requesters",
+  cancel_people: [],
+  solar_aware: false,
+  solar: { windows: 0, on_time: 0, minutes_saved: 0, kwh: null, solar_windows: 0, solar_on_time: 0 },
+};
+
 const cold: HeaterSnapshot = {
   entry_id: "abc",
   name: "Cilindro",
@@ -43,6 +54,8 @@ const cold: HeaterSnapshot = {
   margin: 1,
   status: "waiting",
   ready_in_minutes: null,
+  next_heat_start: null,
+  solar_aware: false,
   next_ready: null,
   is_admin: true,
   me: "m1",
@@ -52,11 +65,7 @@ const cold: HeaterSnapshot = {
   not_rising_checked: true,
   automatic: true,
   heat_now: null,
-  settings: {
-    cancel_rule: "requesters",
-    solar_aware: false,
-    solar: { windows: 0, on_time: 0, minutes_saved: 0, kwh: null, solar_windows: 0, solar_on_time: 0 },
-  },
+  settings: settingsOff,
   week: null,
   cluster_warning: null,
   today: [],
@@ -64,7 +73,12 @@ const cold: HeaterSnapshot = {
 };
 
 // Monday 2 November 2026, 05:00 in Lisbon.
-const pt: ViewContext = { language: "pt", timeZone: "Europe/Lisbon", now: new Date("2026-11-02T05:00:00Z") };
+const pt: ViewContext = {
+  language: "pt",
+  timeZone: "Europe/Lisbon",
+  now: new Date("2026-11-02T05:00:00Z"),
+  people: { "person.ana": "Ana", "person.rui": "Rui" },
+};
 const en: ViewContext = { ...pt, language: "en" };
 
 describe("heaterView", () => {
@@ -137,6 +151,33 @@ describe("heaterView", () => {
     expect(view.headline).toBe("Pronta");
     expect(view.subline).toBe("Próxima às 07:00 de amanhã");
     expect(view.tone).toBe("ready");
+  });
+
+  it("says when heating is planned to start", () => {
+    const waiting = { ...cold, next_heat_start: "2026-11-02T19:25:00+00:00" };
+    expect(heaterView(waiting, pt).subline).toBe("Começa a aquecer por volta das 19:25.");
+    expect(heaterView(waiting, en).subline).toBe("Starts heating around 19:25.");
+  });
+
+  it("allows for the sun when the solar-aware rule is on", () => {
+    const sunny = { ...cold, next_heat_start: "2026-11-03T07:00:00+00:00", solar_aware: true };
+    expect(heaterView(sunny, pt).subline).toBe("Começa a aquecer por volta das 07:00 de amanhã, se o sol não chegar.");
+    expect(heaterView(sunny, en).subline).toBe("Starts heating around 07:00 tomorrow, if the sun has not done it by then.");
+  });
+
+  it("names who asked for heat now while heating", () => {
+    const one = { ...cold, status: "heating" as const, heat_now: { requesters: ["m2"], asked: false, can_cancel_all: true } };
+    expect(heaterView(one, pt).subline).toBe("Pedido por Maria. Recebe um aviso quando estiver pronta.");
+    expect(heaterView(one, en).subline).toBe("Asked for by Maria. They are told when it is ready.");
+    const two = { ...one, heat_now: { ...one.heat_now, requesters: ["m2", "person.ana"] } };
+    expect(heaterView(two, pt).subline).toBe("Pedido por Maria e Ana. Cada um é avisado quando estiver pronta.");
+    expect(heaterView(two, en).subline).toBe("Asked for by Maria and Ana. Each is told when it is ready.");
+  });
+
+  it("shows the status as a badge", () => {
+    expect(heaterView(cold, pt).badge).toBe("EM ESPERA");
+    expect(heaterView({ ...cold, status: "heating" }, pt).badge).toBe("A AQUECER");
+    expect(heaterView({ ...cold, status: "manual" }, en).badge).toBe("MANUAL");
   });
 
   it("fills the ring in proportion to the target, never past full", () => {
@@ -292,20 +333,60 @@ describe("greeting", () => {
   });
 });
 
-describe("houseToday", () => {
+describe("houseTodayChips", () => {
   const today = [
     { member: "m1", at: "2026-11-02T07:00:00+00:00" },
     { member: "m2", at: "2026-11-02T07:30:00+00:00" },
     { member: "m1", at: "2026-11-02T21:00:00+00:00" },
   ];
 
-  it("lists everyone else's times today in the house's time zone", () => {
-    expect(houseToday({ ...cold, me: "m2", today }, pt, "m2")).toBe("Tiago 07:00 · Tiago 21:00");
+  it("lists the house's times today, the member's own as you (mockup A)", () => {
+    expect(houseTodayChips({ ...cold, me: "m2", today }, pt, "m2")).toEqual([
+      { name: "Tiago", time: "07:00", colour: "blue", mine: false },
+      { name: "Você", time: "07:30", colour: "green", mine: true },
+      { name: "Tiago", time: "21:00", colour: "blue", mine: false },
+    ]);
+    expect(houseTodayChips({ ...cold, me: "m2", today }, en, "m2")[1]?.name).toBe("You");
   });
 
-  it("says when nobody else wants water today", () => {
-    expect(houseToday({ ...cold, me: "m1", today: [] }, pt, "m1")).toBe("Mais ninguém hoje");
-    expect(houseToday({ ...cold, me: "m1", today: [] }, en, "m1")).toBe("Nobody else today");
+  it("is empty when nobody wants water today, and says so", () => {
+    expect(houseTodayChips({ ...cold, today: [] }, pt, "m1")).toEqual([]);
+    expect(translations.pt["today.nobody"]).toBe("Ninguém hoje");
+    expect(translations.en["today.nobody"]).toBe("Nobody today");
+  });
+});
+
+describe("listHeader", () => {
+  it("counts the member's ready times", () => {
+    const one = { ...tiago, ready_times: [{ id: "a", time: "07:00", weekdays: [0], enabled: true }] };
+    expect(listHeader(one, "pt")).toEqual({ name: "Tiago", note: "1 horário" });
+    expect(listHeader({ ...one, ready_times: [...one.ready_times, ...one.ready_times] }, "pt").note).toBe("2 horários");
+    expect(listHeader(one, "en").note).toBe("1 ready time");
+    expect(listHeader(tiago, "en").note).toBe("0 ready times");
+  });
+
+  it("explains a virtual member", () => {
+    expect(listHeader({ ...tiago, name: "Global", virtual: true }, "pt").note).toBe(
+      "Membro virtual · horários partilhados da casa",
+    );
+  });
+});
+
+describe("peopleOf", () => {
+  it("takes Home Assistant's people by name, and nothing else", () => {
+    const states = {
+      "person.ana": { attributes: { friendly_name: "Ana" } },
+      "person.rui": { attributes: {} },
+      "switch.relay": { attributes: { friendly_name: "Relé" } },
+    };
+    expect(peopleOf(states)).toEqual({ "person.ana": "Ana", "person.rui": "person.rui" });
+    expect(peopleOf(undefined)).toEqual({});
+  });
+});
+
+describe("newSheet", () => {
+  it("starts at 07:00 on weekdays, as in mockup A", () => {
+    expect(newSheet()).toEqual({ time: "07:00", weekdays: [0, 1, 2, 3, 4] });
   });
 });
 
@@ -325,40 +406,62 @@ describe("awayLine", () => {
 });
 
 describe("heatNowActions", () => {
+  const start = { message: { type: "hot_water_ready/heat_now/start" }, label: "heat_now.start", values: {}, primary: true };
+  const join = { ...start, label: "heat_now.join" };
+  const withdraw = { message: { type: "hot_water_ready/heat_now/cancel", all: false }, label: "heat_now.cancel", values: {}, primary: true };
+
   it("offers to heat now when nothing is running", () => {
-    expect(heatNowActions(cold)).toEqual([
-      { command: "hot_water_ready/heat_now/start", label: "heat_now.start", primary: true },
-    ]);
+    expect(heatNowActions(cold, pt)).toEqual([start]);
   });
 
-  it("offers to cancel to someone who asked", () => {
-    const asked = { ...cold, heat_now: { requesters: ["m1"], asked: true, can_cancel: true } };
-    expect(heatNowActions(asked)).toEqual([
-      { command: "hot_water_ready/heat_now/cancel", label: "heat_now.cancel", primary: true },
-    ]);
+  it("offers nothing to ask while automatic control is off", () => {
+    expect(heatNowActions({ ...cold, automatic: false }, pt)).toEqual([]);
+  });
+
+  it("lets someone who asked withdraw their own request", () => {
+    const asked = { ...cold, heat_now: { requesters: ["m1"], asked: true, can_cancel_all: false } };
+    expect(heatNowActions(asked, pt)).toEqual([withdraw]);
   });
 
   it("offers to be told too to someone who did not ask", () => {
-    const other = { ...cold, heat_now: { requesters: ["m2"], asked: false, can_cancel: false } };
-    expect(heatNowActions(other)).toEqual([
-      { command: "hot_water_ready/heat_now/start", label: "heat_now.join", primary: true },
+    const other = { ...cold, heat_now: { requesters: ["m2"], asked: false, can_cancel_all: false } };
+    expect(heatNowActions(other, pt)).toEqual([join]);
+  });
+
+  it("lets an administrator cancel everyone's request, naming who asked", () => {
+    const other = { ...cold, heat_now: { requesters: ["m2", "person.ana"], asked: false, can_cancel_all: true } };
+    const all = { message: { type: "hot_water_ready/heat_now/cancel", all: true }, label: "heat_now.cancel_all", values: { names: "Maria e Ana" }, primary: false };
+    expect(heatNowActions(other, pt)).toEqual([join, all]);
+    expect(translations.pt["heat_now.cancel_all"]).toBe("Cancelar pedido de {names}");
+  });
+
+  it("offers both to an administrator who asked along with others", () => {
+    const both = { ...cold, heat_now: { requesters: ["m1", "m2"], asked: true, can_cancel_all: true } };
+    expect(heatNowActions(both, en)).toEqual([
+      withdraw,
+      { message: { type: "hot_water_ready/heat_now/cancel", all: true }, label: "heat_now.cancel_all", values: { names: "Tiago and Maria" }, primary: false },
     ]);
   });
 
-  it("also offers an administrator to cancel someone else's request", () => {
-    const other = { ...cold, heat_now: { requesters: ["m2"], asked: false, can_cancel: true } };
-    expect(heatNowActions(other)).toEqual([
-      { command: "hot_water_ready/heat_now/start", label: "heat_now.join", primary: true },
-      { command: "hot_water_ready/heat_now/cancel", label: "heat_now.cancel", primary: false },
+  it("gives only one cancel to someone who is the only one who asked", () => {
+    const alone = { ...cold, heat_now: { requesters: ["m1"], asked: true, can_cancel_all: true } };
+    expect(heatNowActions(alone, pt)).toEqual([withdraw]);
+  });
+
+  it("lets an administrator cancel a request from an automation, which names nobody", () => {
+    const automation = { ...cold, heat_now: { requesters: [], asked: false, can_cancel_all: true } };
+    expect(heatNowActions(automation, pt)).toEqual([
+      join,
+      { message: { type: "hot_water_ready/heat_now/cancel", all: true }, label: "heat_now.cancel", values: {}, primary: false },
     ]);
   });
 
   it("offers nothing to ask to someone who may not ask, but still lets them cancel if allowed", () => {
     const viewer = { ...cold, can_ask_heat_now: false };
-    expect(heatNowActions(viewer)).toEqual([]);
-    const running = { ...viewer, heat_now: { requesters: ["m2"], asked: false, can_cancel: true } };
-    expect(heatNowActions(running)).toEqual([
-      { command: "hot_water_ready/heat_now/cancel", label: "heat_now.cancel", primary: false },
+    expect(heatNowActions(viewer, pt)).toEqual([]);
+    const running = { ...viewer, heat_now: { requesters: ["m2"], asked: false, can_cancel_all: true } };
+    expect(heatNowActions(running, pt)).toEqual([
+      { message: { type: "hot_water_ready/heat_now/cancel", all: true }, label: "heat_now.cancel_all", values: { names: "Maria" }, primary: false },
     ]);
   });
 });
@@ -379,54 +482,74 @@ describe("faultBanner", () => {
 
 describe("heatNowActions during a fault", () => {
   it("offers nothing to ask while a fault stops heating", () => {
-    expect(heatNowActions({ ...cold, heat_now_blocked: true })).toEqual([]);
+    expect(heatNowActions({ ...cold, heat_now_blocked: true }, pt)).toEqual([]);
   });
 
   it("still lets someone cancel a request that was running when the fault came", () => {
-    const running = { ...cold, heat_now_blocked: true, heat_now: { requesters: ["m1"], asked: true, can_cancel: true } };
-    expect(heatNowActions(running)).toEqual([
-      { command: "hot_water_ready/heat_now/cancel", label: "heat_now.cancel", primary: true },
+    const running = { ...cold, heat_now_blocked: true, heat_now: { requesters: ["m1"], asked: true, can_cancel_all: true } };
+    expect(heatNowActions(running, pt)).toEqual([
+      { message: { type: "hot_water_ready/heat_now/cancel", all: false }, label: "heat_now.cancel", values: {}, primary: true },
     ]);
   });
 });
 
 describe("settingsView", () => {
   it("is for administrators only", () => {
-    expect(settingsView({ ...cold, is_admin: false, settings: null }, "pt")).toBeUndefined();
+    expect(settingsView({ ...cold, is_admin: false, settings: null }, pt)).toBeUndefined();
   });
 
   it("shows the band as where heating stops and restarts", () => {
-    const view = settingsView({ ...cold, target: 42.5, margin: 1.5 }, "pt");
+    const view = settingsView({ ...cold, target: 42.5, margin: 1.5 }, pt);
     expect(view?.band).toBe("Pára a 44 °C, retoma a 41 °C");
     expect(view?.target.shown).toBe("42,5");
   });
 
   it("steps the target by half a degree, back onto the step when set elsewhere", () => {
-    expect(settingsView(cold, "pt")?.target).toMatchObject({ down: 41.5, up: 42.5 });
-    expect(settingsView({ ...cold, target: 42.3 }, "pt")?.target).toMatchObject({ down: 42, up: 42.5 });
+    expect(settingsView(cold, pt)?.target).toMatchObject({ down: 41.5, up: 42.5 });
+    expect(settingsView({ ...cold, target: 42.3 }, pt)?.target).toMatchObject({ down: 42, up: 42.5 });
   });
 
   it("stops at the limits", () => {
-    expect(settingsView({ ...cold, target: 75 }, "pt")?.target.up).toBeNull();
-    expect(settingsView({ ...cold, margin: 0 }, "pt")?.margin.down).toBeNull();
-    expect(settingsView({ ...cold, margin: 0 }, "pt")?.margin.up).toBe(0.5);
+    expect(settingsView({ ...cold, target: 75 }, pt)?.target.up).toBeNull();
+    expect(settingsView({ ...cold, margin: 0 }, pt)?.margin.down).toBeNull();
+    expect(settingsView({ ...cold, margin: 0 }, pt)?.margin.up).toBe(0.5);
   });
 
   it("marks the cancel rule in use", () => {
-    const rules = settingsView(cold, "pt")?.cancel.filter((option) => option.selected).map((o) => o.rule);
+    const rules = settingsView(cold, pt)?.cancel.filter((option) => option.selected).map((o) => o.rule);
     expect(rules).toEqual(["requesters"]);
   });
 
+  it("lists the people who may cancel only under the list rule", () => {
+    expect(settingsView(cold, pt)?.people).toEqual([]);
+    expect(settingsView(cold, pt)?.listsPeople).toBe(false);
+    const listed = { ...cold, settings: { ...settingsOff, cancel_rule: "people" as const, cancel_people: ["person.rui"] } };
+    expect(settingsView(listed, pt)?.people).toEqual([
+      { id: "person.ana", name: "Ana", on: false },
+      { id: "person.rui", name: "Rui", on: true },
+    ]);
+    expect(settingsView(listed, { ...pt, people: {} })).toMatchObject({ listsPeople: true, people: [] });
+  });
+
+  it("works out the list once a box is ticked or cleared", () => {
+    const people = [
+      { id: "person.ana", name: "Ana", on: false },
+      { id: "person.rui", name: "Rui", on: true },
+    ];
+    expect(cancelPeopleWith(people, "person.ana", true)).toEqual(["person.ana", "person.rui"]);
+    expect(cancelPeopleWith(people, "person.rui", false)).toEqual([]);
+  });
+
   it("carries the note when not rising cannot be checked", () => {
-    expect(settingsView({ ...cold, not_rising_checked: false }, "pt")?.notes).toEqual([
+    expect(settingsView({ ...cold, not_rising_checked: false }, pt)?.notes).toEqual([
       "O termóstato não indica quando está a aquecer, por isso as verificações \"a água não aquece\" e \"o aquecedor não consome energia\" não são feitas.",
     ]);
-    expect(settingsView(cold, "pt")?.notes).toEqual([]);
+    expect(settingsView(cold, pt)?.notes).toEqual([]);
   });
 });
 
 describe("solarLine", () => {
-  const off = { cancel_rule: "requesters" as const, solar_aware: false };
+  const off = { cancel_rule: "requesters" as const, cancel_people: [], solar_aware: false };
 
   it("says when nothing has been recorded yet", () => {
     expect(solarLine({ ...off, solar: { windows: 0, on_time: 0, minutes_saved: 0, kwh: null, solar_windows: 0, solar_on_time: 0 } }, "pt")).toBe(
@@ -488,6 +611,15 @@ describe("weekView", () => {
       ],
     },
   };
+
+  it("labels the heating bar's hours where they fall on the 05h to 24h day", () => {
+    expect(weekView(household, pt)?.hours).toEqual([
+      { label: "06h", at: 1 / 19 },
+      { label: "12h", at: 7 / 19 },
+      { label: "18h", at: 13 / 19 },
+      { label: "24h", at: 1 },
+    ]);
+  });
 
   it("is for administrators only", () => {
     expect(weekView({ ...household, is_admin: false, week: null }, pt)).toBeUndefined();

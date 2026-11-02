@@ -66,6 +66,7 @@ from .core.controller import (
     Settings,
     lead_minutes,
     minutes_to_ready,
+    next_heat_start,
     next_warning,
     planned_windows,
     solar_lead_minutes,
@@ -647,17 +648,25 @@ class Heater:
         """Any member asks (spec 4.6); admins and automations may too."""
         return user is None or user.is_admin or self.user_member_id(user) is not None
 
-    def can_cancel_heat_now(self, user: User | None) -> bool:
-        """Who asked and admins; the options can add a list of people, or everyone (spec 2)."""
+    def can_cancel_all_heat_now(self, user: User | None) -> bool:
+        """Who may cancel everyone's request: admins, and the people or everyone the options add.
+
+        Anyone who asked may still withdraw their own (spec 2; mockup A).
+        """
         if user is None or user.is_admin:
             return True
         rule = self.entry.options.get(CONF_CANCEL_RULE)
         if rule == CANCEL_EVERYONE:
             return True
-        if rule == CANCEL_PEOPLE and self.person_of(user) in self.entry.options.get(
+        return rule == CANCEL_PEOPLE and self.person_of(user) in self.entry.options.get(
             CONF_CANCEL_PEOPLE, []
-        ):
-            return True
+        )
+
+    @property
+    def heat_now_running(self) -> bool:
+        return self._controller.state.heat_now is not None
+
+    def has_asked_heat_now(self, user: User | None) -> bool:
         return self.requester_key(user) in self.heat_now_requesters
 
     async def async_heat_now(self, requester: str) -> None:
@@ -672,9 +681,15 @@ class Heater:
         self._controller.request_heat_now(dt_util.now(), requester)
         await self._async_saved_and_stepped()
 
-    async def async_cancel_heat_now(self) -> None:
-        """Drop the heat-now request; an open window keeps the heater if it wants it."""
-        self._controller.cancel_heat_now()
+    async def async_cancel_heat_now(self, requester: str | None = None) -> None:
+        """Withdraw one person's request, or with no one named drop it for everyone.
+
+        An open window keeps the heater if it wants it.
+        """
+        if requester is None:
+            self._controller.cancel_heat_now()
+        else:
+            self._controller.withdraw_heat_now(requester)
         await self._async_saved_and_stepped()
 
     # ------------------------------------------------------------------ telling people
@@ -946,6 +961,7 @@ class Heater:
         solar = self.solar_verdict()
         return {
             "cancel_rule": self.entry.options.get(CONF_CANCEL_RULE, CANCEL_REQUESTERS),
+            "cancel_people": list(self.entry.options.get(CONF_CANCEL_PEOPLE, [])),
             "solar_aware": self.solar_aware,
             "solar": {
                 "windows": solar.windows,
@@ -957,10 +973,24 @@ class Heater:
             },
         }
 
-    async def async_set_cancel_rule(self, rule: str) -> None:
-        """Who may cancel heat now; an option, so the entry reloads (spec 3.1)."""
-        options = {**self.entry.options, CONF_CANCEL_RULE: rule}
+    async def async_set_cancel(
+        self, rule: str | None = None, people: list[str] | None = None
+    ) -> None:
+        """Who may cancel heat now, and the people the list rule adds.
+
+        Options, so the entry reloads (spec 3.1).
+        """
+        options = dict(self.entry.options)
+        if rule is not None:
+            options[CONF_CANCEL_RULE] = rule
+        if people is not None:
+            options[CONF_CANCEL_PEOPLE] = people
         self.hass.config_entries.async_update_entry(self.entry, options=options)
+
+    def next_heat_start(self) -> datetime | None:
+        """When heating is planned to start next, for ready times in the coming two days."""
+        now = dt_util.utcnow()
+        return next_heat_start(self.windows_between(now, now + timedelta(days=2)), now)
 
     def snapshot(self, user: User) -> dict[str, Any]:
         """Everything the card needs, as plain data, for this viewer."""
@@ -979,6 +1009,10 @@ class Heater:
             "margin": self.margin,
             "status": self.status.value,
             "ready_in_minutes": ready_in,
+            "next_heat_start": None
+            if (start := self.next_heat_start()) is None
+            else dt_util.as_local(start).isoformat(),
+            "solar_aware": self.solar_aware,
             "next_ready": None
             if next_ready is None
             else {"at": next_ready.at.isoformat(), "members": sorted(next_ready.members)},
@@ -993,8 +1027,8 @@ class Heater:
             if self._controller.state.heat_now is None
             else {
                 "requesters": sorted(self.heat_now_requesters),
-                "asked": self.requester_key(user) in self.heat_now_requesters,
-                "can_cancel": self.can_cancel_heat_now(user),
+                "asked": self.has_asked_heat_now(user),
+                "can_cancel_all": self.can_cancel_all_heat_now(user),
             },
             "settings": self._settings_snapshot() if user.is_admin else None,
             "week": self._week() if user.is_admin else None,

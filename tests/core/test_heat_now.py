@@ -84,6 +84,41 @@ def test_cancelling_stops_the_heater() -> None:
     assert all(e.kind != "heat_now_ready" for _, e in cylinder.events)
 
 
+def test_one_person_withdrawing_keeps_heating_for_the_others() -> None:
+    # Mockup A: a member's "Cancelar" removes only their own request (spec 4.6: each is told).
+    cylinder = _cylinder(35.0)
+    cylinder.heat_now("tiago")
+    cylinder.heat_now("maria")
+    cylinder.run(5)
+    cylinder.controller.withdraw_heat_now("maria")
+    cylinder.run(60)
+
+    assert _kinds(cylinder) == [("heat_now_ready", ["tiago"])]
+
+
+def test_the_last_person_withdrawing_ends_the_request() -> None:
+    cylinder = _cylinder(35.0)
+    cylinder.heat_now("tiago")
+    cylinder.run(5)
+    cylinder.controller.withdraw_heat_now("tiago")
+    cylinder.run(1)
+
+    assert not cylinder.relay
+    assert cylinder.controller.state.heat_now is None
+
+
+def test_withdrawing_someone_who_did_not_ask_changes_nothing() -> None:
+    cylinder = _cylinder(35.0)
+    cylinder.heat_now("tiago")
+    cylinder.run(1)
+    cylinder.controller.withdraw_heat_now("maria")
+    cylinder.run(1)
+
+    assert cylinder.relay
+    assert cylinder.controller.state.heat_now is not None
+    assert cylinder.controller.state.heat_now.requesters == {"tiago"}
+
+
 def test_cancelling_leaves_an_open_window_heating() -> None:
     cylinder = _cylinder(35.0)
     cylinder.occurrences = [Occurrence(NOON + timedelta(minutes=30), frozenset({"maria"}))]

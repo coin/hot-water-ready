@@ -14,7 +14,11 @@ import {
   greeting,
   heatNowActions,
   heaterView,
-  houseToday,
+  houseTodayChips,
+  listHeader,
+  newSheet,
+  cancelPeopleWith,
+  peopleOf,
   readyTimeRows,
   settingsView,
   sheetIsComplete,
@@ -35,7 +39,6 @@ const TAG = "hot-water-ready-card";
 type Tab = "people" | "week";
 const RING_RADIUS = 38;
 const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
-const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
 
 export class HotWaterReadyCard extends LitElement {
   static override properties = {
@@ -94,6 +97,7 @@ export class HotWaterReadyCard extends LitElement {
       language: this._language,
       timeZone: this.hass?.config?.time_zone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
       now: new Date(),
+      people: peopleOf(this.hass?.states),
     };
   }
 
@@ -171,56 +175,81 @@ export class HotWaterReadyCard extends LitElement {
               ${mode === "member"
                 ? html`<div class="greeting">${greeting(heater, language)}</div>`
                 : this._renderAvatars(heater, member)}
-              ${member ? this._renderList(member) : html`<div class="message">${localize(language, "members.none")}</div>`}
-              ${member && this._sheet ? this._renderSheet(member, this._sheet) : nothing}
-              ${member ? this._renderAway(member) : nothing}
               ${mode === "member" && member ? this._renderToday(heater, member) : nothing}
+              ${member
+                ? html`${this._renderListHead(member, mode === "member")} ${this._renderList(member)}
+                  ${this._sheet ? this._renderSheet(member, this._sheet) : nothing}`
+                : html`<div class="message">${localize(language, "members.none")}</div>`}
             `}
         ${this._error ? html`<div class="error" role="alert">${this._error}</div>` : nothing}
       </ha-card>
     `;
   }
 
-  private _renderAway(member: MemberSnapshot): unknown {
+  /** Over the list: whose it is (or "Os meus horários"), and the away switch on the right (mockup A). */
+  private _renderListHead(member: MemberSnapshot, own: boolean): unknown {
     const language = this._language;
+    const head = listHeader(member, language);
     const line = awayLine(member, this._context);
-    if (!member.can_edit) return line ? html`<div class="away-line">${line}</div>` : nothing;
     const set = (away: boolean, until: string | null) =>
       this._call({ type: "hot_water_ready/away/set", member_id: member.id, away, until });
     return html`
-      <div class="away">
-        <label class="away-toggle">
-          <input
-            type="checkbox"
-            class="switch"
-            .checked=${live(member.away.on)}
-            @change=${(event: Event) => {
-              void set((event.target as HTMLInputElement).checked, null);
-            }}
-          />
-          ${line || localize(language, "away.line")}
-        </label>
-        ${member.away.on
-          ? html`<label class="until">
-              ${localize(language, "away.until_label")}
+      <div class="list-head">
+        <div class="list-title">
+          <span>${own ? localize(language, "list.mine") : head.name}</span>
+          ${own ? nothing : html`<span class="hint">${head.note}</span>`}
+        </div>
+        ${member.can_edit
+          ? html`<label class="away-toggle">
+              ${line || localize(language, "away.line")}
               <input
-                type="date"
-                min=${todayInHouse(this._context)}
-                .value=${live(member.away.until ?? "")}
+                type="checkbox"
+                class="switch"
+                .checked=${live(member.away.on)}
                 @change=${(event: Event) => {
-                  void set(true, (event.target as HTMLInputElement).value || null);
+                  void set((event.target as HTMLInputElement).checked, null);
                 }}
               />
             </label>`
-          : nothing}
+          : line
+            ? html`<span class="hint">${line}</span>`
+            : nothing}
       </div>
+      ${member.away.on
+        ? html`<div class="paused">
+            <span>${localize(language, "away.paused")}</span>
+            ${member.can_edit
+              ? html`<label class="until">
+                  ${localize(language, "away.until_label")}
+                  <input
+                    type="date"
+                    min=${todayInHouse(this._context)}
+                    .value=${live(member.away.until ?? "")}
+                    @change=${(event: Event) => {
+                      void set(true, (event.target as HTMLInputElement).value || null);
+                    }}
+                  />
+                </label>`
+              : nothing}
+          </div>`
+        : nothing}
     `;
   }
 
   private _renderToday(heater: HeaterSnapshot, member: MemberSnapshot): unknown {
+    const language = this._language;
+    const chips = houseTodayChips(heater, this._context, member.id);
     return html`<div class="today">
-      <span class="today-label">${localize(this._language, "today.label")}</span>
-      ${houseToday(heater, this._context, member.id)}
+      <span class="today-label">${localize(language, "today.label")}</span>
+      ${chips.length === 0
+        ? html`<span>${localize(language, "today.nobody")}</span>`
+        : chips.map(
+            (chip) => html`<span
+              class="chip ${chip.mine ? "mine" : ""}"
+              style=${chip.mine ? "" : `--chip: var(--${chip.colour}-color, var(--primary-color))`}
+              >${chip.name} ${chip.time}</span
+            >`,
+          )}
     </div>`;
   }
 
@@ -247,6 +276,7 @@ export class HotWaterReadyCard extends LitElement {
         <div class="text">
           <div class="name-row">
             <div class="name">${heater.name}</div>
+            <span class="badge ${view.tone}">${view.badge}</span>
             ${heater.settings
               ? html`<button
                   class="settings-button"
@@ -261,14 +291,14 @@ export class HotWaterReadyCard extends LitElement {
           <div class="headline ${view.tone}">${view.headline}</div>
           ${view.subline ? html`<div class="subline">${view.subline}</div>` : nothing}
           <div class="heat-now">
-            ${heatNowActions(heater).map(
+            ${heatNowActions(heater, this._context).map(
               (item) => html`<button
                 class=${item.primary ? "primary" : "secondary"}
                 @click=${() => {
-                  void this._call({ type: item.command });
+                  void this._call(item.message);
                 }}
               >
-                ${localize(this._language, item.label)}
+                ${localize(this._language, item.label, item.values)}
               </button>`,
             )}
           </div>
@@ -330,7 +360,12 @@ export class HotWaterReadyCard extends LitElement {
               )}
             `,
           )}
-          <span class="hint heating-label">${localize(language, "week.heating")}</span>
+          <span class="heating-label">${localize(language, "week.heating")}</span>
+          <div class="hours">
+            ${week.hours.map(
+              (hour) => html`<span class="hint" style="top: ${(hour.at * 100).toFixed(1)}%">${hour.label}</span>`,
+            )}
+          </div>
           ${week.days.map(
             (day) => html`<div class="bar ${day.today ? "is-today" : ""}">
               ${day.bars.map(
@@ -350,7 +385,7 @@ export class HotWaterReadyCard extends LitElement {
 
   private _renderSettings(heater: HeaterSnapshot): unknown {
     const language = this._language;
-    const view = this._settingsOpen ? settingsView(heater, language) : undefined;
+    const view = this._settingsOpen ? settingsView(heater, this._context) : undefined;
     if (!view) return nothing;
     const set = (changes: Record<string, unknown>) => this._call({ type: SETTINGS_COMMAND, ...changes });
     return html`
@@ -403,6 +438,25 @@ export class HotWaterReadyCard extends LitElement {
               </button>`,
             )}
           </div>
+          ${view.listsPeople
+            ? html`<div class="people" role="group" aria-label=${localize(language, "settings.cancel_people")}>
+                <span class="hint">${localize(language, "settings.cancel_people")}</span>
+                ${view.people.length === 0 ? html`<span class="hint">${localize(language, "settings.no_people")}</span>` : nothing}
+                ${view.people.map(
+                  (person) => html`<label class="person">
+                    <input
+                      type="checkbox"
+                      .checked=${live(person.on)}
+                      @change=${(event: Event) => {
+                        const on = (event.target as HTMLInputElement).checked;
+                        void set({ cancel_people: cancelPeopleWith(view.people, person.id, on) });
+                      }}
+                    />
+                    ${person.name}
+                  </label>`,
+                )}
+              </div>`
+            : nothing}
         </div>
         ${this._renderSolar(view)}
         <button
@@ -491,7 +545,7 @@ export class HotWaterReadyCard extends LitElement {
     const language = this._language;
     const rows = readyTimeRows(member, language);
     return html`
-      <div class="list">
+      <div class="list ${member.away.on ? "paused-list" : ""}">
         ${rows.length === 0 ? html`<div class="empty">${localize(language, "list.empty")}</div>` : nothing}
         ${rows.map(
           (row) => html`
@@ -533,7 +587,7 @@ export class HotWaterReadyCard extends LitElement {
           `,
         )}
         ${member.can_edit
-          ? html`<button class="add" @click=${() => (this._sheet = { time: "07:00", weekdays: [...EVERY_DAY] })}>
+          ? html`<button class="add" @click=${() => (this._sheet = newSheet())}>
               + ${localize(language, "list.add")}
             </button>`
           : nothing}
@@ -780,11 +834,22 @@ export class HotWaterReadyCard extends LitElement {
       text-decoration: line-through;
     }
     .heating-label {
-      align-self: center;
+      grid-column: 1 / -1;
+      font-weight: 700;
+      padding-top: 6px;
+    }
+    .hours {
+      position: relative;
+    }
+    .hours span {
+      position: absolute;
+      right: 4px;
+      transform: translateY(-50%);
+      font-size: 10px;
     }
     .bar {
       position: relative;
-      height: 64px;
+      height: 150px;
       border-radius: 6px;
       border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.25));
     }
@@ -800,6 +865,28 @@ export class HotWaterReadyCard extends LitElement {
       align-items: center;
       justify-content: space-between;
       gap: 8px;
+    }
+    .badge {
+      margin-left: auto;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--text-primary-color, #fff);
+      background: var(--hwr-waiting);
+    }
+    .badge.ready {
+      background: var(--hwr-ready);
+    }
+    .badge.heating {
+      background: var(--hwr-heating);
+    }
+    .badge.fault {
+      background: var(--hwr-fault);
+    }
+    .badge.manual {
+      background: var(--secondary-text-color);
     }
     .settings-button {
       border: 0;
@@ -945,8 +1032,8 @@ export class HotWaterReadyCard extends LitElement {
       font-size: 18px;
       font-weight: 700;
     }
-    .away,
-    .away-line,
+    .list-head,
+    .paused,
     .today {
       margin: 0 16px 12px;
       display: flex;
@@ -969,8 +1056,47 @@ export class HotWaterReadyCard extends LitElement {
       border-radius: 8px;
       padding: 4px 6px;
     }
-    .today {
+    .list-head {
+      flex-wrap: nowrap;
+      justify-content: space-between;
+    }
+    .list-title {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-weight: 700;
+      min-width: 0;
+    }
+    .paused {
       color: var(--secondary-text-color);
+    }
+    .paused-list .row {
+      opacity: 0.45;
+    }
+    .chip {
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 13px;
+      color: var(--text-primary-color, #fff);
+      background: var(--chip, var(--primary-color));
+      font-variant-numeric: tabular-nums;
+    }
+    .chip.mine {
+      background: none;
+      color: var(--primary-color);
+      box-shadow: inset 0 0 0 2px var(--primary-color);
+      font-weight: 700;
+    }
+    .people {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-top: 4px;
+    }
+    .person {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     .today-label {
       font-weight: 700;
@@ -1010,7 +1136,7 @@ export class HotWaterReadyCard extends LitElement {
       opacity: 0.55;
     }
     .time {
-      font-size: 26px;
+      font-size: 38px;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
     }

@@ -8,6 +8,7 @@ import pytest
 from custom_components.hot_water_ready.core.controller import (
     Occurrence,
     Settings,
+    next_heat_start,
     planned_windows,
 )
 
@@ -66,3 +67,13 @@ def test_the_plan_starts_and_groups_as_the_controller_does(second: int) -> None:
     window = cylinder.controller.state.window
     assert window is not None
     assert window.last_ready_at == plan[0].ready_times[-1].at
+
+
+def test_the_next_start_is_the_earliest_still_to_come() -> None:
+    # Water at 30: 99 min of lead, so 07:00 starts at 05:21 and 12:00 at 10:21.
+    windows = planned_windows(Settings(), [_at(300), _at(0)], 30.0)
+
+    assert next_heat_start(windows, SEVEN - timedelta(hours=3)) == SEVEN - timedelta(minutes=99)
+    # 06:00 is past 07:00's start (heating then is told by "A aquecer"): the next is 10:21.
+    assert next_heat_start(windows, SEVEN - timedelta(hours=1)) == SEVEN + timedelta(minutes=201)
+    assert next_heat_start(windows, SEVEN + timedelta(hours=6)) is None

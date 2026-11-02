@@ -228,3 +228,28 @@ async def test_the_admin_gets_this_weeks_windows_and_a_member_does_not(
         hass, hass_ws_client, heater, await access_token(hass, maria_user)
     )
     assert member_view["week"] is None
+
+
+async def test_everyone_sees_when_heating_is_planned_to_start(
+    hass: HomeAssistant,
+    heater: MockConfigEntry,
+    hass_ws_client: WebSocketGenerator,
+    maria_user: MockUser,
+) -> None:
+    """For the card's "Começa a aquecer por volta das 08:28" (mockup A)."""
+    await heater.runtime_data.async_add_ready_time(TIAGO, time(9, 0), EVERY_DAY, True)
+
+    member_view = await _snapshot(
+        hass, hass_ws_client, heater, await access_token(hass, maria_user)
+    )
+
+    # As the calendar: (42 - 39.6) x 7 + 15 = 31.8 min before 09:00.
+    planned = local("08:28") + timedelta(seconds=12)
+    assert member_view["next_heat_start"] == planned.isoformat()
+    assert member_view["solar_aware"] is False
+
+
+async def test_no_planned_start_without_a_ready_time(
+    hass: HomeAssistant, heater: MockConfigEntry, hass_ws_client: WebSocketGenerator
+) -> None:
+    assert (await _snapshot(hass, hass_ws_client, heater))["next_heat_start"] is None

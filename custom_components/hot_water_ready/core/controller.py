@@ -319,6 +319,11 @@ def next_warning(windows: Iterable[PlannedWindow], now: datetime) -> PlannedWind
     return None
 
 
+def next_heat_start(windows: Iterable[PlannedWindow], now: datetime) -> datetime | None:
+    """When heating is planned to start next: the earliest window start after now (mockup A)."""
+    return min((window.start for window in windows if window.start > now), default=None)
+
+
 def minutes_to_ready(settings: Settings, temperature: float | None) -> int | None:
     """About how long heating from `temperature` to the target takes, by the rate."""
     if temperature is None:
@@ -353,6 +358,15 @@ class Controller:
             )
         else:
             heat_now.requesters |= {requester}
+
+    def withdraw_heat_now(self, requester: str) -> None:
+        """One person no longer wants heat now; the request ends when nobody is left."""
+        heat_now = self.state.heat_now
+        if heat_now is None or requester not in heat_now.requesters:
+            return
+        heat_now.requesters -= {requester}
+        if not heat_now.requesters:
+            self.cancel_heat_now()
 
     def cancel_heat_now(self) -> None:
         """Drop the heat-now request; the relay goes back to what an open window wants."""
