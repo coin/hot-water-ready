@@ -20,7 +20,9 @@ Read by the reviewer. Mechanical rules live in the checks (`scripts/check`, `car
   hidden in the card. That covers every write path: websocket commands, actions, and entity
   services such as `number.set_value` or `switch.turn_on` (read the user from the entity's
   context). `tests/ha/test_permissions.py` refuses a stranger on every websocket command it
-  finds registered; entity services and actions still need their own refusal test.
+  finds registered; entity services and actions still need their own refusal test. So does a
+  field that changes who may call a command: that test sends the bare command, and
+  `heat_now/cancel`'s `all` had no stranger test until review.
 - Current APIs only: `runtime_data`, `ConfigEntry*` exceptions, `step_id` on every flow step,
   `Store` validated on load, `DeviceInfo` with keyword arguments.
 - "Validated on load" means every field read from storage, nested shapes included, goes through

@@ -7,6 +7,7 @@
   (WSL Ubuntu, venv `~/venvs/hwr`). Calling `wsl.exe ... bash -c '$VAR'` expands variables too early;
   put commands in a script instead.
 - Card checks: `cd card; npm run check`. After changing `card/src`, `npm run build` and commit the bundle.
+  The card has no code formatter: keep to the surrounding layout by hand, as eslint checks it.
 - Test HA: `dev/testha.sh` (Docker, http://localhost:8124, a simulated cylinder heats while the
   fake relay is on). The card is already on the **HWR test** dashboard, http://localhost:8124/hwr-test/0;
   send the owner there. Run the script from Git Bash as `MSYS_NO_PATHCONV=1 bash dev/testha.sh`,
