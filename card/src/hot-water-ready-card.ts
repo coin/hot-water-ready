@@ -177,8 +177,8 @@ export class HotWaterReadyCard extends LitElement {
                 : this._renderAvatars(heater, member)}
               ${mode === "member" && member ? this._renderToday(heater, member) : nothing}
               ${member
-                ? html`${this._renderListHead(member, mode === "member")} ${this._renderList(member)}
-                  ${this._sheet ? this._renderSheet(member, this._sheet) : nothing}`
+                ? html`<div class="panel">${this._renderListHead(member, mode === "member")} ${this._renderList(member)}</div>
+                    ${this._sheet ? this._renderSheet(member, this._sheet) : nothing}`
                 : html`<div class="message">${localize(language, "members.none")}</div>`}
             `}
         ${this._error ? html`<div class="error" role="alert">${this._error}</div>` : nothing}
@@ -550,9 +550,11 @@ export class HotWaterReadyCard extends LitElement {
         ${rows.map(
           (row) => html`
             <div class="row ${row.enabled ? "" : "off"}">
-              <div class="time">${row.time}</div>
-              <div class="days">
-                ${row.days.map((day) => html`<span class="${day.on ? "on" : ""}">${day.letter}</span>`)}
+              <div class="row-text">
+                <div class="time">${row.time}</div>
+                <div class="days">
+                  ${row.days.map((day) => html`<span class="${day.on ? "on" : ""}">${day.letter}</span>`)}
+                </div>
               </div>
               ${member.can_edit
                 ? html`
@@ -1032,8 +1034,6 @@ export class HotWaterReadyCard extends LitElement {
       font-size: 18px;
       font-weight: 700;
     }
-    .list-head,
-    .paused,
     .today {
       margin: 0 16px 12px;
       display: flex;
@@ -1056,19 +1056,37 @@ export class HotWaterReadyCard extends LitElement {
       border-radius: 8px;
       padding: 4px 6px;
     }
+    .panel {
+      margin: 0 16px 16px;
+      padding: 16px 16px 4px;
+      border-radius: 20px;
+      border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.25));
+    }
     .list-head {
-      flex-wrap: nowrap;
+      display: flex;
+      align-items: center;
       justify-content: space-between;
+      gap: 10px;
     }
     .list-title {
       display: flex;
       flex-direction: column;
       gap: 2px;
-      font-weight: 700;
+      font-size: 17px;
+      font-weight: 800;
       min-width: 0;
     }
     .paused {
-      color: var(--secondary-text-color);
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--primary-text-color);
+      background: color-mix(in srgb, var(--warning-color, #ef6c00) 14%, transparent);
     }
     .paused-list .row {
       opacity: 0.45;
@@ -1119,42 +1137,99 @@ export class HotWaterReadyCard extends LitElement {
       font-size: 12px;
     }
     .list {
-      padding: 0 16px 16px;
+      margin-top: 8px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
     }
     .row {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 10px 12px;
-      border-radius: 12px;
-      background: var(--secondary-background-color, rgba(127, 127, 127, 0.08));
+      padding: 14px 0;
+      border-bottom: 1px solid var(--divider-color, rgba(127, 127, 127, 0.2));
+    }
+    .row-text {
+      flex: 1;
+      min-width: 0;
     }
     .row.off {
       opacity: 0.55;
     }
     .time {
       font-size: 38px;
-      font-weight: 700;
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: -0.02em;
       font-variant-numeric: tabular-nums;
     }
     .days {
-      flex: 1;
       display: flex;
       gap: 4px;
-      font-size: 12px;
+      margin-top: 8px;
+    }
+    .days span {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 700;
       color: var(--disabled-text-color, #9aa2ad);
     }
     .days .on {
-      color: var(--primary-color);
-      font-weight: 700;
+      color: var(--text-primary-color, #fff);
+      background: var(--primary-color);
     }
+    /* An on/off toggle drawn on a checkbox, as in mockup A. */
     .switch {
-      width: 20px;
-      height: 20px;
-      accent-color: var(--primary-color);
+      appearance: none;
+      -webkit-appearance: none;
+      position: relative;
+      flex: none;
+      margin: 0;
+      width: 46px;
+      height: 28px;
+      border-radius: 14px;
+      cursor: pointer;
+      background: var(--switch-unchecked-track-color, var(--disabled-text-color, #9aa2ad));
+      transition: background 0.15s;
+    }
+    .switch::before {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--switch-unchecked-button-color, #fff);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+      transition: left 0.15s;
+    }
+    .switch:checked {
+      background: var(--switch-checked-track-color, var(--primary-color));
+    }
+    .switch:checked::before {
+      left: 21px;
+      background: var(--switch-checked-button-color, #fff);
+    }
+    .away-toggle .switch:checked {
+      background: var(--warning-color, #ef6c00);
+    }
+    .row .switch {
+      width: 52px;
+      height: 32px;
+      border-radius: 16px;
+    }
+    .row .switch::before {
+      top: 4px;
+      left: 4px;
+      width: 24px;
+      height: 24px;
+    }
+    .row .switch:checked::before {
+      left: 24px;
     }
     .remove {
       border: 0;
@@ -1165,6 +1240,7 @@ export class HotWaterReadyCard extends LitElement {
       min-height: 32px;
     }
     .add {
+      margin: 12px 0;
       min-height: 44px;
       border: 1px dashed var(--divider-color, #9aa2ad);
       border-radius: 12px;
