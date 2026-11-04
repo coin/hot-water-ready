@@ -39,8 +39,7 @@ async def test_an_admin_sees_the_settings_and_the_solar_comparison(
     snapshot = await _snapshot(hass, hass_ws_client, heater)
 
     assert snapshot["settings"] == {
-        "cancel_rule": "requesters",
-        "cancel_people": [],
+        "switch_off_people": [],
         "solar_aware": False,
         "solar": {
             "windows": 0,
@@ -71,11 +70,9 @@ async def test_an_admin_changes_each_setting(
 ) -> None:
     assert (await _set(hass, hass_ws_client, heater, target=45, margin=1.5))["success"]
     assert (await _set(hass, hass_ws_client, heater, automatic=False))["success"]
-    assert (await _set(hass, hass_ws_client, heater, cancel_rule="everyone"))["success"]
 
-    heater_now = heater.runtime_data  # a new one: the cancel rule is an option, so it reloaded
+    heater_now = heater.runtime_data
     assert (heater_now.target, heater_now.margin, heater_now.automatic) == (45.0, 1.5, False)
-    assert heater.options["cancel_rule"] == "everyone"
 
 
 async def test_an_admin_sets_the_people_who_may_cancel(
@@ -84,14 +81,11 @@ async def test_an_admin_sets_the_people_who_may_cancel(
     hass_ws_client: WebSocketGenerator,
     maria_user: MockUser,
 ) -> None:
-    reply = await _set(
-        hass, hass_ws_client, heater, cancel_rule="people", cancel_people=[MARIA_PERSON]
-    )
+    reply = await _set(hass, hass_ws_client, heater, switch_off_people=[MARIA_PERSON])
 
     assert reply["success"]
-    assert heater.options["cancel_rule"] == "people"
     assert heater.options["cancel_people"] == [MARIA_PERSON]
-    assert (await _snapshot(hass, hass_ws_client, heater))["settings"]["cancel_people"] == [
+    assert (await _snapshot(hass, hass_ws_client, heater))["settings"]["switch_off_people"] == [
         MARIA_PERSON
     ]
 
@@ -100,7 +94,7 @@ async def test_only_existing_people_go_on_the_list(
     hass: HomeAssistant, heater: MockConfigEntry, hass_ws_client: WebSocketGenerator
 ) -> None:
     for people in (["person.nobody"], ["switch.cylinder"]):
-        reply = await _set(hass, hass_ws_client, heater, cancel_people=people)
+        reply = await _set(hass, hass_ws_client, heater, switch_off_people=people)
         assert reply["success"] is False, people
     assert heater.options.get("cancel_people", []) == []
 
@@ -108,7 +102,7 @@ async def test_only_existing_people_go_on_the_list(
 async def test_values_out_of_range_are_refused(
     hass: HomeAssistant, heater: MockConfigEntry, hass_ws_client: WebSocketGenerator
 ) -> None:
-    for change in ({"target": 90}, {"margin": -1}, {"cancel_rule": "nobody"}):
+    for change in ({"target": 90}, {"margin": -1}):
         reply = await _set(hass, hass_ws_client, heater, **change)
         assert reply["success"] is False, change
     assert heater.runtime_data.target == 42.0

@@ -17,9 +17,6 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 import probatio
 
 from .const import (
-    CANCEL_EVERYONE,
-    CANCEL_PEOPLE,
-    CANCEL_REQUESTERS,
     DOMAIN,
     MAX_MARGIN,
     MAX_TARGET,
@@ -61,6 +58,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_set_away)
     websocket_api.async_register_command(hass, ws_heat_now)
     websocket_api.async_register_command(hass, ws_cancel_heat_now)
+    websocket_api.async_register_command(hass, ws_switch_off)
     websocket_api.async_register_command(hass, ws_set_settings)
 
 
@@ -308,33 +306,51 @@ async def ws_heat_now(
     {
         probatio.Required("type"): f"{DOMAIN}/heat_now/cancel",
         probatio.Required("entry_id"): str,
-        probatio.Optional("all", default=False): bool,
     }
 )
 @websocket_api.async_response
 async def ws_cancel_heat_now(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
-    """Withdraw the caller's own request, or with `all` cancel everyone's, if they may (spec 2)."""
+    """Withdraw the caller's own heat-now request; the last one out ends it."""
     heater = _loaded_heater(hass, msg["entry_id"])
     if heater is None:
         await _async_error(hass, connection, msg, websocket_api.ERR_NOT_FOUND, "heater_not_found")
         return
     user = connection.user
-    if not heater.heat_now_running and (
-        heater.can_ask_heat_now(user) or heater.can_cancel_all_heat_now(user)
-    ):
+    if not heater.heat_now_running and heater.can_ask_heat_now(user):
         connection.send_result(msg["id"])  # already gone: a second tap, or a card behind
         return
-    allowed = (
-        heater.can_cancel_all_heat_now(user) if msg["all"] else heater.has_asked_heat_now(user)
-    )
-    if not allowed:
+    if not heater.has_asked_heat_now(user):
         await _async_error(
             hass, connection, msg, websocket_api.ERR_UNAUTHORIZED, "cancel_not_allowed"
         )
         return
-    await heater.async_cancel_heat_now(None if msg["all"] else heater.requester_key(user))
+    await heater.async_cancel_heat_now(heater.requester_key(user))
+    connection.send_result(msg["id"])
+
+
+@websocket_api.websocket_command(
+    {
+        probatio.Required("type"): f"{DOMAIN}/switch_off",
+        probatio.Required("entry_id"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_switch_off(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Switch the heater off for everyone ("Desligar o aquecimento"), if the caller may."""
+    heater = _loaded_heater(hass, msg["entry_id"])
+    if heater is None:
+        await _async_error(hass, connection, msg, websocket_api.ERR_NOT_FOUND, "heater_not_found")
+        return
+    if not heater.can_switch_off(connection.user):
+        await _async_error(
+            hass, connection, msg, websocket_api.ERR_UNAUTHORIZED, "switch_off_not_allowed"
+        )
+        return
+    await heater.async_switch_off(connection.user)
     connection.send_result(msg["id"])
 
 
@@ -349,10 +365,7 @@ async def ws_cancel_heat_now(
             probatio.Coerce(float), probatio.Range(min=0, max=MAX_MARGIN)
         ),
         probatio.Optional("automatic"): bool,
-        probatio.Optional("cancel_rule"): probatio.In(
-            [CANCEL_REQUESTERS, CANCEL_PEOPLE, CANCEL_EVERYONE]
-        ),
-        probatio.Optional("cancel_people"): [str],
+        probatio.Optional("switch_off_people"): [str],
     }
 )
 @websocket_api.async_response
@@ -369,7 +382,7 @@ async def ws_set_settings(
             hass, connection, msg, websocket_api.ERR_UNAUTHORIZED, "settings_admin_only"
         )
         return
-    people = msg.get("cancel_people")
+    people = msg.get("switch_off_people")
     if people is not None and any(
         not person.startswith("person.") or hass.states.get(person) is None for person in people
     ):
@@ -379,6 +392,6 @@ async def ws_set_settings(
         await heater.async_set_band(target=msg.get("target"), margin=msg.get("margin"))
     if "automatic" in msg:
         await heater.async_set_automatic(msg["automatic"])
-    if "cancel_rule" in msg or people is not None:
-        await heater.async_set_cancel(rule=msg.get("cancel_rule"), people=people)
+    if people is not None:
+        await heater.async_set_switch_off_people(people)
     connection.send_result(msg["id"])

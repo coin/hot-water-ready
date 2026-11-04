@@ -128,13 +128,6 @@
         "brown": "Castanho"
       }
     },
-    "cancel_rule": {
-      "options": {
-        "requesters": "Quem pediu e os administradores",
-        "people": "Quem pediu, administradores e estas pessoas",
-        "everyone": "Todos"
-      }
-    },
     "weekdays": {
       "options": {
         "mon": "Segunda-feira",
@@ -225,8 +218,7 @@
           "tank_litres": "Volume do depósito (opcional)",
           "element_watts": "Potência da resistência (opcional)",
           "max_temperature": "Temperatura máxima para duches seguidos",
-          "cancel_rule": "Quem pode cancelar o aquecer agora",
-          "cancel_people": "Pessoas que também podem cancelar",
+          "cancel_people": "Quem pode desligar o aquecimento para todos",
           "rich_notifications": "Substituir mensagens anteriores nos telemóveis",
           "power_sensor": "Sensor de potência do aquecedor (opcional)",
           "fault_recipients": "Quem é avisado das avarias",
@@ -234,7 +226,7 @@
         },
         "data_description": {
           "keep_heating_gap_minutes": "Horários assim próximos partilham uma janela e o aquecedor continua a aquecer, em vez de deixar a água arrefecer entre eles.",
-          "cancel_people": "Usado quando a regra é \"quem pediu, administradores e estas pessoas\".",
+          "cancel_people": "Além dos administradores. Quem pediu pode sempre cancelar o seu próprio pedido.",
           "rich_notifications": "Nos telemóveis com a aplicação Home Assistant, \"Duche pronto\" substitui \"a aquecer\" em vez de chegar como segunda mensagem.",
           "power_sensor": "Com um sensor de potência, também se detectam um aquecedor que não consome e um relé preso ligado.",
           "fault_recipients": "Vazio: todos os administradores.",
@@ -331,13 +323,22 @@
       "message": "Só os membros e os administradores podem pedir água quente."
     },
     "cancel_not_allowed": {
-      "message": "Só quem pediu, ou um administrador, pode cancelar."
+      "message": "Só quem pediu pode cancelar o seu pedido."
     },
     "settings_admin_only": {
       "message": "Só um administrador pode alterar as definições."
     },
     "person_not_found": {
       "message": "Essa pessoa não existe no Home Assistant."
+    },
+    "switched_off_by": {
+      "message": "{name} desligou o aquecimento."
+    },
+    "switched_off": {
+      "message": "O aquecimento foi desligado."
+    },
+    "switch_off_not_allowed": {
+      "message": "Só um administrador, ou uma pessoa escolhida por um administrador, pode desligar o aquecimento para todos."
     }
   },
   "issues": {
@@ -438,6 +439,16 @@
         "until": {
           "name": "Até",
           "description": "O último dia de ausência; depois dele, a ausência termina sozinha."
+        }
+      }
+    },
+    "switch_off": {
+      "name": "Desligar",
+      "description": "Desliga o aquecedor agora para todos: o pedido de aquecer agora termina e os horários para que estava a aquecer ficam sem água quente. Quem fica sem ela é avisado.",
+      "fields": {
+        "heater": {
+          "name": "Aquecedor",
+          "description": "O aquecedor a desligar."
         }
       }
     }

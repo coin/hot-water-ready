@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
 from .cluster import ClusterTarget, Tank, cluster_target
-from .parsing import aware_datetime, flag, name_list, number
+from .parsing import aware_datetime, flag, name_list, number, optional_aware_datetime
 
 # The probe reads in 0.1 C steps; compare with a little slack so 43.0 counts as reaching 43.
 _EPSILON = 1e-6
@@ -102,6 +102,8 @@ class ControllerState:
     told: frozenset[tuple[str, datetime]] = frozenset()
     # (member, ready time) pairs already told the water is heating, for the same reason.
     told_heating: frozenset[tuple[str, datetime]] = frozenset()
+    # Switched off now: no window opens before this, the end of the window that was skipped.
+    off_until: datetime | None = None
 
     def all_told(self, window: Window) -> bool:
         """Whether every member of the window has been told the water is ready."""
@@ -125,6 +127,7 @@ class ControllerState:
             },
             "told": sorted([member, at.isoformat()] for member, at in self.told),
             "told_heating": sorted([member, at.isoformat()] for member, at in self.told_heating),
+            "off_until": None if self.off_until is None else self.off_until.isoformat(),
             "window": None
             if window is None
             else {
@@ -186,6 +189,7 @@ class ControllerState:
             window=window,
             heating=flag(data.get("heating", False)),
             heat_now=heat_now,
+            off_until=optional_aware_datetime(data.get("off_until")),
             told=frozenset(told),
             told_heating=frozenset(told_heating),
         )
@@ -368,6 +372,26 @@ class Controller:
         if not heat_now.requesters:
             self.cancel_heat_now()
 
+    def switch_off(self, now: datetime, by: Iterable[str] = ()) -> frozenset[str]:
+        """Switch the heater off now: the heat-now request ends and the open window is skipped.
+
+        No window opens until the skipped one would have ended; heat now still works. Returns
+        who loses out and is to be told: the people who asked and the members of the skipped
+        window, but not whoever switched it off (`by`, under every name they go by).
+        """
+        state = self.state
+        lost: frozenset[str] = frozenset()
+        if state.heat_now is not None:
+            lost |= state.heat_now.requesters
+        window = state.window
+        if window is not None:
+            lost |= window.members
+            state.off_until = max(window.end, now.astimezone(UTC))
+        state.heat_now = None
+        state.window = None
+        state.heating = False
+        return lost - frozenset(by)
+
     def cancel_heat_now(self) -> None:
         """Drop the heat-now request; the relay goes back to what an open window wants."""
         self.state.heat_now = None
@@ -405,10 +429,12 @@ class Controller:
             # No reading: hold what is happening; the fault guard decides when that ends.
             return Decision(relay_on=state.heating and self._requested(), events=tuple(events))
 
+        if state.off_until is not None and now >= state.off_until:
+            state.off_until = None
         before = None if state.window is None else state.window.members
         if state.window is not None:
             self._follow_ready_times(state.window, now, temperature, ready_times, solar_rise)
-        if state.window is None:
+        if state.window is None and state.off_until is None:
             self._open_window(now, temperature, ready_times, events, solar_rise)
             before = None if state.window is None else state.window.members
         if state.window is not None:

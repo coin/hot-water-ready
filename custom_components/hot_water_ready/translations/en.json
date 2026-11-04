@@ -128,13 +128,6 @@
         "brown": "Brown"
       }
     },
-    "cancel_rule": {
-      "options": {
-        "requesters": "Those who asked, and admins",
-        "people": "Those who asked, admins and these people",
-        "everyone": "Everyone"
-      }
-    },
     "weekdays": {
       "options": {
         "mon": "Monday",
@@ -225,8 +218,7 @@
           "tank_litres": "Tank volume (optional)",
           "element_watts": "Element power (optional)",
           "max_temperature": "Highest temperature for showers close together",
-          "cancel_rule": "Who may cancel heat now",
-          "cancel_people": "People who may also cancel",
+          "cancel_people": "People who may switch off the heating for everyone",
           "rich_notifications": "Replace earlier messages on phones",
           "power_sensor": "Heater power sensor (optional)",
           "fault_recipients": "Who is told about faults",
@@ -234,7 +226,7 @@
         },
         "data_description": {
           "keep_heating_gap_minutes": "Ready times this close share one window and the heater keeps heating through, instead of letting the water cool in between.",
-          "cancel_people": "Used when the rule is \"those who asked, admins and these people\".",
+          "cancel_people": "Besides the administrators. Whoever asked may always cancel their own request.",
           "rich_notifications": "On phones with the Home Assistant app, \"Hot water ready\" replaces \"heating\" instead of arriving as a second message.",
           "power_sensor": "With a power sensor, a heater that draws nothing and a relay stuck on are noticed too.",
           "fault_recipients": "Empty: every administrator.",
@@ -331,13 +323,22 @@
       "message": "Only members and administrators may ask for hot water."
     },
     "cancel_not_allowed": {
-      "message": "Only whoever asked, or an administrator, may cancel."
+      "message": "Only whoever asked may cancel their request."
     },
     "settings_admin_only": {
       "message": "Only an administrator may change the settings."
     },
     "person_not_found": {
       "message": "That person does not exist in Home Assistant."
+    },
+    "switched_off_by": {
+      "message": "{name} switched off the heating."
+    },
+    "switched_off": {
+      "message": "The heating was switched off."
+    },
+    "switch_off_not_allowed": {
+      "message": "Only an administrator, or someone an administrator chose, may switch off the heating for everyone."
     }
   },
   "issues": {
@@ -438,6 +439,16 @@
         "until": {
           "name": "Until",
           "description": "The last day away; after it, away ends by itself."
+        }
+      }
+    },
+    "switch_off": {
+      "name": "Switch off",
+      "description": "Switches the heater off now for everyone: the heat-now request ends and the ready times it was heating for are skipped. Everyone who loses out is told.",
+      "fields": {
+        "heater": {
+          "name": "Heater",
+          "description": "The heater to switch off."
         }
       }
     }

@@ -12,11 +12,11 @@ from homeassistant.core import HomeAssistant
 
 from . import HotWaterReadyConfigEntry
 from .const import (
-    CONF_CANCEL_PEOPLE,
     CONF_FAULT_RECIPIENTS,
     CONF_NOTIFY_TARGETS,
     CONF_PERSON,
     CONF_RECIPIENTS,
+    CONF_SWITCH_OFF_PEOPLE,
 )
 from .storage import ready_time_to_dict
 
@@ -24,7 +24,7 @@ TO_REDACT = {
     CONF_PERSON,
     CONF_RECIPIENTS,
     CONF_NOTIFY_TARGETS,
-    CONF_CANCEL_PEOPLE,
+    CONF_SWITCH_OFF_PEOPLE,
     CONF_FAULT_RECIPIENTS,
 }
 

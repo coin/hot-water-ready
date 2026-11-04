@@ -292,6 +292,8 @@ def test_state_from_corrupt_data_is_refused() -> None:
                 "ready_reported": False,
             },
         },
+        {"heating": False, "off_until": "2026-11-02T07:15:00"},  # naive
+        {"heating": False, "off_until": 7},
     ):
         with pytest.raises(ValueError, match="controller state"):
             ControllerState.from_dict(bad)

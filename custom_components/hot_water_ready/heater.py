@@ -25,13 +25,8 @@ from homeassistant.util.unit_conversion import TemperatureConverter
 
 from .actuator import Actuator, ClimateActuator, SwitchActuator
 from .const import (
-    CANCEL_EVERYONE,
-    CANCEL_PEOPLE,
-    CANCEL_REQUESTERS,
     COLOURS,
     CONF_ADVANCED,
-    CONF_CANCEL_PEOPLE,
-    CONF_CANCEL_RULE,
     CONF_CLIMATE,
     CONF_COLOUR,
     CONF_ELEMENT_WATTS,
@@ -47,6 +42,7 @@ from .const import (
     CONF_RICH_NOTIFICATIONS,
     CONF_SOLAR_AWARE,
     CONF_SWITCH,
+    CONF_SWITCH_OFF_PEOPLE,
     CONF_TANK_LITRES,
     CONF_TEMPERATURE_SENSOR,
     DEFAULT_MAX_TEMPERATURE,
@@ -500,9 +496,12 @@ class Heater:
             self._store.async_delay_save(self._data)
 
     def next_ready(self, member_id: str | None = None) -> Occurrence | None:
-        """The next ready time from now, of one member or of anyone."""
+        """The next ready time from now, of one member or of anyone; skipped ones left out."""
         now = dt_util.now()
+        off_until = self._controller.state.off_until
         for occurrence in self.occurrences(now, now + HORIZON):
+            if off_until is not None and occurrence.at < off_until:
+                continue  # switched off: this one gets no hot water
             if member_id is None or member_id in occurrence.members:
                 return occurrence
         return None
@@ -648,19 +647,14 @@ class Heater:
         """Any member asks (spec 4.6); admins and automations may too."""
         return user is None or user.is_admin or self.user_member_id(user) is not None
 
-    def can_cancel_all_heat_now(self, user: User | None) -> bool:
-        """Who may cancel everyone's request: admins, and the people or everyone the options add.
+    def can_switch_off(self, user: User | None) -> bool:
+        """Who may switch the heater off for everyone: admins and the people the options list.
 
-        Anyone who asked may still withdraw their own (spec 2; mockup A).
+        Anyone who asked may still withdraw their own request.
         """
         if user is None or user.is_admin:
             return True
-        rule = self.entry.options.get(CONF_CANCEL_RULE)
-        if rule == CANCEL_EVERYONE:
-            return True
-        return rule == CANCEL_PEOPLE and self.person_of(user) in self.entry.options.get(
-            CONF_CANCEL_PEOPLE, []
-        )
+        return self.person_of(user) in self.entry.options.get(CONF_SWITCH_OFF_PEOPLE, [])
 
     @property
     def heat_now_running(self) -> bool:
@@ -691,6 +685,45 @@ class Heater:
         else:
             self._controller.withdraw_heat_now(requester)
         await self._async_saved_and_stepped()
+
+    def name_of(self, user: User | None) -> str | None:
+        """Who a user is to the household: their member's name, else their person's, else theirs."""
+        if user is None:
+            return None
+        member_id = self.user_member_id(user)
+        if member_id is not None:
+            return self.member(member_id).name
+        person = self.person_of(user)
+        state = None if person is None else self.hass.states.get(person)
+        return state.name if state is not None else user.name
+
+    async def async_switch_off(self, user: User | None) -> None:
+        """Switch the heater off now; everyone who loses out, but whoever did it, is told.
+
+        Only while it heats: a window holding its water, or nothing at all, is left alone.
+        """
+        if self.status is not Status.HEATING:
+            return
+        by = set() if user is None else {self.requester_key(user), self.person_of(user)}
+        lost = self._controller.switch_off(dt_util.now(), by={key for key in by if key}) - {NOBODY}
+        await self._async_saved_and_stepped()
+        name = self.name_of(user)
+        if name is None:
+            message = await async_message(self.hass, "switched_off")
+        else:
+            message = await async_message(self.hass, "switched_off_by", {"name": name})
+        for who in sorted(lost):
+            await self._async_tell_one(who, message, f"{DOMAIN}_{self.entry_id}_{who}_off")
+
+    def heating_for(self) -> list[tuple[str, datetime]]:
+        """The members, and their ready times, the open window heats for; earliest first."""
+        window = self._controller.state.window
+        if window is None:
+            return []
+        return sorted(
+            ((member, window.ready_for(member)[1]) for member in window.members),
+            key=lambda pair: (pair[1], pair[0]),
+        )
 
     # ------------------------------------------------------------------ telling people
 
@@ -960,8 +993,7 @@ class Heater:
         """The settings sheet an administrator sees on the card (spec 6, 7)."""
         solar = self.solar_verdict()
         return {
-            "cancel_rule": self.entry.options.get(CONF_CANCEL_RULE, CANCEL_REQUESTERS),
-            "cancel_people": list(self.entry.options.get(CONF_CANCEL_PEOPLE, [])),
+            "switch_off_people": list(self.entry.options.get(CONF_SWITCH_OFF_PEOPLE, [])),
             "solar_aware": self.solar_aware,
             "solar": {
                 "windows": solar.windows,
@@ -973,24 +1005,22 @@ class Heater:
             },
         }
 
-    async def async_set_cancel(
-        self, rule: str | None = None, people: list[str] | None = None
-    ) -> None:
-        """Who may cancel heat now, and the people the list rule adds.
+    async def async_set_switch_off_people(self, people: list[str]) -> None:
+        """The people who may switch off for everyone, besides admins.
 
-        Options, so the entry reloads (spec 3.1).
+        An option, so the entry reloads (spec 3.1).
         """
-        options = dict(self.entry.options)
-        if rule is not None:
-            options[CONF_CANCEL_RULE] = rule
-        if people is not None:
-            options[CONF_CANCEL_PEOPLE] = people
+        options = {**self.entry.options, CONF_SWITCH_OFF_PEOPLE: people}
         self.hass.config_entries.async_update_entry(self.entry, options=options)
 
     def next_heat_start(self) -> datetime | None:
         """When heating is planned to start next, for ready times in the coming two days."""
         now = dt_util.utcnow()
-        return next_heat_start(self.windows_between(now, now + timedelta(days=2)), now)
+        start = next_heat_start(self.windows_between(now, now + timedelta(days=2)), now)
+        off_until = self._controller.state.off_until
+        if start is not None and off_until is not None and start < off_until:
+            return off_until  # switched off: nothing heats before the skipped window would end
+        return start
 
     def snapshot(self, user: User) -> dict[str, Any]:
         """Everything the card needs, as plain data, for this viewer."""
@@ -1024,12 +1054,19 @@ class Heater:
             "heat_now_blocked": bool(self.faults & BLOCKING),
             "automatic": self.automatic,
             "heat_now": None
-            if self._controller.state.heat_now is None
+            if (heat_now := self._controller.state.heat_now) is None
             else {
                 "requesters": sorted(self.heat_now_requesters),
                 "asked": self.has_asked_heat_now(user),
-                "can_cancel_all": self.can_cancel_all_heat_now(user),
+                # An automation's request names nobody: it keeps heating after the last person.
+                "unnamed": NOBODY in heat_now.requesters,
             },
+            "viewer": self.requester_key(user) or None,
+            "can_switch_off": self.can_switch_off(user),
+            "heating_for": [
+                {"member": member, "at": dt_util.as_local(at).isoformat()}
+                for member, at in self.heating_for()
+            ],
             "settings": self._settings_snapshot() if user.is_admin else None,
             "week": self._week() if user.is_admin else None,
             "cluster_warning": None

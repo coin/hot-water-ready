@@ -20,6 +20,7 @@ WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 ATTR_HEATER = "heater"
 ATTR_MEMBER = "member"
 
+SWITCH_OFF_SCHEMA = probatio.Schema({probatio.Required(ATTR_HEATER): cv.string})
 HEAT_NOW_SCHEMA = probatio.Schema(
     {probatio.Required(ATTR_HEATER): cv.string, probatio.Optional(ATTR_MEMBER): cv.string}
 )
@@ -54,6 +55,7 @@ def async_register(hass: HomeAssistant) -> None:
         DOMAIN, "remove_ready_time", _remove_ready_time, schema=REMOVE_SCHEMA
     )
     hass.services.async_register(DOMAIN, "set_away", _set_away, schema=AWAY_SCHEMA)
+    hass.services.async_register(DOMAIN, "switch_off", _switch_off, schema=SWITCH_OFF_SCHEMA)
 
 
 def _error(key: str, **placeholders: str) -> ServiceValidationError:
@@ -114,6 +116,15 @@ async def _heat_now(call: ServiceCall) -> None:
         await heater.async_heat_now(requester)
     except HeatNowRefusedError as err:
         raise HomeAssistantError(await heater.async_refusal_message(err)) from err
+
+
+async def _switch_off(call: ServiceCall) -> None:
+    """Switch the heater off now for everyone: admins, the people listed, automations."""
+    heater = _heater(call.hass, call.data[ATTR_HEATER])
+    user = await async_calling_user(call.hass, call.context)
+    if not heater.can_switch_off(user):
+        raise Unauthorized(context=call.context)
+    await heater.async_switch_off(user)
 
 
 async def _add_ready_time(call: ServiceCall) -> None:

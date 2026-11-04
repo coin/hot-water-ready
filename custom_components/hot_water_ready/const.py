@@ -25,8 +25,8 @@ COLOURS: Final = ("blue", "green", "orange", "purple", "red", "teal", "pink", "b
 
 # Options
 CONF_KEEP_HEATING_GAP: Final = "keep_heating_gap_minutes"
-CONF_CANCEL_RULE: Final = "cancel_rule"
-CONF_CANCEL_PEOPLE: Final = "cancel_people"
+# Who may switch off for everyone besides admins; stored under its first name, "cancel_people".
+CONF_SWITCH_OFF_PEOPLE: Final = "cancel_people"
 CONF_RICH_NOTIFICATIONS: Final = "rich_notifications"
 CONF_POWER_SENSOR: Final = "power_sensor"
 CONF_FAULT_RECIPIENTS: Final = "fault_recipients"
@@ -37,9 +37,6 @@ CONF_TANK_LITRES: Final = "tank_litres"
 CONF_ELEMENT_WATTS: Final = "element_watts"
 CONF_MAX_TEMPERATURE: Final = "max_temperature"
 DEFAULT_MAX_TEMPERATURE: Final = MAX_TEMPERATURE
-CANCEL_REQUESTERS: Final = "requesters"  # who asked, and admins (default)
-CANCEL_PEOPLE: Final = "people"  # also the people listed
-CANCEL_EVERYONE: Final = "everyone"
 
 # Temperature band (number entities, kept in storage)
 DEFAULT_TARGET: Final = Settings().target

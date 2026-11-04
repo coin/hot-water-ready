@@ -1,7 +1,7 @@
 // What the card shows, worked out from a heater snapshot without touching the DOM.
 
 import { localeOf, localize, pickLanguage, weekdayLetters, type TextKey } from "./i18n";
-import type { AdminSettings, CancelRule, HeaterSnapshot, MemberSnapshot, Status, TimeSpan } from "./types";
+import type { AdminSettings, HeaterSnapshot, MemberSnapshot, Status, TimeSpan } from "./types";
 
 export interface ViewContext {
   language: string;
@@ -88,7 +88,21 @@ function joinNames(names: string[], language: string): string {
   return `${names.slice(0, -1).join(", ")}${localize(language, "names.and")}${names.at(-1) ?? ""}`;
 }
 
-/** Under the headline: who asked while heating for them, when heating starts, or the next time. */
+/** "Maria às 07:00 e Tiago às 07:30": the ready times the open window heats for. */
+function readyTimesOf(heater: HeaterSnapshot, entries: HeaterSnapshot["heating_for"], context: ViewContext): string {
+  const items = entries.map((entry) =>
+    localize(context.language, "item.at", {
+      name: namesOf(heater, [entry.member], context)[0] ?? "",
+      time: clock(entry.at, context),
+    }),
+  );
+  return joinNames(items, context.language);
+}
+
+/**
+ * Under the headline: who asked while heating for them, or whose ready time it heats for, when
+ * heating starts, or the next time.
+ */
 function sublineOf(heater: HeaterSnapshot, context: ViewContext): string {
   const { language } = context;
   const requesters = heater.heat_now?.requesters ?? [];
@@ -97,6 +111,9 @@ function sublineOf(heater: HeaterSnapshot, context: ViewContext): string {
     return names.length === 1
       ? localize(language, "subline.asked_by_one", { name: names[0] ?? "" })
       : localize(language, "subline.asked_by_many", { names: joinNames(names, language) });
+  }
+  if (heater.status === "heating" && heater.heating_for.length > 0) {
+    return localize(language, "subline.for", { list: readyTimesOf(heater, heater.heating_for, context) });
   }
   if (heater.status === "waiting" && heater.next_heat_start) {
     const key = heater.solar_aware ? "subline.starts_at_solar" : "subline.starts_at";
@@ -278,42 +295,62 @@ export function awayLine(member: MemberSnapshot, context: Pick<ViewContext, "lan
 }
 
 export interface HeatNowAction {
-  /** The websocket message the button sends; a cancel says whether it is everyone's request. */
-  message: { type: typeof START } | { type: typeof CANCEL; all: boolean };
+  /** The websocket message the button sends. */
+  message: { type: typeof START | typeof CANCEL };
   label: TextKey;
-  values: Record<string, string>;
-  primary: boolean;
 }
 
 const START = "hot_water_ready/heat_now/start";
 const CANCEL = "hot_water_ready/heat_now/cancel";
 
 /**
- * "Aquecer agora"; "Cancelar" withdraws the viewer's own request; "Avisar-me também" joins
- * someone else's; "Cancelar pedido de Maria e Ana" ends everyone's, for who may (spec 2, 4.6).
+ * The heat-now button (spec 4.6): "Aquecer agora" while not heating; "Avisar-me quando estiver
+ * quente" while it heats and the viewer has not asked; "Cancelar" for the only one who asked, and
+ * "Não me avisar" for one of several (an automation counts), who leaves while it heats on.
  */
-export function heatNowActions(heater: HeaterSnapshot, context: ViewContext): HeatNowAction[] {
+export function heatNowActions(heater: HeaterSnapshot): HeatNowAction[] {
   // Nobody can ask during a fault or while the heater is run by hand (the server refuses), but a
   // request already running can still be cancelled.
   const canAsk = heater.can_ask_heat_now && !heater.heat_now_blocked && heater.automatic;
-  const ask = (label: TextKey): HeatNowAction => ({ message: { type: START }, label, values: {}, primary: true });
   const request = heater.heat_now;
-  if (!request) return canAsk ? [ask("heat_now.start")] : [];
-  const actions: HeatNowAction[] = [];
-  if (request.asked) {
-    actions.push({ message: { type: CANCEL, all: false }, label: "heat_now.cancel", values: {}, primary: true });
-  } else if (canAsk) {
-    actions.push(ask("heat_now.join"));
+  if (request?.asked) {
+    const alone = request.requesters.length === 1 && !request.unnamed;
+    return [{ message: { type: CANCEL }, label: alone ? "heat_now.cancel" : "heat_now.leave" }];
   }
-  const othersAsked = request.requesters.length > (request.asked ? 1 : 0);
-  const cancelAll = { message: { type: CANCEL, all: true }, primary: false } as const;
-  if (request.can_cancel_all && othersAsked) {
-    const names = joinNames(namesOf(heater, request.requesters, context), context.language);
-    actions.push({ ...cancelAll, label: "heat_now.cancel_all", values: { names } });
-  } else if (request.can_cancel_all && !request.asked) {
-    actions.push({ ...cancelAll, label: "heat_now.cancel", values: {} }); // an automation's request
+  if (!canAsk) return [];
+  // Heating for the viewer's own ready time: they are told anyway.
+  if (request === null && heater.heating_for.some((entry) => entry.member === heater.me)) return [];
+  const heating = heater.status === "heating" || request !== null;
+  return [{ message: { type: START }, label: heating ? "heat_now.join" : "heat_now.start" }];
+}
+
+export const SWITCH_OFF_COMMAND = "hot_water_ready/switch_off";
+
+/** "Desligar o aquecimento…" shows while it heats, to admins and the people they chose. */
+export function switchOffShown(heater: HeaterSnapshot): boolean {
+  return heater.can_switch_off && heater.status === "heating";
+}
+
+/**
+ * The confirmation before switching off: who loses out, the viewer left out, and when a ready
+ * time is skipped (the viewer's own included), that it comes back on by itself.
+ */
+export function switchOffSheet(heater: HeaterSnapshot, context: ViewContext): { title: string; lines: string[] } {
+  const { language } = context;
+  const asked = (heater.heat_now?.requesters ?? []).filter((id) => id !== heater.viewer);
+  const skipped = heater.heating_for.filter((entry) => entry.member !== heater.viewer);
+  const lines: string[] = [];
+  if (asked.length > 0) {
+    const names = joinNames(namesOf(heater, asked, context), language);
+    lines.push(localize(language, asked.length === 1 ? "switch_off.asked_one" : "switch_off.asked_many", { names }));
   }
-  return actions;
+  if (skipped.length > 0) {
+    const list = readyTimesOf(heater, skipped, context);
+    lines.push(localize(language, skipped.length === 1 ? "switch_off.skipped_one" : "switch_off.skipped_many", { list }));
+  }
+  if (lines.length === 0) lines.push(localize(language, "switch_off.nobody"));
+  if (heater.heating_for.length > 0) lines.push(localize(language, "switch_off.back"));
+  return { title: localize(language, "switch_off.title"), lines };
 }
 
 /** The red banner (spec 4.8): one line per active fault. */
@@ -327,7 +364,6 @@ export const SETTINGS_COMMAND = "hot_water_ready/settings/set";
 // degrees here, which is fine enough on a phone.
 const TARGET = { min: 30, max: 75, step: 0.5 };
 const MARGIN = { min: 0, max: 5, step: 0.5 };
-const CANCEL_RULES: CancelRule[] = ["requesters", "people", "everyone"];
 
 /** The value one step down and one step up, or null past a limit. */
 export interface Stepper {
@@ -353,10 +389,7 @@ export interface SettingsView {
   /** Where heating stops and restarts. */
   band: string;
   automatic: boolean;
-  cancel: { rule: CancelRule; label: TextKey; selected: boolean }[];
-  /** Whether the "people" rule is chosen, so the sheet shows its list. */
-  listsPeople: boolean;
-  /** Under that rule, Home Assistant's people and whether each may cancel. */
+  /** Home Assistant's people, and whether each may switch off for everyone besides admins. */
   people: { id: string; name: string; on: boolean }[];
   solar: string;
   /** Checks this heater cannot have, such as "not rising" on a thermostat that never says. */
@@ -376,21 +409,16 @@ export function settingsView(heater: HeaterSnapshot, context: ViewContext): Sett
       restart: formatNumber(heater.target - heater.margin, language, 1),
     }),
     automatic: heater.automatic,
-    cancel: CANCEL_RULES.map((rule) => ({ rule, label: `cancel.${rule}`, selected: rule === settings.cancel_rule })),
-    listsPeople: settings.cancel_rule === "people",
-    people:
-      settings.cancel_rule === "people"
-        ? Object.entries(context.people ?? {})
-            .map(([id, name]) => ({ id, name, on: settings.cancel_people.includes(id) }))
-            .sort((a, b) => a.name.localeCompare(b.name))
-        : [],
+    people: Object.entries(context.people ?? {})
+      .map(([id, name]) => ({ id, name, on: settings.switch_off_people.includes(id) }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
     solar: solarLine(settings, language),
     notes: heater.not_rising_checked ? [] : [localize(language, "note.not_rising_skipped")],
   };
 }
 
-/** The people who may cancel once one box is ticked or cleared. */
-export function cancelPeopleWith(people: SettingsView["people"], id: string, on: boolean): string[] {
+/** The people who may switch off for everyone once one box is ticked or cleared. */
+export function switchOffPeopleWith(people: SettingsView["people"], id: string, on: boolean): string[] {
   return people.filter((person) => (person.id === id ? on : person.on)).map((person) => person.id);
 }
 

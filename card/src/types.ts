@@ -26,14 +26,10 @@ export interface MemberSnapshot {
   ready_times: ReadyTimeSnapshot[];
 }
 
-/** Who may cancel a heat-now request besides whoever asked (spec 2). */
-export type CancelRule = "requesters" | "people" | "everyone";
-
 /** The settings sheet, sent to administrators only. */
 export interface AdminSettings {
-  cancel_rule: CancelRule;
-  /** The person entities the "people" rule adds. */
-  cancel_people: string[];
+  /** The person entities who, besides admins, may switch the heater off for everyone. */
+  switch_off_people: string[];
   /** Whether the solar-aware rule is applied; off, it is only recorded (spec 4.3). */
   solar_aware: boolean;
   /**
@@ -78,11 +74,17 @@ export interface HeaterSnapshot {
   /** Whether this viewer may ask for heat now (members and admins). */
   can_ask_heat_now: boolean;
   /**
-   * The heat-now request, if one is running. `requesters` are member ids or person entities (an
-   * automation's request names nobody); `asked` is whether the viewer is one of them, and
-   * `can_cancel_all` whether they may cancel everyone's (spec 2). Who asked may always withdraw.
+   * The heat-now request, if one is running. `requesters` are member ids or person entities;
+   * `asked` is whether the viewer is one of them; `unnamed` whether an automation asked too,
+   * which keeps it heating after the last person leaves.
    */
-  heat_now: { requesters: string[]; asked: boolean; can_cancel_all: boolean } | null;
+  heat_now: { requesters: string[]; asked: boolean; unnamed: boolean } | null;
+  /** The viewer as the heater knows them: their member id, else their person; null for neither. */
+  viewer: string | null;
+  /** Whether this viewer may switch the heater off for everyone (admins and the people listed). */
+  can_switch_off: boolean;
+  /** The members, and their ready times, the open window is heating for; earliest first. */
+  heating_for: { member: string; at: string }[];
   /** The settings sheet; null unless the viewer is an administrator. */
   settings: AdminSettings | null;
   /** This week, Monday to Sunday, for the Semana tab; null unless the viewer is an administrator. */

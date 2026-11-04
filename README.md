@@ -45,7 +45,7 @@ Everything else is in the heater's options (*Configure*):
 | Heating rate set by hand | Minutes to raise the water one degree. Empty: learned from the heater's own clean runs (started with the sun down, over 15 min, a rise of more than 3 °C, no water drawn), the median of the last week once there are three. |
 | Tank volume, element power | Both together let the heater heat higher for showers close together that the tank at the normal target cannot carry. The element power also gives the solar comparison its kWh without a power sensor. |
 | Highest temperature for showers close together | The cap for that raise: 50 °C by default, the scald limit without a mixing valve; up to 60 °C only with one. |
-| Who may cancel heat now | Who asked and the administrators; or also the *People who may also cancel*; or everyone. |
+| People who may switch off the heating for everyone | Besides the administrators, who may always. Whoever asked for heat now may always cancel their own request. |
 | Replace earlier messages on phones | On phones with the Home Assistant app, "ready" replaces "heating" instead of arriving as a second message. |
 | Heater power sensor | With one, a heater that draws nothing while on, or power while switched off, is noticed. |
 | Who is told about faults | Empty: every administrator. |
@@ -89,7 +89,7 @@ once the heater has started for a window it carries on until the water is ready.
 - **Week** (administrators): the household's week, people by day, with the number of showers and
   heating windows, a heating bar per day (05h to 24h), and a tap on a person to highlight them.
 - **Settings** (the cog, administrators): target, margin (shown as where heating stops and starts
-  again), automatic control, who may cancel heat now, and the solar comparison.
+  again), automatic control, who may switch off the heating for everyone, and the solar comparison.
 - **A member** sees a greeting, their own ready times and away, and a read-only line with the rest
   of the house today.
 
@@ -99,9 +99,16 @@ highest temperature allows.
 ## Heat now
 
 *Heat now* (on the card, the button entity, or the action) heats the water to the target as soon
-as possible. Several people can ask; each is told when it is ready, and *Tell me too* joins a
-request someone else started. It is refused, with the reason, during a fault or while automatic
+as possible. Several people can ask; each is told when it is ready. While the heater is heating,
+*Tell me when it's hot* joins in. Pressing again takes only your own place out: heating stops
+when the last person leaves. It is refused, with the reason, during a fault or while automatic
 control is off.
+
+**Switching off for everyone**: administrators, and the people chosen in the options, also see
+*Switch off the heating…* while it heats, which asks for confirmation and names who loses out.
+It ends the heat-now request and skips the ready times being heated for, until that window would
+have ended; then the heater works normally again. Everyone who loses out is told who switched it
+off, or only that it was switched off when an automation did it, with the `switch_off` action.
 
 ## Faults
 
@@ -142,6 +149,12 @@ data:
 
 Without `member`, the person behind the calling user is told; from an automation, nobody (the
 card still shows the request).
+
+```yaml
+action: hot_water_ready.switch_off
+data:
+  heater: <config entry id of the heater>
+```
 
 ```yaml
 action: hot_water_ready.add_ready_time

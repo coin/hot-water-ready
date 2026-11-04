@@ -143,7 +143,7 @@ async def test_portuguese_message(
     assert sent[0].data["message"] == "Duche pronto: a água está a 42,3 °C."
 
 
-async def test_only_who_asked_and_admins_cancel_by_default(
+async def test_who_asked_cancels_only_their_own_request(
     hass: HomeAssistant,
     heater: MockConfigEntry,
     hass_ws_client: WebSocketGenerator,
@@ -155,7 +155,6 @@ async def test_only_who_asked_and_admins_cancel_by_default(
     _water(hass, 40.0)
     await _press(hass, hass_admin_user)
     cancel = {"type": "hot_water_ready/heat_now/cancel", "entry_id": heater.entry_id}
-    cancel_all = {**cancel, "all": True}
 
     refused = await _ws(hass, hass_ws_client, cancel, maria_user)
     assert refused["error"]["code"] == "unauthorized"
@@ -165,9 +164,7 @@ async def test_only_who_asked_and_admins_cancel_by_default(
     assert (await _ws(hass, hass_ws_client, cancel, maria_user))["success"]
     assert heater.runtime_data.heat_now_requesters == frozenset({TIAGO})
 
-    refused = await _ws(hass, hass_ws_client, cancel_all, maria_user)
-    assert refused["error"]["code"] == "unauthorized"
-    assert (await _ws(hass, hass_ws_client, cancel_all, hass_admin_user))["success"]
+    assert (await _ws(hass, hass_ws_client, cancel, hass_admin_user))["success"]  # the last one
     assert heater.runtime_data.heat_now_requesters == frozenset()
     assert hass.states.get("sensor.cylinder_status").state != "heating"
 
@@ -187,54 +184,6 @@ async def test_withdrawing_leaves_an_automations_request_running(
     assert (await _ws(hass, hass_ws_client, cancel, maria_user))["success"]
     assert heater.runtime_data.heat_now_requesters == frozenset()
     assert hass.states.get("sensor.cylinder_status").state == "heating"
-
-
-async def test_the_setting_lets_everyone_cancel(
-    hass: HomeAssistant,
-    heater: MockConfigEntry,
-    hass_ws_client: WebSocketGenerator,
-    maria_user: MockUser,
-    hass_admin_user: MockUser,
-    sent: list[ServiceCall],
-) -> None:
-    hass.config_entries.async_update_entry(heater, options={"cancel_rule": "everyone"})
-    await hass.async_block_till_done()
-    _water(hass, 40.0)
-    await _press(hass, hass_admin_user)
-
-    reply = await _ws(
-        hass,
-        hass_ws_client,
-        {"type": "hot_water_ready/heat_now/cancel", "entry_id": heater.entry_id, "all": True},
-        maria_user,
-    )
-    assert reply["success"]
-    assert heater.runtime_data.heat_now_requesters == frozenset()
-
-
-async def test_the_setting_lets_listed_people_cancel(
-    hass: HomeAssistant,
-    heater: MockConfigEntry,
-    hass_ws_client: WebSocketGenerator,
-    maria_user: MockUser,
-    hass_admin_user: MockUser,
-    sent: list[ServiceCall],
-) -> None:
-    hass.config_entries.async_update_entry(
-        heater, options={"cancel_rule": "people", "cancel_people": [MARIA_PERSON]}
-    )
-    await hass.async_block_till_done()
-    _water(hass, 40.0)
-    await _press(hass, hass_admin_user)
-
-    reply = await _ws(
-        hass,
-        hass_ws_client,
-        {"type": "hot_water_ready/heat_now/cancel", "entry_id": heater.entry_id, "all": True},
-        maria_user,
-    )
-    assert reply["success"]
-    assert heater.runtime_data.heat_now_requesters == frozenset()
 
 
 async def test_explicit_targets_replace_the_phones_found(
@@ -325,11 +274,9 @@ async def test_card_sees_who_asked_and_whether_it_may_cancel(
     await client.receive_json()
     snapshot = (await client.receive_json())["event"]
 
-    assert snapshot["heat_now"] == {
-        "requesters": [TIAGO],
-        "asked": False,
-        "can_cancel_all": False,
-    }
+    assert snapshot["heat_now"] == {"requesters": [TIAGO], "asked": False, "unnamed": False}
+    assert snapshot["viewer"] == MARIA
+    assert snapshot["can_switch_off"] is False
 
 
 @pytest.fixture
@@ -419,24 +366,3 @@ async def test_cancelling_when_nothing_is_running_is_no_error(
     cancel = {"type": "hot_water_ready/heat_now/cancel", "entry_id": heater.entry_id}
 
     assert (await _ws(hass, hass_ws_client, cancel, maria_user))["success"]
-
-
-async def test_a_stranger_may_not_cancel_everyones_request(
-    hass: HomeAssistant,
-    heater: MockConfigEntry,
-    hass_ws_client: WebSocketGenerator,
-    stranger: MockUser,
-    maria_user: MockUser,
-    sent: list[ServiceCall],
-) -> None:
-    _water(hass, 40.0)
-    await _press(hass, maria_user)
-    cancel_all = {
-        "type": "hot_water_ready/heat_now/cancel",
-        "entry_id": heater.entry_id,
-        "all": True,
-    }
-
-    refused = await _ws(hass, hass_ws_client, cancel_all, stranger)
-    assert refused["error"]["code"] == "unauthorized"
-    assert heater.runtime_data.heat_now_requesters == frozenset({MARIA})

@@ -88,7 +88,12 @@ def broken_rules(seed: int) -> list[str]:  # noqa: PLR0912 - one branch per rule
             cylinder.heat_now(rng.choice("abc"))
         if rng.random() < 0.003:
             cylinder.cancel_heat_now()
+        if rng.random() < 0.004:
+            cylinder.controller.switch_off(cylinder.now)  # "Desligar o aquecimento"
+            cylinder.step()
         state = cylinder.controller.state
+        if state.off_until is not None and state.window is not None:
+            broken.append(f"a window open while switched off at {cylinder.now}")
         if cylinder.relay and state.window is None and state.heat_now is None:
             broken.append(f"relay on with nothing asking for it at {cylinder.now}")
         probe = cylinder.probe
@@ -168,6 +173,18 @@ def test_relay_on_with_nothing_asking_is_caught() -> None:
 
     with _broken("_close", never_close):
         assert _caught("relay on with nothing asking") > 0
+
+
+def test_a_window_open_while_switched_off_is_caught() -> None:
+    def off_but_window_kept(self: Controller, now: datetime) -> frozenset[str]:
+        window = self.state.window
+        if window is not None:
+            self.state.off_until = window.end  # remembers the skip but keeps the window
+        self.state.heat_now = None
+        return frozenset()
+
+    with _broken("switch_off", off_but_window_kept):
+        assert _caught("a window open while switched off") > 0
 
 
 def test_heating_past_the_cap_is_caught() -> None:

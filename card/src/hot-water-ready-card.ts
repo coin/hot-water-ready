@@ -7,6 +7,7 @@ import { HeaterSubscription, fetchHeaters } from "./subscription";
 import type { CardConfig, Hass, HeaterSnapshot, MemberSnapshot } from "./types";
 import {
   SETTINGS_COMMAND,
+  SWITCH_OFF_COMMAND,
   avatarViews,
   awayLine,
   clusterWarning,
@@ -17,11 +18,13 @@ import {
   houseTodayChips,
   listHeader,
   newSheet,
-  cancelPeopleWith,
+  switchOffPeopleWith,
   peopleOf,
   readyTimeRows,
   settingsView,
   sheetIsComplete,
+  switchOffSheet,
+  switchOffShown,
   showsAvatarRow,
   shownMember,
   todayInHouse,
@@ -49,6 +52,7 @@ export class HotWaterReadyCard extends LitElement {
     _selected: { state: true },
     _sheet: { state: true },
     _settingsOpen: { state: true },
+    _offOpen: { state: true },
     _tab: { state: true },
     _focus: { state: true },
     _error: { state: true },
@@ -61,6 +65,8 @@ export class HotWaterReadyCard extends LitElement {
   private _selected: string | undefined;
   private _sheet: Sheet | undefined;
   private _settingsOpen = false;
+  /** The "Desligar o aquecimento?" confirmation is open. */
+  private _offOpen = false;
   private _tab: Tab = "people";
   /** The person highlighted on the week, if any. */
   private _focus: string | undefined;
@@ -113,6 +119,10 @@ export class HotWaterReadyCard extends LitElement {
 
   protected override updated(changed: PropertyValues): void {
     if (changed.has("hass") || changed.has("_config")) this._follow();
+    if (changed.has("_offOpen") && this._offOpen) {
+      // Focus starts on "Cancelar", never on the action that cannot be undone.
+      this.renderRoot.querySelector<HTMLButtonElement>(".off-keep")?.focus();
+    }
   }
 
   private _follow(): void {
@@ -182,6 +192,7 @@ export class HotWaterReadyCard extends LitElement {
                 : html`<div class="message">${localize(language, "members.none")}</div>`}
             `}
         ${this._error ? html`<div class="error" role="alert">${this._error}</div>` : nothing}
+        ${this._offOpen ? this._renderSwitchOff(heater) : nothing}
       </ha-card>
     `;
   }
@@ -263,16 +274,19 @@ export class HotWaterReadyCard extends LitElement {
     const view = heaterView(heater, this._context);
     return html`
       <div class="top">
-        <svg class="ring" viewBox="0 0 92 92" role="img" aria-label="${view.temperature} ${view.target}">
-          <circle class="track" cx="46" cy="46" r=${RING_RADIUS}></circle>
-          ${view.fill > 0
-            ? svg`<circle class="fill ${view.tone}" cx="46" cy="46" r=${RING_RADIUS}
-                stroke-dasharray="${view.fill * RING_LENGTH} ${RING_LENGTH}"
-                transform="rotate(-90 46 46)"></circle>`
-            : nothing}
-          <text class="temperature" x="46" y="44">${view.temperature}</text>
-          <text class="target" x="46" y="61">${view.target}</text>
-        </svg>
+        <div class="gauge ${view.tone === "heating" ? "glowing" : ""}">
+          <span class="pulse"></span>
+          <svg class="ring" viewBox="0 0 92 92" role="img" aria-label="${view.temperature} ${view.target}">
+            <circle class="track" cx="46" cy="46" r=${RING_RADIUS}></circle>
+            ${view.fill > 0
+              ? svg`<circle class="fill ${view.tone}" cx="46" cy="46" r=${RING_RADIUS}
+                  stroke-dasharray="${view.fill * RING_LENGTH} ${RING_LENGTH}"
+                  transform="rotate(-90 46 46)"></circle>`
+              : nothing}
+            <text class="temperature" x="46" y="44">${view.temperature}</text>
+            <text class="target" x="46" y="61">${view.target}</text>
+          </svg>
+        </div>
         <div class="text">
           <div class="name-row">
             <div class="name">${heater.name}</div>
@@ -291,17 +305,54 @@ export class HotWaterReadyCard extends LitElement {
           <div class="headline ${view.tone}">${view.headline}</div>
           ${view.subline ? html`<div class="subline">${view.subline}</div>` : nothing}
           <div class="heat-now">
-            ${heatNowActions(heater, this._context).map(
+            ${heatNowActions(heater).map(
               (item) => html`<button
-                class=${item.primary ? "primary" : "secondary"}
+                class="primary"
                 @click=${() => {
                   void this._call(item.message);
                 }}
               >
-                ${localize(this._language, item.label, item.values)}
+                ${localize(this._language, item.label)}
               </button>`,
             )}
           </div>
+          ${switchOffShown(heater)
+            ? html`<button class="switch-off-link" @click=${() => (this._offOpen = true)}>
+                ${localize(this._language, "switch_off.link")}
+              </button>`
+            : nothing}
+        </div>
+      </div>
+    `;
+  }
+
+  /** The confirmation before switching off: who loses out, "Desligar" in red, focus on "Cancelar". */
+  private _renderSwitchOff(heater: HeaterSnapshot): unknown {
+    const language = this._language;
+    const sheet = switchOffSheet(heater, this._context);
+    const close = () => (this._offOpen = false);
+    return html`
+      <div class="off-overlay">
+        <div
+          class="off-sheet"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="off-title"
+          @keydown=${(event: KeyboardEvent) => {
+            if (event.key === "Escape") close();
+          }}
+        >
+          <div class="off-title" id="off-title">${sheet.title}</div>
+          ${sheet.lines.map((line) => html`<p>${line}</p>`)}
+          <button
+            class="off-confirm"
+            @click=${async () => {
+              if (await this._call({ type: SWITCH_OFF_COMMAND })) close();
+            }}
+          >
+            ${localize(language, "switch_off.confirm")}
+          </button>
+          <button class="off-keep" @click=${close}>${localize(language, "switch_off.keep")}</button>
         </div>
       </div>
     `;
@@ -425,38 +476,25 @@ export class HotWaterReadyCard extends LitElement {
           />
         </label>
         <div class="setting column">
-          <span>${localize(language, "settings.cancel")}</span>
-          <div class="choices" role="radiogroup">
-            ${view.cancel.map(
-              (option) => html`<button
-                class="choice ${option.selected ? "on" : ""}"
-                role="radio"
-                aria-checked=${option.selected}
-                @click=${() => set({ cancel_rule: option.rule })}
-              >
-                ${localize(language, option.label)}
-              </button>`,
+          <span>${localize(language, "settings.switch_off")}</span>
+          <div class="people" role="group" aria-label=${localize(language, "settings.switch_off")}>
+            <span class="hint">${localize(language, "settings.switch_off_hint")}</span>
+            ${view.people.length === 0 ? html`<span class="hint">${localize(language, "settings.no_people")}</span>` : nothing}
+            ${view.people.map(
+              (person) => html`<label class="person">
+                <input
+                  type="checkbox"
+                  .checked=${live(person.on)}
+                  @change=${(event: Event) => {
+                    const on = (event.target as HTMLInputElement).checked;
+                    void set({ switch_off_people: switchOffPeopleWith(view.people, person.id, on) });
+                  }}
+                />
+                ${person.name}
+              </label>`,
             )}
+            <span class="hint">${localize(language, "settings.own_cancel")}</span>
           </div>
-          ${view.listsPeople
-            ? html`<div class="people" role="group" aria-label=${localize(language, "settings.cancel_people")}>
-                <span class="hint">${localize(language, "settings.cancel_people")}</span>
-                ${view.people.length === 0 ? html`<span class="hint">${localize(language, "settings.no_people")}</span>` : nothing}
-                ${view.people.map(
-                  (person) => html`<label class="person">
-                    <input
-                      type="checkbox"
-                      .checked=${live(person.on)}
-                      @change=${(event: Event) => {
-                        const on = (event.target as HTMLInputElement).checked;
-                        void set({ cancel_people: cancelPeopleWith(view.people, person.id, on) });
-                      }}
-                    />
-                    ${person.name}
-                  </label>`,
-                )}
-              </div>`
-            : nothing}
         </div>
         ${this._renderSolar(view)}
         <button
@@ -668,10 +706,105 @@ export class HotWaterReadyCard extends LitElement {
       gap: 16px;
       padding: 16px;
     }
-    .ring {
+    .gauge {
+      position: relative;
+      flex: none;
       width: 92px;
       height: 92px;
-      flex: none;
+      border-radius: 50%;
+    }
+    .ring {
+      position: relative;
+      width: 92px;
+      height: 92px;
+    }
+    /* Heating: a warm ring and halo, after two soft pulses (about 5 s); still under reduced motion. */
+    .gauge.glowing {
+      box-shadow:
+        0 0 0 3px var(--hwr-heating),
+        0 0 18px 6px color-mix(in srgb, var(--hwr-heating) 35%, transparent);
+    }
+    .pulse {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .gauge.glowing .pulse {
+      box-shadow: 0 0 24px 10px color-mix(in srgb, var(--hwr-heating) 55%, transparent);
+      animation: hwr-pulse 2.4s ease-in-out 2;
+    }
+    @keyframes hwr-pulse {
+      0%,
+      100% {
+        opacity: 0;
+      }
+      50% {
+        opacity: 1;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .gauge.glowing .pulse {
+        animation: none;
+      }
+    }
+    .switch-off-link {
+      align-self: flex-start;
+      min-height: 40px;
+      border: 0;
+      background: none;
+      padding: 0 2px;
+      color: var(--hwr-fault);
+      font-weight: 500;
+    }
+    .off-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      background: var(--mdc-dialog-scrim-color, rgba(0, 0, 0, 0.32));
+    }
+    .off-sheet {
+      width: 100%;
+      max-width: 480px;
+      box-sizing: border-box;
+      padding: 20px 20px 28px;
+      border-radius: 24px 24px 0 0;
+      background: var(--card-background-color, #fff);
+      color: var(--primary-text-color);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .off-title {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .off-sheet p {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.45;
+    }
+    .off-confirm,
+    .off-keep {
+      min-height: 48px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 500;
+    }
+    .off-confirm {
+      margin-top: 6px;
+      border: 0;
+      background: var(--hwr-fault);
+      color: var(--text-primary-color, #fff);
+    }
+    .off-keep {
+      border: 1px solid var(--divider-color, #c5cad1);
+      background: none;
+      color: var(--primary-text-color);
     }
     .ring circle {
       fill: none;
@@ -904,8 +1037,7 @@ export class HotWaterReadyCard extends LitElement {
       justify-content: space-between;
     }
     .sheet-head button,
-    .step,
-    .choice {
+    .step {
       min-height: 40px;
       padding: 0 14px;
       border-radius: 10px;
@@ -946,19 +1078,6 @@ export class HotWaterReadyCard extends LitElement {
       text-align: center;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
-    }
-    .choices {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-    .choice {
-      background: var(--secondary-background-color, rgba(127, 127, 127, 0.15));
-      font-weight: 400;
-    }
-    .choice.on {
-      background: var(--primary-color);
-      color: var(--text-primary-color, #fff);
     }
     .link {
       align-self: flex-start;

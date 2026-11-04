@@ -20,13 +20,8 @@ import probatio
 
 from .actuator import thermostat_supported
 from .const import (
-    CANCEL_EVERYONE,
-    CANCEL_PEOPLE,
-    CANCEL_REQUESTERS,
     COLOURS,
     CONF_ADVANCED,
-    CONF_CANCEL_PEOPLE,
-    CONF_CANCEL_RULE,
     CONF_CLIMATE,
     CONF_COLOUR,
     CONF_ELEMENT_WATTS,
@@ -42,6 +37,7 @@ from .const import (
     CONF_RICH_NOTIFICATIONS,
     CONF_SOLAR_AWARE,
     CONF_SWITCH,
+    CONF_SWITCH_OFF_PEOPLE,
     CONF_TANK_LITRES,
     CONF_TEMPERATURE_SENSOR,
     DEFAULT_MAX_TEMPERATURE,
@@ -333,12 +329,12 @@ class HeaterOptionsFlow(OptionsFlow):
     """Settings that rarely change (spec 3.1)."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """The keep-heating-through gap, the solar rule, the rate, who may cancel heat now..."""
+        """The keep-heating-through gap, the solar rule, the rate, who may switch off..."""
         if user_input is not None:
             # A cleared field is left out of user_input; it means nobody listed, or no sensor.
             data = {
                 **self.config_entry.options,
-                CONF_CANCEL_PEOPLE: [],
+                CONF_SWITCH_OFF_PEOPLE: [],
                 CONF_FAULT_RECIPIENTS: [],
                 CONF_POWER_SENSOR: None,
                 CONF_HEATING_RATE: None,
@@ -380,14 +376,6 @@ class HeaterOptionsFlow(OptionsFlow):
                     default=options.get(CONF_MAX_TEMPERATURE, DEFAULT_MAX_TEMPERATURE),
                 ): _box(40, 60, 1, "°C"),
                 probatio.Required(
-                    CONF_CANCEL_RULE, default=options.get(CONF_CANCEL_RULE, CANCEL_REQUESTERS)
-                ): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=[CANCEL_REQUESTERS, CANCEL_PEOPLE, CANCEL_EVERYONE],
-                        translation_key=CONF_CANCEL_RULE,
-                    )
-                ),
-                probatio.Required(
                     CONF_RICH_NOTIFICATIONS,
                     default=options.get(CONF_RICH_NOTIFICATIONS, False),
                 ): selector.BooleanSelector(),
@@ -408,8 +396,8 @@ class HeaterOptionsFlow(OptionsFlow):
                     {"collapsed": True},
                 ),
                 probatio.Optional(
-                    CONF_CANCEL_PEOPLE,
-                    description={"suggested_value": options.get(CONF_CANCEL_PEOPLE, [])},
+                    CONF_SWITCH_OFF_PEOPLE,
+                    description={"suggested_value": options.get(CONF_SWITCH_OFF_PEOPLE, [])},
                 ): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain="person", multiple=True)
                 ),

@@ -7,7 +7,7 @@ from homeassistant.helpers import config_validation as cv, issue_registry as ir
 from homeassistant.helpers.typing import ConfigType
 
 from . import services, websocket
-from .const import DOMAIN
+from .const import CONF_SWITCH_OFF_PEOPLE, DOMAIN
 from .core.faults import Fault
 from .entity import register_heater_device
 from .frontend import async_load_card, async_unload_card
@@ -35,8 +35,23 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
+def _drop_cancel_rule(hass: HomeAssistant, entry: HotWaterReadyConfigEntry) -> None:
+    """Options from before 0.1.2 had a cancel rule; only its "people" choice kept a list.
+
+    The list now says who may switch off for everyone, so under the other two choices it was
+    never in force and must not start to be.
+    """
+    options = dict(entry.options)
+    if "cancel_rule" not in options:
+        return
+    if options.pop("cancel_rule") != "people":
+        options[CONF_SWITCH_OFF_PEOPLE] = []
+    hass.config_entries.async_update_entry(entry, options=options)
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: HotWaterReadyConfigEntry) -> bool:
     """Set up one heater."""
+    _drop_cancel_rule(hass, entry)
     await async_load_card(hass)
     store = HeaterStore(hass, entry.entry_id)
     heater = Heater(hass, entry, store, await store.async_load())
