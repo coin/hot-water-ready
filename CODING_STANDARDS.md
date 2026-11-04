@@ -10,6 +10,10 @@ Read by the reviewer. Mechanical rules live in the checks (`scripts/check`, `car
   `card/src/i18n.ts`): English, and European Portuguese (`pt`) with the spelling from before the
   1990 orthographic agreement (`actual`, `acção`, `objecto`). Brazilian vocabulary is a defect
   (`tela`, `usuário`, `arquivo`). Every key exists in both languages.
+- A Portuguese text with a name in it (a member, a person, the heater: "Cilindro", "Caldeira")
+  cannot know that name's grammatical gender: no article before it and no gendered word about
+  it. Write "Tiago desligou o aquecimento", "Ana já não recebe o aviso", not "O Tiago…", "a
+  Caldeira", "avisada", "sozinho", "ele".
 
 ## Home Assistant layer
 
@@ -46,6 +50,10 @@ Read by the reviewer. Mechanical rules live in the checks (`scripts/check`, `car
   graces, gaps) happens in UTC: Python adds a timedelta to a local datetime as wall-clock time,
   which is an hour out on a change day, and subtracts two datetimes sharing a `tzinfo` the same
   way.
+- A state that holds the heater back (switched off until a window ends) reaches every place
+  that says what will happen: the next ready time, the planned start, the calendar and the
+  week (both from `Heater.windows_between`), and the card's buttons. The review of the switch-off
+  found the first two missing; the calendar was found after it.
 - A new controller rule gets a scenario test, and `tests/core/test_invariants.py` must still
   pass: it runs hundreds of random households and checks no chatter, nobody told twice, no relay
   on without a window. When a rule adds something that must always hold, add it there, with its

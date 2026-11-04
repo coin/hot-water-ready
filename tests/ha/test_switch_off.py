@@ -320,3 +320,21 @@ async def test_the_old_cancel_rule_is_dropped_keeping_the_list_only_where_it_was
 
     assert "cancel_rule" not in heater_entry.options
     assert heater_entry.options["cancel_people"] == kept
+
+
+async def test_the_calendar_and_week_leave_out_the_skipped_window(
+    hass: HomeAssistant,
+    heater: MockConfigEntry,
+    hass_ws_client: WebSocketGenerator,
+    hass_admin_user: MockUser,
+    sent: list[ServiceCall],
+) -> None:
+    _water(hass, 30.0)
+    await heater.runtime_data.async_add_ready_time(MARIA, time(5, 30), EVERY_DAY, True)
+    await hass.async_block_till_done()
+
+    assert (await _ws(hass, hass_ws_client, _off(heater), hass_admin_user))["success"]
+
+    week = (await _snapshot(hass, hass_ws_client, heater, hass_admin_user))["week"]
+    assert not any(w["end"].startswith("2026-11-02T05:45") for w in week["windows"])
+    assert any(w["end"].startswith("2026-11-03T05:45") for w in week["windows"])  # tomorrow's

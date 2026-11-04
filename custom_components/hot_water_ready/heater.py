@@ -446,10 +446,13 @@ class Heater:
         """The heating windows of the ready times in [start, end), in UTC (spec 5, 6).
 
         Their starts are estimated from the water now; see `core.controller.planned_windows`.
+        Ready times in a window that was switched off are left out: they get no hot water.
         """
-        return planned_windows(
-            self._controller.settings, self.occurrences(start, end), self.temperature
-        )
+        off_until = self._controller.state.off_until
+        occurrences = [
+            o for o in self.occurrences(start, end) if off_until is None or o.at >= off_until
+        ]
+        return planned_windows(self._controller.settings, occurrences, self.temperature)
 
     def _week(self) -> dict[str, Any]:
         """This week, Monday to Sunday in the house's time zone: when the heater may heat."""
