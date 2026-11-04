@@ -209,7 +209,7 @@ describe("heaterView", () => {
   });
 
   it("falls back to English for other languages", () => {
-    expect(heaterView(cold, { ...pt, language: "de" }).headline).toBe("Waiting");
+    expect(heaterView(cold, { ...pt, language: "de" }).headline).toBe("Idle");
   });
 
   it("uses European Portuguese for Brazilian Portuguese too", () => {

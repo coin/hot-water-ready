@@ -153,7 +153,7 @@
       "status": {
         "name": "Status",
         "state": {
-          "waiting": "Waiting",
+          "waiting": "Idle",
           "heating": "Heating",
           "ready": "Ready",
           "fault": "Fault",

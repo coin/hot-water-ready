@@ -276,6 +276,7 @@ export class HotWaterReadyCard extends LitElement {
       <div class="top">
         <div class="gauge ${view.tone === "heating" ? "glowing" : ""}">
           <span class="pulse"></span>
+          <span class="orbit"></span>
           <svg class="ring" viewBox="0 0 92 92" role="img" aria-label="${view.temperature} ${view.target}">
             <circle class="track" cx="46" cy="46" r=${RING_RADIUS}></circle>
             ${view.fill > 0
@@ -718,11 +719,40 @@ export class HotWaterReadyCard extends LitElement {
       width: 92px;
       height: 92px;
     }
-    /* Heating: a warm ring and halo, after two soft pulses (about 5 s); still under reduced motion. */
+    /*
+     * Heating: a warm ring and halo, two soft pulses when it starts, and a soft band of light that
+     * keeps circling slowly, so the card shows it is working. Still under reduced motion.
+     */
     .gauge.glowing {
       box-shadow:
-        0 0 0 3px var(--hwr-heating),
-        0 0 18px 6px color-mix(in srgb, var(--hwr-heating) 35%, transparent);
+        0 0 0 2px var(--hwr-heating),
+        0 0 16px 4px color-mix(in srgb, var(--hwr-heating) 30%, transparent);
+    }
+    .orbit {
+      display: none;
+      position: absolute;
+      inset: -9px;
+      border-radius: 50%;
+      pointer-events: none;
+      background: conic-gradient(
+        from 0turn,
+        transparent 0turn,
+        color-mix(in srgb, var(--hwr-heating) 80%, transparent) 0.1turn,
+        transparent 0.28turn,
+        transparent 1turn
+      );
+      /* Only the band around the ring, not its middle. */
+      mask: radial-gradient(circle, transparent 58%, #000 62%);
+      filter: blur(5px);
+    }
+    .gauge.glowing .orbit {
+      display: block;
+      animation: hwr-orbit 6s linear infinite;
+    }
+    @keyframes hwr-orbit {
+      to {
+        transform: rotate(1turn);
+      }
     }
     .pulse {
       position: absolute;
@@ -747,6 +777,9 @@ export class HotWaterReadyCard extends LitElement {
     @media (prefers-reduced-motion: reduce) {
       .gauge.glowing .pulse {
         animation: none;
+      }
+      .gauge.glowing .orbit {
+        display: none;
       }
     }
     .switch-off-link {

@@ -1,7 +1,7 @@
 // On-screen texts. English and European Portuguese; Portuguese (any region) gets pt.
 
 const en = {
-  "status.waiting": "Waiting",
+  "status.waiting": "Idle",
   "status.heating": "Heating",
   "status.ready": "Ready",
   "status.fault": "Fault",
