@@ -317,23 +317,23 @@ export class HotWaterReadyCard extends LitElement {
           </div>
           <div class="headline ${view.tone}">${view.headline}</div>
           ${view.subline ? html`<div class="subline">${view.subline}</div>` : nothing}
-          <div class="heat-now">
-            ${heatNowActions(heater).map(
-              (item) => html`<button
-                class="primary"
-                @click=${() => {
-                  void this._call(item.message);
-                }}
-              >
-                ${localize(this._language, item.label)}
-              </button>`,
-            )}
-          </div>
+        </div>
+        <div class="heat-now">
           ${switchOffShown(heater)
             ? html`<button class="switch-off-link" @click=${() => (this._offOpen = true)}>
                 ${localize(this._language, "switch_off.link")}
               </button>`
             : nothing}
+          ${heatNowActions(heater).map(
+            (item) => html`<button
+              class="primary"
+              @click=${() => {
+                void this._call(item.message);
+              }}
+            >
+              ${localize(this._language, item.label)}
+            </button>`,
+          )}
         </div>
       </div>
     `;
@@ -739,10 +739,13 @@ export class HotWaterReadyCard extends LitElement {
       color: inherit;
       cursor: pointer;
     }
+    /* The ring and the text side by side, the buttons on a full-width row under both. */
     .top {
-      display: flex;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
       align-items: center;
-      gap: 16px;
+      column-gap: 16px;
+      row-gap: 4px;
       padding: 16px;
     }
     /*
@@ -826,8 +829,10 @@ export class HotWaterReadyCard extends LitElement {
         display: none;
       }
     }
+    /* On the button's row, on the left, so heating does not add a line to the card. */
     .switch-off-link {
-      align-self: flex-start;
+      margin-right: auto;
+      text-align: left;
       min-height: 40px;
       border: 0;
       background: none;
@@ -1537,8 +1542,10 @@ export class HotWaterReadyCard extends LitElement {
     }
     .heat-now {
       display: flex;
+      grid-column: 1 / -1;
       flex-wrap: wrap;
       justify-content: flex-end;
+      align-items: center;
       gap: 8px;
     }
     .heat-now button {
