@@ -123,7 +123,8 @@ export interface CardConfig {
 
 /** The part of Home Assistant's `hass` object the card uses. */
 export interface Hass {
-  locale?: { language: string };
+  /** `time_format` is the profile's choice: "language", "system", "12" or "24". */
+  locale?: { language: string; time_format?: string };
   language?: string;
   config?: { time_zone?: string };
   states?: Record<string, { attributes: { friendly_name?: string } }>;

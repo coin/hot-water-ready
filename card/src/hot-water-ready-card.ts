@@ -18,9 +18,13 @@ import {
   houseTodayChips,
   listHeader,
   newSheet,
+  editSheet,
   switchOffPeopleWith,
   peopleOf,
   readyTimeRows,
+  hourChoices,
+  MINUTE_CHOICES,
+  uses24Hours,
   settingsView,
   sheetIsComplete,
   switchOffSheet,
@@ -32,6 +36,7 @@ import {
   weekView,
   type SettingsView,
   type Sheet,
+  type ReadyTimeRow,
   type Stepper,
   type ViewContext,
   type WeekView,
@@ -98,12 +103,17 @@ export class HotWaterReadyCard extends LitElement {
     return this.hass?.locale?.language ?? this.hass?.language ?? "en";
   }
 
+  private get _hour24(): boolean {
+    return uses24Hours(this.hass?.locale?.time_format, this._language);
+  }
+
   private get _context(): ViewContext {
     return {
       language: this._language,
       timeZone: this.hass?.config?.time_zone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
       now: new Date(),
       people: peopleOf(this.hass?.states),
+      hour24: this._hour24,
     };
   }
 
@@ -149,7 +159,9 @@ export class HotWaterReadyCard extends LitElement {
     const sheet = this._sheet;
     if (!sheet || !sheetIsComplete(sheet)) return;
     const saved = await this._call({
-      type: "hot_water_ready/ready_time/add",
+      ...(sheet.id
+        ? { type: "hot_water_ready/ready_time/update", ready_time_id: sheet.id }
+        : { type: "hot_water_ready/ready_time/add" }),
       member_id: member.id,
       time: sheet.time,
       weekdays: [...sheet.weekdays].sort(),
@@ -582,19 +594,22 @@ export class HotWaterReadyCard extends LitElement {
 
   private _renderList(member: MemberSnapshot): unknown {
     const language = this._language;
-    const rows = readyTimeRows(member, language);
+    const rows = readyTimeRows(member, language, this._hour24);
     return html`
       <div class="list ${member.away.on ? "paused-list" : ""}">
         ${rows.length === 0 ? html`<div class="empty">${localize(language, "list.empty")}</div>` : nothing}
         ${rows.map(
           (row) => html`
             <div class="row ${row.enabled ? "" : "off"}">
-              <div class="row-text">
-                <div class="time">${row.time}</div>
-                <div class="days">
-                  ${row.days.map((day) => html`<span class="${day.on ? "on" : ""}">${day.letter}</span>`)}
-                </div>
-              </div>
+              ${member.can_edit
+                ? html`<button
+                    class="row-text"
+                    aria-label=${localize(language, "list.edit")}
+                    @click=${() => (this._sheet = editSheet(member, row.id))}
+                  >
+                    ${this._rowText(row)}
+                  </button>`
+                : html`<div class="row-text">${this._rowText(row)}</div>`}
               ${member.can_edit
                 ? html`
                     <input
@@ -636,9 +651,18 @@ export class HotWaterReadyCard extends LitElement {
     `;
   }
 
+  private _rowText(row: ReadyTimeRow): unknown {
+    return html`<div class="time">${row.time}</div>
+      <div class="days">
+        ${row.days.map((day) => html`<span class="${day.on ? "on" : ""}">${day.letter}</span>`)}
+      </div>`;
+  }
+
   private _renderSheet(member: MemberSnapshot, sheet: Sheet): unknown {
     const language = this._language;
     const letters = weekdayLetters(language);
+    const [hour = "07", minute = "00"] = sheet.time.split(":");
+    const title = localize(language, sheet.id ? "sheet.edit_title" : "sheet.title");
     const toggle = (day: number) => {
       const weekdays = sheet.weekdays.includes(day)
         ? sheet.weekdays.filter((d) => d !== day)
@@ -646,18 +670,32 @@ export class HotWaterReadyCard extends LitElement {
       this._sheet = { ...sheet, weekdays };
     };
     return html`
-      <div class="sheet" role="dialog" aria-label=${localize(language, "sheet.title")}>
-        <div class="sheet-title">${localize(language, "sheet.title")}</div>
-        <label class="field">
+      <div class="sheet" role="dialog" aria-label=${title}>
+        <div class="sheet-title">${title}</div>
+        <div class="field">
           ${localize(language, "sheet.time")}
-          <input
-            type="time"
-            .value=${sheet.time}
-            @input=${(event: Event) => {
-              this._sheet = { ...sheet, time: (event.target as HTMLInputElement).value };
-            }}
-          />
-        </label>
+          <div class="time-picker">
+            <select
+              aria-label=${localize(language, "sheet.hour")}
+              @change=${(event: Event) => {
+                this._sheet = { ...sheet, time: `${(event.target as HTMLSelectElement).value}:${minute}` };
+              }}
+            >
+              ${hourChoices(language, this._hour24).map(
+                (choice) => html`<option value=${choice.value} ?selected=${choice.value === hour}>${choice.label}</option>`,
+              )}
+            </select>
+            <span>:</span>
+            <select
+              aria-label=${localize(language, "sheet.minute")}
+              @change=${(event: Event) => {
+                this._sheet = { ...sheet, time: `${hour}:${(event.target as HTMLSelectElement).value}` };
+              }}
+            >
+              ${MINUTE_CHOICES.map((value) => html`<option value=${value} ?selected=${value === minute}>${value}</option>`)}
+            </select>
+          </div>
+        </div>
         <div class="field">
           ${localize(language, "sheet.days")}
           <div class="day-toggles">
@@ -1304,6 +1342,15 @@ export class HotWaterReadyCard extends LitElement {
       flex: 1;
       min-width: 0;
     }
+    button.row-text {
+      font: inherit;
+      color: inherit;
+      text-align: left;
+      background: none;
+      border: 0;
+      padding: 0;
+      cursor: pointer;
+    }
     .row.off {
       opacity: 0.55;
     }
@@ -1432,7 +1479,14 @@ export class HotWaterReadyCard extends LitElement {
       font-size: 13px;
       color: var(--secondary-text-color);
     }
-    .field input {
+    .time-picker {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 24px;
+      color: var(--primary-text-color);
+    }
+    .field select {
       font: inherit;
       font-size: 24px;
       color: var(--primary-text-color);
@@ -1478,6 +1532,7 @@ export class HotWaterReadyCard extends LitElement {
     .heat-now {
       display: flex;
       flex-wrap: wrap;
+      justify-content: flex-end;
       gap: 8px;
     }
     .heat-now button {

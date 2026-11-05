@@ -10,6 +10,8 @@ export interface ViewContext {
   now: Date;
   /** Home Assistant's people, entity id to name: who asked for heat now, who may cancel. */
   people?: Record<string, string>;
+  /** Whether the user reads times on a 24-hour clock (see `uses24Hours`); 24-hour when absent. */
+  hour24?: boolean;
 }
 
 export interface HeaterView {
@@ -23,6 +25,48 @@ export interface HeaterView {
   fill: number;
   tone: Status;
 }
+
+/**
+ * Whether the user reads times on a 24-hour clock, decided as Home Assistant decides it from the
+ * time format in their profile: "24" or "12", or else what their language (or the browser) uses.
+ */
+export function uses24Hours(timeFormat: string | undefined, language: string | undefined): boolean {
+  if (timeFormat === "24") return true;
+  if (timeFormat === "12") return false;
+  const locale = timeFormat === "system" ? undefined : language;
+  return !new Intl.DateTimeFormat(locale, { hour: "numeric" }).format(new Date(2023, 0, 1, 22)).includes("10");
+}
+
+/** An hour and minute as the user reads them: "07:30", or "7:30 am" on a 12-hour clock. */
+function hourMinute(hour: number, minute: number, language: string, hour24: boolean): string {
+  if (hour24) return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  return new Intl.DateTimeFormat(localeOf(language), {
+    timeZone: "UTC",
+    hour: "numeric",
+    minute: "2-digit",
+    hourCycle: "h12",
+  }).format(Date.UTC(2000, 0, 1, hour, minute));
+}
+
+/** A ready time's "HH:MM" as the user reads times. */
+export function wallTime(time: string, language: string, hour24 = true): string {
+  const [hour = 0, minute = 0] = time.split(":").map(Number);
+  return hourMinute(hour, minute, language, hour24);
+}
+
+/** The hours offered when choosing a ready time, labelled as the user reads times. */
+export function hourChoices(language: string, hour24 = true): { value: string; label: string }[] {
+  return Array.from({ length: 24 }, (_, hour) => {
+    const value = String(hour).padStart(2, "0");
+    if (hour24) return { value, label: value };
+    const label = new Intl.DateTimeFormat(localeOf(language), { timeZone: "UTC", hour: "numeric", hourCycle: "h12" })
+      .format(Date.UTC(2000, 0, 1, hour));
+    return { value, label };
+  });
+}
+
+/** The minutes offered when choosing a ready time. */
+export const MINUTE_CHOICES = Array.from({ length: 60 }, (_, minute) => String(minute).padStart(2, "0"));
 
 function formatNumber(value: number, language: string, digits: number): string {
   return new Intl.NumberFormat(localeOf(language), { maximumFractionDigits: digits }).format(value);
@@ -165,6 +209,8 @@ export function todayInHouse(context: ViewContext): string {
 export interface Sheet {
   time: string;
   weekdays: number[];
+  /** The ready time being changed; absent for a new one. */
+  id?: string;
 }
 
 /** A new ready time starts at 07:00 on weekdays (mockup A). */
@@ -173,6 +219,12 @@ export function newSheet(): Sheet {
 }
 
 /** A new ready time needs a time and at least one day. */
+/** The sheet for changing one of a member's ready times, filled with what it is now. */
+export function editSheet(member: MemberSnapshot, readyTimeId: string): Sheet | undefined {
+  const ready = member.ready_times.find((entry) => entry.id === readyTimeId);
+  return ready && { id: ready.id, time: ready.time, weekdays: [...ready.weekdays].sort() };
+}
+
 export function sheetIsComplete(sheet: Sheet): boolean {
   return sheet.time !== "" && sheet.weekdays.length > 0;
 }
@@ -185,13 +237,13 @@ export interface ReadyTimeRow {
 }
 
 /** A member's ready times as alarm-style rows, earliest first. */
-export function readyTimeRows(member: MemberSnapshot, language: string): ReadyTimeRow[] {
+export function readyTimeRows(member: MemberSnapshot, language: string, hour24 = true): ReadyTimeRow[] {
   const letters = weekdayLetters(language);
   return [...member.ready_times]
     .sort((a, b) => a.time.localeCompare(b.time) || a.id.localeCompare(b.id))
     .map((ready) => ({
       id: ready.id,
-      time: ready.time,
+      time: wallTime(ready.time, language, hour24),
       enabled: ready.enabled,
       days: letters.map((letter, index) => ({ letter, on: ready.weekdays.includes(index) })),
     }));
@@ -235,12 +287,8 @@ export function greeting(heater: HeaterSnapshot, language: string): string {
 }
 
 function clock(iso: string, context: ViewContext): string {
-  return new Intl.DateTimeFormat(localeOf(context.language), {
-    timeZone: context.timeZone,
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).format(new Date(iso));
+  const { minutes } = wallClock(iso, context.timeZone);
+  return hourMinute(Math.floor(minutes / 60), minutes % 60, context.language, context.hour24 ?? true);
 }
 
 export interface TodayChip {
@@ -492,7 +540,7 @@ export function weekView(heater: HeaterSnapshot, context: ViewContext): WeekView
   if (!heater.is_admin || !week) return undefined;
   const labels = localize(context.language, "week.days").split(",");
   const keys = labels.map((_, index) => addDays(week.monday, index));
-  const rows = heater.members.map((member) => weekRow(member, keys, context.language));
+  const rows = heater.members.map((member) => weekRow(member, keys, context.language, context.hour24 ?? true));
   const perDay = keys.map((_, day) =>
     rows.reduce((count, row) => {
       const cell = row.cells[day];
@@ -529,13 +577,14 @@ function awayOn(member: MemberSnapshot, day: string): boolean {
   return member.away.on && (member.away.until === null || day <= member.away.until);
 }
 
-function weekRow(member: MemberSnapshot, days: string[], language: string): WeekRow {
+function weekRow(member: MemberSnapshot, days: string[], language: string, hour24: boolean): WeekRow {
   const enabled = member.ready_times.filter((ready) => ready.enabled);
   const cells = days.map((key, day) => ({
     times: enabled
       .filter((ready) => ready.weekdays.includes(day))
       .map((ready) => ready.time)
-      .sort(),
+      .sort()
+      .map((time) => wallTime(time, language, hour24)),
     away: awayOn(member, key),
   }));
   const awayAllWeek = cells.every((cell) => cell.away);

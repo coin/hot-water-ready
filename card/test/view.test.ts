@@ -11,6 +11,7 @@ import {
   houseTodayChips,
   listHeader,
   newSheet,
+  editSheet,
   switchOffPeopleWith,
   peopleOf,
   switchOffSheet,
@@ -26,6 +27,9 @@ import {
   todayInHouse,
   clusterWarning,
   weekView,
+  hourChoices,
+  uses24Hours,
+  wallTime,
   type ViewContext,
 } from "../src/view";
 
@@ -742,5 +746,59 @@ describe("clusterWarning", () => {
     expect(clusterWarning({ ...cold, cluster_warning: warning }, pt)).toBe(
       "Os duches a partir das 07:00 precisam da água a 72 °C, mas o aquecedor só aquece até 50 °C: os últimos podem sair menos quentes.",
     );
+  });
+});
+
+describe("the time format in the user's profile", () => {
+  it("follows the profile's choice of 12 or 24 hours, else the language's", () => {
+    expect(uses24Hours("24", "en")).toBe(true);
+    expect(uses24Hours("12", "pt")).toBe(false);
+    expect(uses24Hours("language", "pt")).toBe(true);
+    expect(uses24Hours("language", "en")).toBe(false);
+    expect(uses24Hours("language", "en-GB")).toBe(true);
+    expect(uses24Hours(undefined, "pt")).toBe(true);
+  });
+
+  it("writes times on a 24-hour clock by default", () => {
+    expect(wallTime("07:05", "en")).toBe("07:05");
+    expect(wallTime("21:30", "pt", true)).toBe("21:30");
+  });
+
+  it("writes times on a 12-hour clock when the user reads them so", () => {
+    expect(wallTime("21:30", "en", false)).toMatch(/^9:30\s?pm$/i);
+    expect(wallTime("00:15", "en", false)).toMatch(/^12:15\s?am$/i);
+  });
+
+  it("uses the same clock for the house's times today and the list", () => {
+    const today = [{ member: "m1", at: "2026-11-02T21:00:00+00:00" }];
+    expect(houseTodayChips({ ...cold, today }, { ...en, hour24: false }, "m1")[0]?.time).toMatch(/^9:00\s?pm$/i);
+    expect(houseTodayChips({ ...cold, today }, en, "m1")[0]?.time).toBe("21:00");
+    const evening = { ...tiago, ready_times: [{ id: "r1", time: "21:00", weekdays: [0], enabled: true }] };
+    expect(readyTimeRows(evening, "en", false)[0]?.time).toMatch(/^9:00\s?pm$/i);
+  });
+
+  it("offers every hour when choosing a time, labelled for the user's clock", () => {
+    expect(hourChoices("pt").map((c) => c.label).slice(0, 2)).toEqual(["00", "01"]);
+    const twelve = hourChoices("en", false);
+    expect(twelve).toHaveLength(24);
+    expect(twelve[21]).toMatchObject({ value: "21" });
+    expect(twelve[21]?.label).toMatch(/^9\s?pm$/i);
+  });
+});
+
+describe("editSheet", () => {
+  const member = { ...tiago, ready_times: [{ id: "r1", time: "06:45", weekdays: [4, 0, 2], enabled: false }] };
+
+  it("opens a ready time as it is now, to be changed", () => {
+    expect(editSheet(member, "r1")).toEqual({ id: "r1", time: "06:45", weekdays: [0, 2, 4] });
+  });
+
+  it("has nothing to open for a ready time that is gone", () => {
+    expect(editSheet(member, "gone")).toBeUndefined();
+  });
+
+  it("says it changes a ready time rather than adding one", () => {
+    expect(translations.pt["sheet.edit_title"]).toBe("Alterar horário");
+    expect(translations.en["sheet.edit_title"]).toBe("Change ready time");
   });
 });
