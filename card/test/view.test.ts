@@ -473,6 +473,13 @@ describe("switchOffShown", () => {
     expect(switchOffShown(cold)).toBe(false);
     expect(switchOffShown({ ...cold, status: "heating", can_switch_off: false })).toBe(false);
   });
+
+  it("is shown while a heat-now request waits without heating, to end it", () => {
+    const waiting = { ...cold, status: "fault" as const, heat_now: { requesters: ["m2"], asked: false, unnamed: false } };
+    expect(switchOffShown(waiting)).toBe(true);
+    expect(switchOffShown({ ...waiting, heat_now: { requesters: [], asked: false, unnamed: true } })).toBe(true);
+    expect(switchOffShown({ ...waiting, can_switch_off: false })).toBe(false);
+  });
 });
 
 describe("switchOffSheet", () => {

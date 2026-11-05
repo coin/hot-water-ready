@@ -109,6 +109,8 @@ control is off.
 It ends the heat-now request and skips the ready times being heated for, until that window would
 have ended; then the heater works normally again. Everyone who loses out is told who switched it
 off, or only that it was switched off when an automation did it, with the `switch_off` action.
+The same link also shows when a heat-now request waits without heating (during a fault, or with
+automatic control off): switching off then ends that request, so it cannot start heating later.
 
 ## Faults
 

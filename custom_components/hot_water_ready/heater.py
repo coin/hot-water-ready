@@ -711,12 +711,21 @@ class Heater:
     async def async_switch_off(self, user: User | None) -> None:
         """Switch the heater off now; everyone who loses out, but whoever did it, is told.
 
-        Only while it heats: a window holding its water, or nothing at all, is left alone.
+        While it heats, the request and the open window end. Otherwise (a fault, automatic
+        control off, the water already hot) only a waiting heat-now request ends, so it cannot
+        start heating later on its own; a window holding its water is left alone.
         """
-        if self.status is not Status.HEATING:
+        names = set() if user is None else {self.requester_key(user), self.person_of(user)}
+        by = {name for name in names if name}
+        heat_now = self._controller.state.heat_now
+        if self.status is Status.HEATING:
+            lost = self._controller.switch_off(dt_util.now(), by=by)
+        elif heat_now is not None:
+            lost = heat_now.requesters - by
+            self._controller.cancel_heat_now()
+        else:
             return
-        by = set() if user is None else {self.requester_key(user), self.person_of(user)}
-        lost = self._controller.switch_off(dt_util.now(), by={key for key in by if key}) - {NOBODY}
+        lost -= {NOBODY}
         await self._async_saved_and_stepped()
         name = self.name_of(user)
         if name is None:

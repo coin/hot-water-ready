@@ -1,14 +1,16 @@
 """Desligar o aquecimento: who may switch the heater off now, and who is told."""
 
-from datetime import time
+from datetime import time, timedelta
 from typing import Any
 
+from freezegun.api import FrozenDateTimeFactory
 from homeassistant.core import Context, HomeAssistant, ServiceCall
 from homeassistant.exceptions import Unauthorized
 import pytest
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     MockUser,
+    async_fire_time_changed,
     async_mock_service,
 )
 from pytest_homeassistant_custom_component.typing import WebSocketGenerator
@@ -240,6 +242,34 @@ async def test_a_listed_person_may_switch_off_through_the_action(
     await hass.async_block_till_done()
 
     assert hass.states.get("sensor.cylinder_status").state != "heating"
+
+
+async def test_during_a_fault_switching_off_ends_a_waiting_request(
+    hass: HomeAssistant,
+    heater: MockConfigEntry,
+    hass_ws_client: WebSocketGenerator,
+    maria_user: MockUser,
+    hass_admin_user: MockUser,
+    phones: dict[str, str],
+    sent: list[ServiceCall],
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Spec 2: an admin can drop a request that is not heating, so it cannot start later."""
+    _water(hass, 38.0)
+    await _ask(hass, maria_user)
+    hass.states.async_set(SENSOR, "unavailable")
+    freezer.tick(timedelta(minutes=5.5))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.cylinder_status").state == "fault"
+    sent.clear()
+
+    assert (await _ws(hass, hass_ws_client, _off(heater), hass_admin_user))["success"]
+
+    assert heater.runtime_data.heat_now_requesters == frozenset()
+    assert [(c.data["entity_id"], c.data["message"]) for c in sent] == [
+        (phones[MARIA], "Tiago switched off the heating.")
+    ]
 
 
 async def test_nothing_happens_when_it_is_not_heating(

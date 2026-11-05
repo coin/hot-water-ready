@@ -389,9 +389,13 @@ export function heatNowActions(heater: HeaterSnapshot): HeatNowAction[] {
 
 export const SWITCH_OFF_COMMAND = "hot_water_ready/switch_off";
 
-/** "Desligar o aquecimento…" shows while it heats, to admins and the people they chose. */
+/**
+ * "Desligar o aquecimento…" shows to admins and the people they chose while it heats, and while
+ * a heat-now request waits without heating (a fault, automatic control off), to end it.
+ */
 export function switchOffShown(heater: HeaterSnapshot): boolean {
-  return heater.can_switch_off && heater.status === "heating";
+  const waiting = (heater.heat_now?.requesters.length ?? 0) > 0 || Boolean(heater.heat_now?.unnamed);
+  return heater.can_switch_off && (heater.status === "heating" || waiting);
 }
 
 /**
