@@ -30,6 +30,7 @@ import {
   hourChoices,
   uses24Hours,
   wallTime,
+  weekHint,
   type ViewContext,
 } from "../src/view";
 
@@ -670,6 +671,14 @@ describe("weekView", () => {
       ],
     },
   };
+
+  it("labels the heating bar's hours and the hint for the user's clock", () => {
+    const labels = weekView(household, { ...en, hour24: false })?.hours.map((h) => h.label);
+    expect(labels?.[0]).toMatch(/^6\s?am$/i);
+    expect(labels?.[2]).toMatch(/^6\s?pm$/i);
+    expect(weekHint("pt")).toContain("(05h a 24h)");
+    expect(weekHint("en", false)).toMatch(/\(5\s?am to 12\s?am\)/i);
+  });
 
   it("labels the heating bar's hours where they fall on the 05h to 24h day", () => {
     expect(weekView(household, pt)?.hours).toEqual([

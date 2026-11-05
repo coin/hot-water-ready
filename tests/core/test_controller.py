@@ -58,7 +58,8 @@ def test_window_opens_by_the_lead() -> None:
     assert cylinder.toggles[0].at == SEVEN - timedelta(minutes=99)
     ((started_at, started),) = cylinder.heating_events()
     assert started_at == SEVEN - timedelta(minutes=99)
-    assert started.minutes == 99
+    # Told when the water reaches 42, without the margin: (42 - 30) x 7 = 84 min (ticket 10).
+    assert started.minutes == 84
 
 
 def test_lead_is_capped() -> None:

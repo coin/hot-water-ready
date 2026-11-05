@@ -3,6 +3,7 @@
 from datetime import time, timedelta
 from typing import Any
 
+from freezegun.api import FrozenDateTimeFactory
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError, Unauthorized
 from homeassistant.helpers import device_registry as dr
@@ -247,6 +248,23 @@ async def test_everyone_sees_when_heating_is_planned_to_start(
     planned = local("08:28") + timedelta(seconds=12)
     assert member_view["next_heat_start"] == planned.isoformat()
     assert member_view["solar_aware"] is False
+
+
+async def test_in_summer_a_ready_time_keeps_the_house_clock(
+    hass: HomeAssistant, heater: MockConfigEntry, freezer: FrozenDateTimeFactory
+) -> None:
+    """Spec 4.1: 09:00 is 09:00 in Lisbon in July (UTC+1), not 09:00 UTC."""
+    freezer.move_to("2026-07-01 04:00:00+00:00")  # 05:00 in Lisbon
+    await heater.runtime_data.async_add_ready_time(TIAGO, time(9, 0), EVERY_DAY, True)
+    await hass.async_block_till_done()
+
+    # (42 - 39.6) x 7 + 15 = 31.8 min before 09:00, house time.
+    start = heater.runtime_data.next_heat_start()
+    assert start is not None
+    assert dt_util.as_local(start).strftime("%H:%M:%S") == "08:28:12"
+    state = hass.states.get(CALENDAR)
+    assert state is not None
+    assert state.attributes["start_time"] == "2026-07-01 08:28:12"
 
 
 async def test_no_planned_start_without_a_ready_time(

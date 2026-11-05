@@ -105,3 +105,6 @@ async def test_a_thermostat_is_set_to_the_raised_stop_point_and_starts_earlier(
     await hass.async_block_till_done()
 
     assert thermostat.commands == [("mode", "heat"), ("setpoint", 51.0)]  # the cap plus margin
+    # "Ready" is told at the normal target (ticket 10), so the card says when that is:
+    # (42 - 40) x 7 = 14 min, not the 70 min to the raised 50.
+    assert entry.runtime_data.snapshot(maria_user)["ready_in_minutes"] == 14

@@ -52,8 +52,9 @@ Read by the reviewer. Mechanical rules live in the checks (`scripts/check`, `car
   way.
 - A state that holds the heater back (switched off until a window ends) reaches every place
   that says what will happen: the next ready time, the planned start, the calendar and the
-  week (both from `Heater.windows_between`), and the card's buttons. The review of the switch-off
-  found the first two missing; the calendar was found after it.
+  week (both from `Heater.windows_between`), "Casa hoje", and the card's buttons. They all read
+  `Heater.planned_occurrences`; only the controller reads every occurrence. The review of the
+  switch-off found the first two missing; the calendar and "Casa hoje" were found after it.
 - A new controller rule gets a scenario test, and `tests/core/test_invariants.py` must still
   pass: it runs hundreds of random households and checks no chatter, nobody told twice, no relay
   on without a window. When a rule adds something that must always hold, add it there, with its
@@ -79,6 +80,9 @@ Read by the reviewer. Mechanical rules live in the checks (`scripts/check`, `car
   did nothing. Home Assistant restores entity states after a restart, and a heater that runs
   whenever a ready time exists also "heats for a window"; ticket 11's first trial passed both ways
   until the relay was switched off by hand and a scenario checked that heating waits for the lead.
+- A test of a wall-clock time runs at least once in summer. The HA fixtures are in Lisbon in
+  November, where house time equals UTC, so the planned start and the calendar were read in UTC
+  (an hour late from April to October) and every test passed.
 - A new invariant in `tests/core/test_invariants.py` comes with a test that breaks the controller
   on purpose and expects the random households to catch it.
 - `async_mock_service(hass, "switch", ...)` registered before the entry is set up is replaced

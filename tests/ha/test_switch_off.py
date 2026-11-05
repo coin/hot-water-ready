@@ -281,6 +281,7 @@ async def test_a_skipped_ready_time_is_no_longer_the_next_one(
     snapshot = await _snapshot(hass, hass_ws_client, heater, hass_admin_user)
     assert snapshot["next_ready"]["at"].startswith("2026-11-03T05:30")  # tomorrow's
     assert snapshot["next_heat_start"] >= "2026-11-02T05:45"  # not before the skip ends
+    assert snapshot["today"] == []  # "Casa hoje" no longer lists the skipped 05:30
 
 
 async def test_the_card_knows_an_automation_also_asked(

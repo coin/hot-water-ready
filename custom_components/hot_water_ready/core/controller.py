@@ -482,6 +482,11 @@ class Controller:
         until = (ready_at - now).total_seconds() / 60
         return solar_lead_minutes(settings, temperature, rise, until)
 
+    def _ready_in(self, temperature: float) -> int:
+        """Minutes until the water is ready: to the normal target, which is when "ready" is told
+        even in a raised window (ticket 10), so the phone and the card give the same figure."""
+        return minutes_to_ready(self.settings, temperature) or 0
+
     def target_now(self) -> float:
         """The highest target asked for now: a raised cluster's, else the normal one."""
         window = self.state.window
@@ -595,9 +600,7 @@ class Controller:
         )
         if temperature < target - _EPSILON:
             self.state.heating = self.state.window.wants_heat = True
-            # The sun was to do it and did not: the estimate is the heater's own lead.
-            heater_only = lead_minutes(self.settings.with_target(target), temperature)
-            minutes = round(lead or heater_only)
+            minutes = self._ready_in(temperature)
             events.append(
                 ControllerEvent("heating", first.at, first.members, temperature, minutes=minutes)
             )
@@ -613,7 +616,7 @@ class Controller:
         joined = window.members - before
         if not joined or not window.wants_heat:
             return
-        minutes = round(lead_minutes(self.settings, temperature))
+        minutes = self._ready_in(temperature)
         by_time: dict[datetime, set[str]] = {}
         for member in joined:
             by_time.setdefault(window.member_times.get(member, window.ready_at), set()).add(member)

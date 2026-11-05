@@ -435,7 +435,13 @@ class Heater:
         return self._data.away.get(member_id, Away())
 
     def occurrences(self, start: datetime, end: datetime) -> list[Occurrence]:
-        """Every member's ready times in [start, end), away skipped, same times together."""
+        """Every member's ready times in [start, end), away skipped, same times together.
+
+        A ready time is a wall-clock time in the house's time zone (spec 4.1), and the core
+        places it in the zone of `start`: so `start` goes over to house time first, whatever
+        zone the caller used (UTC, or the calendar's).
+        """
+        start = dt_util.as_local(start)
         plans = [
             MemberPlan(member.id, tuple(self.ready_times(member.id)), self.away(member.id))
             for member in self.members
@@ -448,11 +454,16 @@ class Heater:
         Their starts are estimated from the water now; see `core.controller.planned_windows`.
         Ready times in a window that was switched off are left out: they get no hot water.
         """
+        return planned_windows(
+            self._controller.settings, self.planned_occurrences(start, end), self.temperature
+        )
+
+    def planned_occurrences(self, start: datetime, end: datetime) -> list[Occurrence]:
+        """The ready times in [start, end) that will get hot water: those in a window that was
+        switched off are left out. Everything that says what will happen reads these; only the
+        controller reads all of them, to know which window was skipped."""
         off_until = self._controller.state.off_until
-        occurrences = [
-            o for o in self.occurrences(start, end) if off_until is None or o.at >= off_until
-        ]
-        return planned_windows(self._controller.settings, occurrences, self.temperature)
+        return [o for o in self.occurrences(start, end) if off_until is None or o.at >= off_until]
 
     def _week(self) -> dict[str, Any]:
         """This week, Monday to Sunday in the house's time zone: when the heater may heat."""
@@ -473,10 +484,10 @@ class Heater:
         }
 
     def today(self) -> list[Occurrence]:
-        """Everyone's ready times today, from midnight to midnight in the house's time zone."""
+        """Everyone's ready times today, midnight to midnight in house time; skipped ones out."""
         midnight = dt_util.start_of_local_day()
         tomorrow = dt_util.start_of_local_day(midnight.date() + timedelta(days=1))
-        return self.occurrences(midnight, tomorrow)
+        return self.planned_occurrences(midnight, tomorrow)
 
     async def async_set_away(self, member_id: str, on: bool, until: date | None) -> None:
         """Pause or resume a member's ready times; an end date ends the pause by itself.
@@ -501,10 +512,7 @@ class Heater:
     def next_ready(self, member_id: str | None = None) -> Occurrence | None:
         """The next ready time from now, of one member or of anyone; skipped ones left out."""
         now = dt_util.now()
-        off_until = self._controller.state.off_until
-        for occurrence in self.occurrences(now, now + HORIZON):
-            if off_until is not None and occurrence.at < off_until:
-                continue  # switched off: this one gets no hot water
+        for occurrence in self.planned_occurrences(now, now + HORIZON):
             if member_id is None or member_id in occurrence.members:
                 return occurrence
         return None
@@ -775,7 +783,9 @@ class Heater:
         for fault in faults:
             message = await async_message(self.hass, f"fault_{fault.value}", {"heater": self.name})
             for person in await self.async_fault_recipients():
-                await self._async_tell_one(person, message, f"{DOMAIN}_{self.entry_id}_fault")
+                # One tag per kind: a second fault must not replace the first on the phone.
+                tag = f"{DOMAIN}_{self.entry_id}_fault_{fault.value}"
+                await self._async_tell_one(person, message, tag)
 
     async def _async_tell(self, events: tuple[ControllerEvent, ...]) -> None:
         """Turn what happened into messages for the people it concerns (spec 4.9)."""
@@ -1031,8 +1041,8 @@ class Heater:
         next_ready = self.next_ready()
         ready_in = None
         if self.heating:  # 0 means it is past the target and finishing: no estimate to show
-            settings = self._controller.settings.with_target(self._controller.target_now())
-            ready_in = minutes_to_ready(settings, temperature) or None
+            # To the normal target, as the phone's "heating" message: "ready" is told there.
+            ready_in = minutes_to_ready(self._controller.settings, temperature) or None
         me = self.user_member_id(user)
         return {
             "entry_id": self.entry_id,

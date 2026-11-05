@@ -97,8 +97,8 @@ async def test_each_member_of_a_window_is_told_heating_then_ready(
     # Maria's time joins Tiago's window while it heats, so she is told it is heating too.
     assert sorted(_messages(sent)) == sorted(
         [
-            (phones[TIAGO], "Cylinder heating: water ready in about 29 min."),
-            (phones[MARIA], "Cylinder heating: water ready in about 29 min."),
+            (phones[TIAGO], "Cylinder heating: water ready in about 14 min."),
+            (phones[MARIA], "Cylinder heating: water ready in about 14 min."),
         ]
     )
 
@@ -121,7 +121,7 @@ async def test_portuguese_heating_message(
     await _ready_time(hass, hass_ws_client, heater, TIAGO, "05:20")
 
     assert _messages(sent) == [
-        (phones[TIAGO], "Cylinder a aquecer: água pronta em cerca de 29 min.")
+        (phones[TIAGO], "Cylinder a aquecer: água pronta em cerca de 14 min.")
     ]
 
 

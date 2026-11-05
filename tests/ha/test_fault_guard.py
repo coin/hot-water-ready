@@ -2,6 +2,7 @@
 
 from datetime import timedelta
 from typing import Any
+from unittest.mock import AsyncMock, patch
 
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.components.repairs import repairs_flow_manager
@@ -23,6 +24,7 @@ from pytest_homeassistant_custom_component.common import (
 from pytest_homeassistant_custom_component.typing import WebSocketGenerator
 
 from custom_components.hot_water_ready.const import DOMAIN
+from custom_components.hot_water_ready.core.faults import Fault
 
 from .conftest import SENSOR, SWITCH, TIAGO, TIAGO_PERSON
 
@@ -321,3 +323,14 @@ async def test_issues_are_removed_with_the_heater(
     assert await hass.config_entries.async_remove(heater.entry_id)
     await hass.async_block_till_done()
     assert _issue(hass, heater, "sensor_unavailable") is None
+
+
+async def test_two_faults_do_not_replace_each_other_on_the_phone(
+    hass: HomeAssistant, heater: MockConfigEntry
+) -> None:
+    tell = AsyncMock()
+    with patch.object(type(heater.runtime_data), "_async_tell_one", tell):
+        await heater.runtime_data._async_tell_fault((Fault.NOT_RISING, Fault.RELAY_STUCK))
+
+    tags = {call.args[2] for call in tell.await_args_list}
+    assert len(tags) == 2

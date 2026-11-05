@@ -25,6 +25,7 @@ import {
   hourChoices,
   MINUTE_CHOICES,
   uses24Hours,
+  weekHint,
   settingsView,
   sheetIsComplete,
   switchOffSheet,
@@ -442,7 +443,7 @@ export class HotWaterReadyCard extends LitElement {
             </div>`,
           )}
         </div>
-        <div class="hint">${localize(language, "week.hint")}</div>
+        <div class="hint">${weekHint(language, this._hour24)}</div>
       </div>
     `;
   }
@@ -792,9 +793,20 @@ export class HotWaterReadyCard extends LitElement {
       mask: radial-gradient(circle, transparent 58%, #000 62%);
       filter: blur(5px);
     }
+    /* The band fades in once the two start pulses (2 x 2.4s) are over, then keeps circling. */
     .gauge.glowing .orbit {
       display: block;
-      animation: hwr-orbit 6s linear infinite;
+      animation:
+        hwr-orbit-in 0.8s ease-in 4.8s both,
+        hwr-orbit 6s linear 4.8s infinite;
+    }
+    @keyframes hwr-orbit-in {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
     }
     @keyframes hwr-orbit {
       to {

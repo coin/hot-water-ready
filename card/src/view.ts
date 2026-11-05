@@ -65,6 +65,21 @@ export function hourChoices(language: string, hour24 = true): { value: string; l
   });
 }
 
+/** A whole hour on its own: "06h" (24 as the end of the day), or "6 am" on a 12-hour clock. */
+export function hourLabel(hour: number, language: string, hour24 = true): string {
+  if (hour24) return `${String(hour).padStart(2, "0")}h`;
+  return new Intl.DateTimeFormat(localeOf(language), { timeZone: "UTC", hour: "numeric", hourCycle: "h12" })
+    .format(Date.UTC(2000, 0, 1, hour % 24));
+}
+
+/** The week's hint, naming the hours the heating bars cover as the user reads times. */
+export function weekHint(language: string, hour24 = true): string {
+  return localize(language, "week.hint", {
+    start: hourLabel(DAY_START / 60, language, hour24),
+    end: hourLabel(DAY_END / 60, language, hour24),
+  });
+}
+
 /** The minutes offered when choosing a ready time. */
 export const MINUTE_CHOICES = Array.from({ length: 60 }, (_, minute) => String(minute).padStart(2, "0"));
 
@@ -556,7 +571,7 @@ export function weekView(heater: HeaterSnapshot, context: ViewContext): WeekView
       bars: dayBars(key, week.windows, context.timeZone),
     })),
     hours: [6, 12, 18, 24].map((hour) => ({
-      label: `${String(hour).padStart(2, "0")}h`,
+      label: hourLabel(hour, context.language, context.hour24 ?? true),
       at: (hour * 60 - DAY_START) / (DAY_END - DAY_START),
     })),
     rows,
