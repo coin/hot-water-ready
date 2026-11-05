@@ -348,11 +348,17 @@ var z=globalThis,W=z.ShadowRoot&&(z.ShadyCSS===void 0||z.ShadyCSS.nativeShadow)&
       gap: 16px;
       padding: 16px;
     }
+    /*
+     * Pinned to the top, so the ring stays put when the text beside it grows (heating adds a line
+     * and the switch-off link), with room on every side for the halo and the start pulse.
+     */
     .gauge {
       position: relative;
       flex: none;
+      align-self: flex-start;
       width: 92px;
       height: 92px;
+      margin: 8px;
       border-radius: 50%;
     }
     .ring {
@@ -403,7 +409,7 @@ var z=globalThis,W=z.ShadowRoot&&(z.ShadyCSS===void 0||z.ShadyCSS.nativeShadow)&
       pointer-events: none;
     }
     .gauge.glowing .pulse {
-      box-shadow: 0 0 24px 10px color-mix(in srgb, var(--hwr-heating) 55%, transparent);
+      box-shadow: 0 0 16px 6px color-mix(in srgb, var(--hwr-heating) 55%, transparent);
       animation: hwr-pulse 2.4s ease-in-out 2;
     }
     @keyframes hwr-pulse {
