@@ -32,6 +32,8 @@ async def test_subscribe_sends_snapshot_then_updates(
     assert event["temperature"] == 39.6
     assert event["target"] == 42.0
     assert event["status"] == "waiting"
+    assert event["element_on"] is False
+    assert event["power_w"] is None
 
     hass.states.async_set(SENSOR, "42.1", {"unit_of_measurement": "°C"})
     await hass.async_block_till_done()
@@ -72,3 +74,23 @@ async def test_subscription_survives_a_reload(
     while not events or events[-1]["temperature"] != 44.0:
         events.append((await client.receive_json())["event"])
     assert events[-1]["status"] == "ready"
+
+
+async def test_snapshot_carries_the_power_drawn(
+    hass: HomeAssistant, heater: MockConfigEntry, hass_ws_client: WebSocketGenerator
+) -> None:
+    hass.states.async_set("sensor.cylinder_power", "2790.4", {"unit_of_measurement": "W"})
+    hass.config_entries.async_update_entry(
+        heater, options={**heater.options, "power_sensor": "sensor.cylinder_power"}
+    )
+    await hass.async_block_till_done()
+    client = await hass_ws_client(hass)
+    await client.send_json_auto_id(
+        {"type": "hot_water_ready/subscribe", "entry_id": heater.entry_id}
+    )
+    assert (await client.receive_json())["success"]
+    assert (await client.receive_json())["event"]["power_w"] == 2790.4
+
+    hass.states.async_set("sensor.cylinder_power", "0", {"unit_of_measurement": "W"})
+    await hass.async_block_till_done()
+    assert (await client.receive_json())["event"]["power_w"] == 0.0

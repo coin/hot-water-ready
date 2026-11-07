@@ -83,6 +83,8 @@ describe("HeaterSubscription", () => {
       faults: [],
       heat_now_blocked: false,
       not_rising_checked: true,
+      element_on: false,
+      power_w: null,
       automatic: true,
       heat_now: null,
       today: [],

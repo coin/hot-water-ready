@@ -21,6 +21,8 @@ export interface HeaterView {
   badge: string;
   headline: string;
   subline: string;
+  /** The heater on or off and what it draws, as version 1's card; empty when unknown. */
+  element: string;
   /** Ring fill, 0 to 1. */
   fill: number;
   tone: Status;
@@ -184,6 +186,13 @@ function sublineOf(heater: HeaterSnapshot, context: ViewContext): string {
   return "";
 }
 
+function elementOf(heater: HeaterSnapshot, language: string): string {
+  if (heater.element_on === null) return "";
+  const state = localize(language, heater.element_on ? "element.on" : "element.off");
+  if (heater.power_w === null) return state;
+  return localize(language, "element.drawing", { state, watts: formatNumber(heater.power_w, language, 0) });
+}
+
 export function heaterView(heater: HeaterSnapshot, context: ViewContext): HeaterView {
   const { language } = context;
   const { temperature, target } = heater;
@@ -193,6 +202,7 @@ export function heaterView(heater: HeaterSnapshot, context: ViewContext): Heater
     badge: localize(language, `status.${heater.status}`).toLocaleUpperCase(localeOf(language)),
     headline: headlineOf(heater, context),
     subline: sublineOf(heater, context),
+    element: elementOf(heater, language),
     fill: temperature === null || target <= 0 ? 0 : Math.min(1, Math.max(0, temperature / target)),
     tone: heater.status,
   };

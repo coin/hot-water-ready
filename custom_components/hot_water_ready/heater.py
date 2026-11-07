@@ -1073,6 +1073,8 @@ class Heater:
             "can_ask_heat_now": self.can_ask_heat_now(user),
             "faults": sorted(self.faults),
             "not_rising_checked": self.not_rising_checked,
+            "element_on": self.element_heating,
+            "power_w": self._number(self._power_sensor),
             "heat_now_blocked": bool(self.faults & BLOCKING),
             "automatic": self.automatic,
             "heat_now": None

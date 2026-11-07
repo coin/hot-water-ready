@@ -69,6 +69,10 @@ export interface HeaterSnapshot {
   not_rising_checked: boolean;
   /** A fault stops heating, so heat now is refused. */
   heat_now_blocked: boolean;
+  /** Whether the relay or thermostat says the element is heating; null when it cannot tell. */
+  element_on: boolean | null;
+  /** What the element draws now, from the power sensor; null without one. */
+  power_w: number | null;
   /** Off: the heater is run by hand. */
   automatic: boolean;
   /** Whether this viewer may ask for heat now (members and admins). */

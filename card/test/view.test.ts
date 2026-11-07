@@ -69,6 +69,8 @@ const cold: HeaterSnapshot = {
   faults: [],
   heat_now_blocked: false,
   not_rising_checked: true,
+  element_on: false,
+  power_w: 0,
   automatic: true,
   heat_now: null,
   viewer: "m1",
@@ -91,6 +93,24 @@ const pt: ViewContext = {
 const en: ViewContext = { ...pt, language: "en" };
 
 describe("heaterView", () => {
+  it("shows the heater on and what it draws, like version 1's card", () => {
+    const on = { ...cold, element_on: true, power_w: 2790.4 };
+    expect(heaterView(on, pt).element).toBe("Resistência ligada · a consumir 2790 W");
+    expect(heaterView(on, en).element).toBe("Heater on · drawing 2,790 W");
+  });
+
+  it("shows the heater off with what it draws", () => {
+    expect(heaterView(cold, pt).element).toBe("Resistência desligada · a consumir 0 W");
+  });
+
+  it("leaves the watts out without a power sensor", () => {
+    expect(heaterView({ ...cold, element_on: true, power_w: null }, pt).element).toBe("Resistência ligada");
+  });
+
+  it("shows no heater line when Home Assistant cannot tell whether it heats", () => {
+    expect(heaterView({ ...cold, element_on: null, power_w: null }, pt).element).toBe("");
+  });
+
   it("shows the temperature with a Portuguese decimal comma", () => {
     expect(heaterView(cold, pt).temperature).toBe("39,6°");
   });

@@ -318,6 +318,7 @@ export class HotWaterReadyCard extends LitElement {
           </div>
           <div class="headline ${view.tone}">${view.headline}</div>
           ${view.subline ? html`<div class="subline">${view.subline}</div>` : nothing}
+          ${view.element ? html`<div class="subline">${view.element}</div>` : nothing}
         </div>
         <div class="heat-now">
           ${switchOffShown(heater)
