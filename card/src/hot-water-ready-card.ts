@@ -25,8 +25,18 @@ import {
   switchOffPeopleWith,
   peopleOf,
   readyTimeRows,
-  hourChoices,
-  MINUTE_CHOICES,
+  openClock,
+  dialMarks,
+  dialMarkOn,
+  dialHand,
+  dialPick,
+  dialStep,
+  clockHalf,
+  clockTime,
+  switchClockMode,
+  DIAL_SIZE,
+  wallTime,
+  type Clock,
   uses24Hours,
   weekHint,
   settingsView,
@@ -47,6 +57,10 @@ import {
   type WeekView,
 } from "./view";
 
+/** Material's "keyboard" and "schedule" icons, for the popup's switch between typing and the dial. */
+const KEYBOARD_ICON = svg`<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M20 5H4c-1.1 0-1.99.9-1.99 2L2 17c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg>`;
+const CLOCK_ICON = svg`<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>`;
+
 const TAG = "hot-water-ready-card";
 
 type Tab = "people" | "week";
@@ -61,6 +75,7 @@ export class HotWaterReadyCard extends LitElement {
     _missing: { state: true },
     _selected: { state: true },
     _sheet: { state: true },
+    _clock: { state: true },
     _settingsOpen: { state: true },
     _offOpen: { state: true },
     _keep: { state: true },
@@ -76,6 +91,8 @@ export class HotWaterReadyCard extends LitElement {
   private _missing = false;
   private _selected: string | undefined;
   private _sheet: Sheet | undefined;
+  /** The popup setting the sheet's time, over the sheet. */
+  private _clock: Clock | undefined;
   private _settingsOpen = false;
   /** The "Desligar o aquecimento?" confirmation is open. */
   private _offOpen = false;
@@ -217,7 +234,8 @@ export class HotWaterReadyCard extends LitElement {
               ${mode === "member" && member ? this._renderToday(heater, member) : nothing}
               ${member
                 ? html`<div class="panel">${this._renderListHead(member, mode === "member")} ${this._renderList(member)}</div>
-                    ${this._sheet ? this._renderSheet(member, this._sheet) : nothing}`
+                    ${this._sheet ? this._renderSheet(member, this._sheet) : nothing}
+                    ${this._sheet && this._clock ? this._renderClock(this._clock) : nothing}`
                 : html`<div class="message">${localize(language, "members.none")}</div>`}
             `}
         ${this._error ? html`<div class="error" role="alert">${this._error}</div>` : nothing}
@@ -347,6 +365,16 @@ export class HotWaterReadyCard extends LitElement {
           ${heatNowActions(heater).map((item) =>
             choosesKeepTime(item)
               ? html`<button
+                    class="keep-more"
+                    aria-label=${localize(this._language, "keep_hot.more")}
+                    title=${localize(this._language, "keep_hot.more")}
+                    @click=${() => {
+                      this._openKeep(item);
+                    }}
+                  >
+                    ⋯
+                  </button>
+                  <button
                     class="primary holdable ${this._holding ? "holding" : ""}"
                     @pointerdown=${() => {
                       this._holdStart(item);
@@ -366,16 +394,6 @@ export class HotWaterReadyCard extends LitElement {
                     }}
                   >
                     ${localize(this._language, item.label)}
-                  </button>
-                  <button
-                    class="keep-more"
-                    aria-label=${localize(this._language, "keep_hot.more")}
-                    title=${localize(this._language, "keep_hot.more")}
-                    @click=${() => {
-                      this._openKeep(item);
-                    }}
-                  >
-                    ⋯
                   </button>`
               : html`<button
                   class="primary"
@@ -730,7 +748,10 @@ export class HotWaterReadyCard extends LitElement {
                 ? html`<button
                     class="row-text"
                     aria-label=${localize(language, "list.edit")}
-                    @click=${() => (this._sheet = editSheet(member, row.id))}
+                    @click=${() => {
+                      this._sheet = editSheet(member, row.id);
+                      this._clock = undefined;
+                    }}
                   >
                     ${this._rowText(row)}
                   </button>`
@@ -768,7 +789,13 @@ export class HotWaterReadyCard extends LitElement {
           `,
         )}
         ${member.can_edit
-          ? html`<button class="add" @click=${() => (this._sheet = newSheet())}>
+          ? html`<button
+              class="add"
+              @click=${() => {
+                this._sheet = newSheet();
+                this._clock = openClock(this._sheet.time, true, this._hour24);
+              }}
+            >
               + ${localize(language, "list.add")}
             </button>`
           : nothing}
@@ -786,7 +813,6 @@ export class HotWaterReadyCard extends LitElement {
   private _renderSheet(member: MemberSnapshot, sheet: Sheet): unknown {
     const language = this._language;
     const letters = weekdayLetters(language);
-    const [hour = "07", minute = "00"] = sheet.time.split(":");
     const title = localize(language, sheet.id ? "sheet.edit_title" : "sheet.title");
     const toggle = (day: number) => {
       const weekdays = sheet.weekdays.includes(day)
@@ -799,27 +825,13 @@ export class HotWaterReadyCard extends LitElement {
         <div class="sheet-title">${title}</div>
         <div class="field">
           ${localize(language, "sheet.time")}
-          <div class="time-picker">
-            <select
-              aria-label=${localize(language, "sheet.hour")}
-              @change=${(event: Event) => {
-                this._sheet = { ...sheet, time: `${(event.target as HTMLSelectElement).value}:${minute}` };
-              }}
-            >
-              ${hourChoices(language, this._hour24).map(
-                (choice) => html`<option value=${choice.value} ?selected=${choice.value === hour}>${choice.label}</option>`,
-              )}
-            </select>
-            <span>:</span>
-            <select
-              aria-label=${localize(language, "sheet.minute")}
-              @change=${(event: Event) => {
-                this._sheet = { ...sheet, time: `${hour}:${(event.target as HTMLSelectElement).value}` };
-              }}
-            >
-              ${MINUTE_CHOICES.map((value) => html`<option value=${value} ?selected=${value === minute}>${value}</option>`)}
-            </select>
-          </div>
+          <button
+            class="sheet-time"
+            aria-label=${localize(language, "clock.change")}
+            @click=${() => (this._clock = openClock(sheet.time, false, this._hour24))}
+          >
+            ${wallTime(sheet.time, language, this._hour24)}
+          </button>
         </div>
         <div class="field">
           ${localize(language, "sheet.days")}
@@ -843,6 +855,174 @@ export class HotWaterReadyCard extends LitElement {
           <button class="primary" ?disabled=${!sheetIsComplete(sheet)} @click=${() => this._save(member)}>
             ${localize(language, "sheet.save")}
           </button>
+        </div>
+      </div>
+    `;
+  }
+
+  /** A touch on the dial, from the pointer's place on the drawn circle. */
+  private _dialAt(event: PointerEvent, clock: Clock): Clock {
+    const box = (event.currentTarget as Element).getBoundingClientRect();
+    const scale = DIAL_SIZE / box.width;
+    return dialPick(clock, (event.clientX - box.left) * scale, (event.clientY - box.top) * scale, this._hour24);
+  }
+
+  /** OK: the time goes into the sheet and the popup closes. */
+  private _clockDone(clock: Clock): void {
+    const time = clockTime(clock, this._hour24);
+    if (!time || !this._sheet) return;
+    this._sheet = { ...this._sheet, time };
+    this._clock = undefined;
+  }
+
+  /** Cancel: a ready time being added goes too, as an alarm does on Android. */
+  private _clockCancel(clock: Clock): void {
+    if (clock.fresh) this._sheet = undefined;
+    this._clock = undefined;
+  }
+
+  private _renderClockInput(clock: Clock, part: "hour" | "minute", valid: boolean): unknown {
+    const label = localize(this._language, part === "hour" ? "sheet.hour" : "sheet.minute");
+    return html`<label class="clock-box">
+      <input
+        class="clock-input ${valid ? "" : "invalid"}"
+        inputmode="numeric"
+        maxlength="2"
+        autocomplete="off"
+        aria-label=${label}
+        .value=${live(part === "hour" ? clock.hourText : clock.minuteText)}
+        @input=${(event: Event) => {
+          const value = (event.target as HTMLInputElement).value;
+          this._clock = part === "hour" ? { ...clock, hourText: value } : { ...clock, minuteText: value };
+        }}
+        @keydown=${(event: KeyboardEvent) => {
+          if (event.key === "Enter") this._clockDone(clock);
+        }}
+      />
+      <span>${label}</span>
+    </label>`;
+  }
+
+  private _renderClock(clock: Clock): unknown {
+    const language = this._language;
+    const hour24 = this._hour24;
+    const keys = clock.mode === "keys";
+    const valid = clockTime(clock, hour24) !== undefined;
+    const title = localize(language, keys ? "clock.title_keys" : "clock.title");
+    const half = hour24
+      ? nothing
+      : html`<div class="clock-half" role="group">
+          ${([false, true] as const).map(
+            (afternoon) =>
+              html`<button
+                class=${clock.hour >= 12 === afternoon ? "on" : ""}
+                aria-pressed=${clock.hour >= 12 === afternoon}
+                @click=${() => (this._clock = clockHalf(clock, afternoon))}
+              >
+                ${localize(language, afternoon ? "clock.pm" : "clock.am")}
+              </button>`,
+          )}
+        </div>`;
+    const header = keys
+      ? html`<div class="clock-head">
+            ${this._renderClockInput(clock, "hour", valid)}
+            <span class="clock-colon">:</span>
+            ${this._renderClockInput(clock, "minute", valid)} ${half}
+          </div>
+          ${valid ? nothing : html`<div class="clock-invalid" role="alert">${localize(language, "clock.invalid")}</div>`}`
+      : html`<div class="clock-head">
+          ${(["hour", "minute"] as const).map(
+            (part, index) =>
+              html`${index ? html`<span class="clock-colon">:</span>` : nothing}
+                <button
+                  class="clock-part ${clock.part === part ? "on" : ""}"
+                  aria-pressed=${clock.part === part}
+                  aria-label=${localize(language, part === "hour" ? "sheet.hour" : "sheet.minute")}
+                  @click=${() => (this._clock = { ...clock, part })}
+                >
+                  ${part === "hour" ? clock.hourText : clock.minuteText}
+                </button>`,
+          )}
+          ${half}
+        </div>`;
+    const hand = dialHand(clock, hour24);
+    const centre = DIAL_SIZE / 2;
+    const dial = keys
+      ? nothing
+      : html`<svg
+          class="dial"
+          viewBox="0 0 ${DIAL_SIZE} ${DIAL_SIZE}"
+          role="slider"
+          tabindex="0"
+          aria-label=${localize(language, clock.part === "hour" ? "sheet.hour" : "sheet.minute")}
+          aria-valuenow=${clock.part === "hour" ? clock.hour : clock.minute}
+          aria-valuetext=${clock.part === "hour" ? clock.hourText : clock.minuteText}
+          @pointerdown=${(event: PointerEvent) => {
+            (event.currentTarget as Element).setPointerCapture(event.pointerId);
+            this._clock = this._dialAt(event, clock);
+          }}
+          @pointermove=${(event: PointerEvent) => {
+            if ((event.currentTarget as Element).hasPointerCapture(event.pointerId)) {
+              this._clock = this._dialAt(event, this._clock ?? clock);
+            }
+          }}
+          @pointerup=${() => {
+            // As on Android, letting go of the hour moves on to the minutes.
+            if (this._clock?.part === "hour") this._clock = { ...this._clock, part: "minute" };
+          }}
+          @keydown=${(event: KeyboardEvent) => {
+            const step = ({ ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1 } as Record<string, number>)[event.key];
+            if (step === undefined) return;
+            event.preventDefault();
+            this._clock = dialStep(clock, step, hour24);
+          }}
+        >
+          <circle class="dial-face" cx=${centre} cy=${centre} r=${centre} />
+          <line class="dial-hand" x1=${centre} y1=${centre} x2=${hand.x} y2=${hand.y} />
+          <circle class="dial-hand-dot" cx=${centre} cy=${centre} r="4" />
+          <circle class="dial-knob" cx=${hand.x} cy=${hand.y} r="20" />
+          ${dialMarks(clock.part, hour24).map(
+            (mark) =>
+              svg`<text class="dial-mark ${dialMarkOn(clock, mark, hour24) ? "on" : ""}" x=${mark.x} y=${mark.y}>${mark.label}</text>`,
+          )}
+        </svg>`;
+    return html`
+      <div
+        class="clock-overlay"
+        @click=${(event: Event) => {
+          if (event.target === event.currentTarget) this._clockCancel(clock);
+        }}
+      >
+        <div class="clock-dialog" role="dialog" aria-modal="true" aria-label=${title}>
+          <div class="clock-title">${title}</div>
+          ${header} ${dial}
+          <div class="clock-actions">
+            <button
+              class="clock-mode"
+              aria-label=${localize(language, keys ? "clock.to_dial" : "clock.to_keys")}
+              title=${localize(language, keys ? "clock.to_dial" : "clock.to_keys")}
+              @click=${() => (this._clock = switchClockMode(clock, hour24))}
+            >
+              ${keys ? CLOCK_ICON : KEYBOARD_ICON}
+            </button>
+            <button
+              class="clock-text"
+              @click=${() => {
+                this._clockCancel(clock);
+              }}
+            >
+              ${localize(language, "sheet.cancel")}
+            </button>
+            <button
+              class="clock-text"
+              ?disabled=${!valid}
+              @click=${() => {
+                this._clockDone(clock);
+              }}
+            >
+              ${localize(language, "clock.ok")}
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -1626,21 +1806,176 @@ export class HotWaterReadyCard extends LitElement {
       font-size: 13px;
       color: var(--secondary-text-color);
     }
-    .time-picker {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 24px;
+    /* The time on the sheet, large as in Android's alarm list; a tap opens the popup. */
+    .sheet-time {
+      align-self: flex-start;
+      padding: 0 4px;
+      border: 0;
+      background: none;
+      font-size: 44px;
+      font-weight: 300;
+      line-height: 1.1;
       color: var(--primary-text-color);
     }
-    .field select {
-      font: inherit;
-      font-size: 24px;
+    /* The time popup: a small dialog in the middle of the screen, as Android's clock. */
+    .clock-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: var(--mdc-dialog-scrim-color, rgba(0, 0, 0, 0.32));
+    }
+    .clock-dialog {
+      width: 100%;
+      max-width: 328px;
+      box-sizing: border-box;
+      padding: 24px 24px 12px;
+      border-radius: 28px;
+      background: var(--card-background-color, #fff);
       color: var(--primary-text-color);
-      background: var(--secondary-background-color, transparent);
-      border: 1px solid var(--divider-color, #ccc);
-      border-radius: 8px;
-      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .clock-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--secondary-text-color);
+    }
+    .clock-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 8px;
+    }
+    .clock-colon {
+      font-size: 48px;
+      line-height: 80px;
+    }
+    .clock-part,
+    .clock-input {
+      width: 96px;
+      height: 80px;
+      box-sizing: border-box;
+      border-radius: 10px;
+      border: 2px solid transparent;
+      background: var(--secondary-background-color, rgba(127, 127, 127, 0.15));
+      color: var(--primary-text-color);
+      font: inherit;
+      font-size: 48px;
+      text-align: center;
+    }
+    .clock-part.on,
+    .clock-input:focus {
+      background: color-mix(in srgb, var(--primary-color) 22%, transparent);
+      color: var(--primary-color);
+      outline: none;
+    }
+    .clock-input:focus {
+      border-color: var(--primary-color);
+    }
+    .clock-input.invalid {
+      border-color: var(--error-color, #c62828);
+    }
+    .clock-box {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--secondary-text-color);
+    }
+    .clock-invalid {
+      margin-top: -12px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--error-color, #c62828);
+    }
+    .clock-half {
+      display: flex;
+      flex-direction: column;
+      height: 80px;
+      border: 1px solid var(--divider-color, #c5cad1);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .clock-half button {
+      flex: 1;
+      min-width: 52px;
+      border: 0;
+      background: none;
+      font-weight: 500;
+    }
+    .clock-half button.on {
+      background: color-mix(in srgb, var(--primary-color) 22%, transparent);
+      color: var(--primary-color);
+    }
+    .dial {
+      display: block;
+      width: 100%;
+      max-width: 256px;
+      align-self: center;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: pointer;
+    }
+    .dial:focus-visible {
+      outline: 2px solid var(--primary-color);
+      outline-offset: 4px;
+      border-radius: 50%;
+    }
+    .dial-face {
+      fill: var(--secondary-background-color, rgba(127, 127, 127, 0.15));
+    }
+    .dial-hand {
+      stroke: var(--primary-color);
+      stroke-width: 2;
+    }
+    .dial-hand-dot,
+    .dial-knob {
+      fill: var(--primary-color);
+    }
+    .dial-mark {
+      fill: var(--primary-text-color);
+      font-size: 15px;
+      text-anchor: middle;
+      dominant-baseline: central;
+      pointer-events: none;
+    }
+    .dial-mark.on {
+      fill: var(--text-primary-color, #fff);
+    }
+    .clock-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .clock-mode {
+      margin-right: auto;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      border-radius: 50%;
+      background: none;
+      color: var(--secondary-text-color);
+    }
+    .clock-text {
+      min-height: 40px;
+      padding: 0 12px;
+      border: 0;
+      border-radius: 20px;
+      background: none;
+      color: var(--primary-color);
+      font-weight: 500;
+    }
+    .clock-text[disabled] {
+      opacity: 0.4;
     }
     .day-toggles {
       display: flex;

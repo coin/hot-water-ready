@@ -29,7 +29,17 @@ import {
   todayInHouse,
   clusterWarning,
   weekView,
-  hourChoices,
+  openClock,
+  dialMarks,
+  dialMarkOn,
+  dialHand,
+  dialPick,
+  dialStep,
+  clockHalf,
+  clockTime,
+  typedTime,
+  switchClockMode,
+  DIAL_SIZE,
   uses24Hours,
   wallTime,
   weekHint,
@@ -851,14 +861,6 @@ describe("the time format in the user's profile", () => {
     const evening = { ...tiago, ready_times: [{ id: "r1", time: "21:00", weekdays: [0], enabled: true }] };
     expect(readyTimeRows(evening, "en", false)[0]?.time).toMatch(/^9:00\s?pm$/i);
   });
-
-  it("offers every hour when choosing a time, labelled for the user's clock", () => {
-    expect(hourChoices("pt").map((c) => c.label).slice(0, 2)).toEqual(["00", "01"]);
-    const twelve = hourChoices("en", false);
-    expect(twelve).toHaveLength(24);
-    expect(twelve[21]).toMatchObject({ value: "21" });
-    expect(twelve[21]?.label).toMatch(/^9\s?pm$/i);
-  });
 });
 
 describe("editSheet", () => {
@@ -875,5 +877,97 @@ describe("editSheet", () => {
   it("says it changes a ready time rather than adding one", () => {
     expect(translations.pt["sheet.edit_title"]).toBe("Alterar horário");
     expect(translations.en["sheet.edit_title"]).toBe("Change ready time");
+  });
+});
+
+describe("the time popup", () => {
+  const centre = DIAL_SIZE / 2;
+  // A point on the dial, `fraction` of a turn from the top, `radius` from the centre.
+  const at = (fraction: number, radius: number): [number, number] => [
+    centre + radius * Math.sin(fraction * 2 * Math.PI),
+    centre - radius * Math.cos(fraction * 2 * Math.PI),
+  ];
+
+  it("opens on the dial at the hour, with the time it was given", () => {
+    expect(openClock("06:45", true)).toEqual({
+      hour: 6, minute: 45, part: "hour", mode: "dial", hourText: "06", minuteText: "45", fresh: true,
+    });
+  });
+
+  it("lays out the hours as Android does: 0 to 11 outside, 12 to 23 inside, 0 and 12 at the top", () => {
+    const marks = dialMarks("hour");
+    expect(marks).toHaveLength(24);
+    const zero = marks.find((mark) => mark.value === 0);
+    const twelve = marks.find((mark) => mark.value === 12);
+    const three = marks.find((mark) => mark.value === 3);
+    expect(zero?.x).toBeCloseTo(centre);
+    expect(twelve?.x).toBeCloseTo(centre);
+    expect(twelve?.y).toBeGreaterThan(zero?.y ?? 0);
+    expect(three?.y).toBeCloseTo(centre);
+    expect(three?.x).toBeGreaterThan(centre);
+  });
+
+  it("shows one ring of 12 to 11 on a 12-hour clock, and minutes in fives", () => {
+    expect(dialMarks("hour", false).map((mark) => mark.label).slice(0, 3)).toEqual(["12", "1", "2"]);
+    expect(dialMarks("minute").map((mark) => mark.label).slice(0, 3)).toEqual(["00", "05", "10"]);
+  });
+
+  it("picks the hour of the ring touched, snapping to the nearest number", () => {
+    const clock = openClock("07:00", false);
+    expect(dialPick(clock, ...at(3 / 12 + 0.02, 104)).hour).toBe(3);
+    expect(dialPick(clock, ...at(3 / 12, 68)).hour).toBe(15);
+    expect(dialPick(clock, ...at(0.99, 104)).hour).toBe(0);
+    expect(dialPick(clock, ...at(0, 60))).toMatchObject({ hour: 12, hourText: "12" });
+  });
+
+  it("keeps the morning or afternoon on a 12-hour clock", () => {
+    const evening = openClock("21:00", false, false);
+    expect(dialPick(evening, ...at(3 / 12, 104), false)).toMatchObject({ hour: 15, hourText: "3" });
+    expect(clockHalf(evening, false).hour).toBe(9);
+    expect(dialMarkOn(evening, { value: 9, label: "9", x: 0, y: 0 }, false)).toBe(true);
+  });
+
+  it("takes any of the sixty minutes", () => {
+    const clock = { ...openClock("07:00", false), part: "minute" as const };
+    expect(dialPick(clock, ...at(7 / 60, 90))).toMatchObject({ minute: 7, minuteText: "07" });
+    expect(clockTime(dialPick(clock, ...at(0.5, 90)))).toBe("07:30");
+  });
+
+  it("puts the hand on the inner ring for the afternoon", () => {
+    const afternoon = dialHand(openClock("15:00", false));
+    const morning = dialHand(openClock("03:00", false));
+    expect(afternoon.x).toBeCloseTo(centre + 68);
+    expect(afternoon.y).toBeCloseTo(centre);
+    expect(morning.x).toBeCloseTo(centre + 104);
+    expect(morning.y).toBeCloseTo(centre);
+  });
+
+  it("steps round the clock from the keyboard", () => {
+    expect(dialStep(openClock("23:00", false), 1).hour).toBe(0);
+    expect(dialStep({ ...openClock("07:00", false), part: "minute" }, -1).minute).toBe(59);
+  });
+
+  it("accepts only a real time typed in the boxes", () => {
+    const keys = switchClockMode(openClock("07:05", false));
+    expect(keys).toMatchObject({ mode: "keys", hourText: "07", minuteText: "05" });
+    expect(clockTime({ ...keys, hourText: "6", minuteText: "30" })).toBe("06:30");
+    expect(typedTime({ ...keys, hourText: "24" })).toBeUndefined();
+    expect(typedTime({ ...keys, minuteText: "60" })).toBeUndefined();
+    expect(typedTime({ ...keys, hourText: "" })).toBeUndefined();
+    expect(typedTime({ ...keys, hourText: "7a" })).toBeUndefined();
+  });
+
+  it("reads typed hours on a 12-hour clock with the half of the day chosen", () => {
+    const keys = switchClockMode(openClock("21:00", false, false), false);
+    expect(keys.hourText).toBe("9");
+    expect(typedTime({ ...keys, hourText: "12", minuteText: "00" }, false)).toBe("12:00");
+    expect(typedTime({ ...clockHalf(keys, false), hourText: "12", minuteText: "00" }, false)).toBe("00:00");
+    expect(typedTime({ ...keys, hourText: "0" }, false)).toBeUndefined();
+  });
+
+  it("carries a typed time back to the dial, and keeps the dial's when the typing is not a time", () => {
+    const keys = switchClockMode(openClock("07:00", false));
+    expect(switchClockMode({ ...keys, hourText: "18", minuteText: "20" })).toMatchObject({ mode: "dial", part: "hour", hour: 18, minute: 20 });
+    expect(switchClockMode({ ...keys, hourText: "99" })).toMatchObject({ mode: "dial", hour: 7, minute: 0, hourText: "07" });
   });
 });

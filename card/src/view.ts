@@ -58,17 +58,6 @@ export function wallTime(time: string, language: string, hour24 = true): string 
   return hourMinute(hour, minute, language, hour24);
 }
 
-/** The hours offered when choosing a ready time, labelled as the user reads times. */
-export function hourChoices(language: string, hour24 = true): { value: string; label: string }[] {
-  return Array.from({ length: 24 }, (_, hour) => {
-    const value = String(hour).padStart(2, "0");
-    if (hour24) return { value, label: value };
-    const label = new Intl.DateTimeFormat(localeOf(language), { timeZone: "UTC", hour: "numeric", hourCycle: "h12" })
-      .format(Date.UTC(2000, 0, 1, hour));
-    return { value, label };
-  });
-}
-
 /** A whole hour on its own: "06h" (24 as the end of the day), or "6 am" on a 12-hour clock. */
 export function hourLabel(hour: number, language: string, hour24 = true): string {
   if (hour24) return `${String(hour).padStart(2, "0")}h`;
@@ -83,9 +72,6 @@ export function weekHint(language: string, hour24 = true): string {
     end: hourLabel(DAY_END / 60, language, hour24),
   });
 }
-
-/** The minutes offered when choosing a ready time. */
-export const MINUTE_CHOICES = Array.from({ length: 60 }, (_, minute) => String(minute).padStart(2, "0"));
 
 function formatNumber(value: number, language: string, digits: number): string {
   return new Intl.NumberFormat(localeOf(language), { maximumFractionDigits: digits }).format(value);
@@ -255,6 +241,145 @@ export function editSheet(member: MemberSnapshot, readyTimeId: string): Sheet | 
 
 export function sheetIsComplete(sheet: Sheet): boolean {
   return sheet.time !== "" && sheet.weekdays.length > 0;
+}
+
+/**
+ * The popup that sets a ready time, as Android's clock sets an alarm: a dial first, where the hour
+ * is picked and then the minute, or the time typed in two boxes after the keyboard button.
+ */
+export interface Clock {
+  hour: number;
+  minute: number;
+  part: "hour" | "minute";
+  mode: "dial" | "keys";
+  hourText: string;
+  minuteText: string;
+  /** Opened by "Add": cancelling it drops the new ready time as well. */
+  fresh: boolean;
+}
+
+/** The dial's size, in the units of its viewBox, and the radius of each ring of numbers. */
+export const DIAL_SIZE = 256;
+const DIAL_OUTER = 104;
+const DIAL_INNER = 68;
+
+function pad(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+/** The hour as the header shows it: "07", or "7" on a 12-hour clock. */
+function clockHourText(hour: number, hour24: boolean): string {
+  return hour24 ? pad(hour) : String(hour % 12 || 12);
+}
+
+function clockTexts(clock: Pick<Clock, "hour" | "minute">, hour24: boolean): { hourText: string; minuteText: string } {
+  return { hourText: clockHourText(clock.hour, hour24), minuteText: pad(clock.minute) };
+}
+
+export function openClock(time: string, fresh: boolean, hour24 = true): Clock {
+  const [hour = 7, minute = 0] = time.split(":").map(Number);
+  return { hour, minute, part: "hour", mode: "dial", ...clockTexts({ hour, minute }, hour24), fresh };
+}
+
+export interface DialMark {
+  value: number;
+  label: string;
+  x: number;
+  y: number;
+}
+
+/** Where the twelfth `index` of a turn, from the top clockwise, lies on a ring. */
+function onRing(index: number, radius: number): { x: number; y: number } {
+  const angle = (index * Math.PI) / 6;
+  return { x: DIAL_SIZE / 2 + radius * Math.sin(angle), y: DIAL_SIZE / 2 - radius * Math.cos(angle) };
+}
+
+/**
+ * The numbers on the dial. Hours on a 24-hour clock are two rings, as Android's: 0 to 11 outside
+ * and 12 to 23 inside; on a 12-hour clock one ring, 12 at the top. Minutes go in fives.
+ */
+export function dialMarks(part: Clock["part"], hour24 = true): DialMark[] {
+  const twelve = Array.from({ length: 12 }, (_, index) => index);
+  if (part === "minute") {
+    return twelve.map((index) => ({ value: index * 5, label: pad(index * 5), ...onRing(index, DIAL_OUTER) }));
+  }
+  if (!hour24) return twelve.map((index) => ({ value: index, label: String(index || 12), ...onRing(index, DIAL_OUTER) }));
+  return [
+    ...twelve.map((index) => ({ value: index, label: String(index), ...onRing(index, DIAL_OUTER) })),
+    ...twelve.map((index) => ({ value: index + 12, label: String(index + 12), ...onRing(index, DIAL_INNER) })),
+  ];
+}
+
+/** Whether a mark is the one the clock holds (on a 12-hour clock, the hour's place on the ring). */
+export function dialMarkOn(clock: Clock, mark: DialMark, hour24 = true): boolean {
+  if (clock.part === "minute") return clock.minute === mark.value;
+  return (hour24 ? clock.hour : clock.hour % 12) === mark.value;
+}
+
+/** Where the hand ends for what the clock holds now. */
+export function dialHand(clock: Clock, hour24 = true): { x: number; y: number } {
+  if (clock.part === "minute") {
+    const angle = (clock.minute * Math.PI) / 30;
+    return { x: DIAL_SIZE / 2 + DIAL_OUTER * Math.sin(angle), y: DIAL_SIZE / 2 - DIAL_OUTER * Math.cos(angle) };
+  }
+  return onRing(clock.hour % 12, hour24 && clock.hour >= 12 ? DIAL_INNER : DIAL_OUTER);
+}
+
+/**
+ * The clock after a touch on the dial at (x, y) in viewBox units. Hours snap to the nearest number
+ * and, on a 24-hour clock, to the ring touched; on a 12-hour clock they keep the morning or the
+ * afternoon. Minutes take any of the sixty.
+ */
+export function dialPick(clock: Clock, x: number, y: number, hour24 = true): Clock {
+  const dx = x - DIAL_SIZE / 2;
+  const dy = y - DIAL_SIZE / 2;
+  const turn = (Math.atan2(dx, -dy) / (2 * Math.PI) + 1) % 1;
+  if (clock.part === "minute") {
+    const minute = Math.round(turn * 60) % 60;
+    return { ...clock, minute, minuteText: pad(minute) };
+  }
+  const index = Math.round(turn * 12) % 12;
+  const afternoon = hour24 ? Math.hypot(dx, dy) < (DIAL_OUTER + DIAL_INNER) / 2 : clock.hour >= 12;
+  const hour = index + (afternoon ? 12 : 0);
+  return { ...clock, hour, hourText: clockHourText(hour, hour24) };
+}
+
+/** One step of the dial by keyboard: an hour or a minute forward or back, round the clock. */
+export function dialStep(clock: Clock, step: number, hour24 = true): Clock {
+  if (clock.part === "minute") {
+    const minute = (clock.minute + step + 60) % 60;
+    return { ...clock, minute, minuteText: pad(minute) };
+  }
+  const hour = (clock.hour + step + 24) % 24;
+  return { ...clock, hour, hourText: clockHourText(hour, hour24) };
+}
+
+/** Morning or afternoon on a 12-hour clock, keeping the hour's place on the dial. */
+export function clockHalf(clock: Clock, afternoon: boolean): Clock {
+  return { ...clock, hour: (clock.hour % 12) + (afternoon ? 12 : 0) };
+}
+
+/** What the two boxes say, as "HH:MM"; undefined while they do not make a time. */
+export function typedTime(clock: Clock, hour24 = true): string | undefined {
+  if (!/^\d{1,2}$/.test(clock.hourText) || !/^\d{1,2}$/.test(clock.minuteText)) return undefined;
+  const typed = Number(clock.hourText);
+  const minute = Number(clock.minuteText);
+  if (minute > 59) return undefined;
+  if (hour24) return typed > 23 ? undefined : `${pad(typed)}:${pad(minute)}`;
+  if (typed < 1 || typed > 12) return undefined;
+  return `${pad((typed % 12) + (clock.hour >= 12 ? 12 : 0))}:${pad(minute)}`;
+}
+
+/** The time the popup gives on OK: the dial's, or what was typed. */
+export function clockTime(clock: Clock, hour24 = true): string | undefined {
+  return clock.mode === "keys" ? typedTime(clock, hour24) : `${pad(clock.hour)}:${pad(clock.minute)}`;
+}
+
+/** Between the dial and the boxes; what was typed carries to the dial when it makes a time. */
+export function switchClockMode(clock: Clock, hour24 = true): Clock {
+  if (clock.mode === "dial") return { ...clock, mode: "keys", ...clockTexts(clock, hour24) };
+  const [hour = clock.hour, minute = clock.minute] = typedTime(clock, hour24)?.split(":").map(Number) ?? [];
+  return { ...clock, mode: "dial", part: "hour", hour, minute, ...clockTexts({ hour, minute }, hour24) };
 }
 
 export interface ReadyTimeRow {
