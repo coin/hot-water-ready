@@ -203,6 +203,16 @@ export class HotWaterReadyCard extends LitElement {
     if (saved) this._sheet = undefined; // on an error the sheet stays, with what was typed
   }
 
+  /** Delete, from the sheet of a ready time being changed. */
+  private async _remove(member: MemberSnapshot, readyTimeId: string): Promise<void> {
+    const removed = await this._call({
+      type: "hot_water_ready/ready_time/remove",
+      member_id: member.id,
+      ready_time_id: readyTimeId,
+    });
+    if (removed) this._sheet = undefined;
+  }
+
   protected override render(): unknown {
     const language = this._language;
     if (this._missing) {
@@ -771,18 +781,6 @@ export class HotWaterReadyCard extends LitElement {
                           enabled: (event.target as HTMLInputElement).checked,
                         })}
                     />
-                    <button
-                      class="remove"
-                      aria-label=${localize(language, "list.remove")}
-                      @click=${() =>
-                        this._call({
-                          type: "hot_water_ready/ready_time/remove",
-                          member_id: member.id,
-                          ready_time_id: row.id,
-                        })}
-                    >
-                      ×
-                    </button>
                   `
                 : nothing}
             </div>
@@ -851,6 +849,11 @@ export class HotWaterReadyCard extends LitElement {
           </div>
         </div>
         <div class="actions">
+          ${sheet.id
+            ? html`<button class="remove" @click=${() => this._remove(member, sheet.id ?? "")}>
+                ${localize(language, "sheet.delete")}
+              </button>`
+            : nothing}
           <button class="secondary" @click=${() => (this._sheet = undefined)}>${localize(language, "sheet.cancel")}</button>
           <button class="primary" ?disabled=${!sheetIsComplete(sheet)} @click=${() => this._save(member)}>
             ${localize(language, "sheet.save")}
@@ -1757,13 +1760,12 @@ export class HotWaterReadyCard extends LitElement {
     .row .switch:checked::before {
       left: 24px;
     }
-    .remove {
-      border: 0;
+    /* Delete sits apart from Cancel and Save, on the left, as in Android's alarm editor. */
+    .actions .remove {
+      margin-right: auto;
       background: none;
-      font-size: 20px;
-      color: var(--secondary-text-color);
-      min-width: 32px;
-      min-height: 32px;
+      color: var(--error-color, #c62828);
+      font-weight: 500;
     }
     .add {
       margin: 12px 0;
