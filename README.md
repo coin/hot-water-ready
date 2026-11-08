@@ -41,6 +41,7 @@ Everything else is in the heater's options (*Configure*):
 | Option | What it does |
 |---|---|
 | Keep heating through gaps shorter than | Ready times this close share one heating window, and the heater keeps going between them instead of letting the water cool (default 40 min). |
+| After heat now, keep the water hot for | After the "hot water ready" message, heat now keeps the water between target minus and plus the margin this long, then switches off (default 5 min; 0 stops at the message). On the card, hold the button for half a second, or press ⋯, to pick 5 min to 2 h for that request only. |
 | Use the solar-aware rule | Off by default. Off, the start is worked out from the heater alone and the solar-aware result is only recorded, for the comparison on the card. |
 | Heating rate set by hand | Minutes to raise the water one degree. Empty: learned from the heater's own clean runs (started with the sun down, over 15 min, a rise of more than 3 °C, no water drawn), the median of the last week once there are three. |
 | Tank volume, element power | Both together let the heater heat higher for showers close together that the tank at the normal target cannot carry. The element power also gives the solar comparison its kWh without a power sensor. |
@@ -103,6 +104,13 @@ as possible. Several people can ask; each is told when it is ready. While the he
 *Tell me when it's hot* joins in. Pressing again takes only your own place out: heating stops
 when the last person leaves. It is refused, with the reason, during a fault or while automatic
 control is off.
+
+**Keeping it hot**: after the message the heater keeps the water hot for 5 minutes (an option),
+heating again if it drops to the target minus the margin, then switches off without another
+message. The card shows *Keeping hot until 18:25*. Hold *Heat now* for half a second, or press
+⋯ next to it, to pick 5, 15 or 30 minutes, 1 or 2 hours for that request; when several people
+ask, the longest wins, and someone told later starts the time again. The `heat_now` action takes
+`keep_minutes` for the same.
 
 **Switching off for everyone**: administrators, and the people chosen in the options, also see
 *Switch off the heating…* while it heats, which asks for confirmation and names who loses out.

@@ -85,6 +85,7 @@ describe("HeaterSubscription", () => {
       not_rising_checked: true,
       element_on: false,
       power_w: null,
+      keep_hot_minutes: 5,
       automatic: true,
       heat_now: null,
       today: [],

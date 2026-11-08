@@ -327,7 +327,12 @@ async def test_the_card_knows_an_automation_also_asked(
 
     snapshot = await _snapshot(hass, hass_ws_client, heater, maria_user)
 
-    assert snapshot["heat_now"] == {"requesters": [MARIA], "asked": True, "unnamed": True}
+    assert snapshot["heat_now"] == {
+        "requesters": [MARIA],
+        "asked": True,
+        "unnamed": True,
+        "keep_until": None,
+    }
 
 
 @pytest.mark.parametrize(

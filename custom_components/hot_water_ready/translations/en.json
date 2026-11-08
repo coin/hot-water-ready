@@ -213,6 +213,7 @@
         "title": "Heater settings",
         "data": {
           "keep_heating_gap_minutes": "Keep heating through gaps shorter than",
+          "keep_hot_minutes": "After heat now, keep the water hot for",
           "solar_aware": "Use the solar-aware rule",
           "heating_rate": "Heating rate set by hand (optional)",
           "tank_litres": "Tank volume (optional)",
@@ -226,6 +227,7 @@
         },
         "data_description": {
           "keep_heating_gap_minutes": "Ready times this close share one window and the heater keeps heating through, instead of letting the water cool in between.",
+          "keep_hot_minutes": "Counted from the \"hot water ready\" message; meanwhile the water is kept between the target minus and plus the margin. 0: stop at the message. Holding the card's button picks another time for that request, up to 120 minutes.",
           "cancel_people": "Besides the administrators. Whoever asked may always cancel their own request.",
           "rich_notifications": "On phones with the Home Assistant app, \"Hot water ready\" replaces \"heating\" instead of arriving as a second message.",
           "power_sensor": "With a power sensor, a heater that draws nothing and a relay stuck on are noticed too.",
@@ -385,6 +387,10 @@
         "member": {
           "name": "Member",
           "description": "Who to tell when it is ready."
+        },
+        "keep_minutes": {
+          "name": "Keep hot for",
+          "description": "Minutes to keep the water hot after the message. Empty: the heater's setting."
         }
       }
     },

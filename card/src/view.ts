@@ -23,6 +23,8 @@ export interface HeaterView {
   subline: string;
   /** The heater on or off and what it draws, as version 1's card; empty when unknown. */
   element: string;
+  /** "A manter a água quente até às 18:25" after a heat-now message; empty otherwise. */
+  keepHot: string;
   /** Ring fill, 0 to 1. */
   fill: number;
   tone: Status;
@@ -203,6 +205,7 @@ export function heaterView(heater: HeaterSnapshot, context: ViewContext): Heater
     headline: headlineOf(heater, context),
     subline: sublineOf(heater, context),
     element: elementOf(heater, language),
+    keepHot: keepHotLine(heater, context),
     fill: temperature === null || target <= 0 ? 0 : Math.min(1, Math.max(0, temperature / target)),
     tone: heater.status,
   };
@@ -395,6 +398,42 @@ export function heatNowActions(heater: HeaterSnapshot): HeatNowAction[] {
   if (request === null && heater.heating_for.some((entry) => entry.member === heater.me)) return [];
   const heating = heater.status === "heating" || request !== null;
   return [{ message: { type: START }, label: heating ? "heat_now.join" : "heat_now.start" }];
+}
+
+/** Holding "Aquecer agora" (or "Avisar-me") opens the choice of how long to keep it hot. */
+export function choosesKeepTime(action: HeatNowAction): boolean {
+  return action.message.type === START;
+}
+
+/** How long a press must last to open the choice; Home Assistant's own hold is about this. */
+export const HOLD_MS = 500;
+
+/** The times offered after a hold, in minutes; the heater's default joins them if missing. */
+export const KEEP_HOT_CHOICES = [5, 15, 30, 60, 120];
+
+export interface KeepHotChoice {
+  minutes: number;
+  label: string;
+  /** The heater's own time, picked when the choice opens. */
+  isDefault: boolean;
+}
+
+export function keepHotChoices(heater: HeaterSnapshot, language: string): KeepHotChoice[] {
+  const fallback = heater.keep_hot_minutes;
+  const minutes = [...new Set([...KEEP_HOT_CHOICES, fallback])].sort((a, b) => a - b);
+  return minutes.map((value) => ({
+    minutes: value,
+    label:
+      value >= 60 && value % 60 === 0
+        ? localize(language, "keep_hot.hours", { n: formatNumber(value / 60, language, 0) })
+        : localize(language, "keep_hot.minutes", { n: formatNumber(value, language, 0) }),
+    isDefault: value === fallback,
+  }));
+}
+
+function keepHotLine(heater: HeaterSnapshot, context: ViewContext): string {
+  const until = heater.heat_now?.keep_until;
+  return until ? localize(context.language, "keep_hot.until", { time: clock(until, context) }) : "";
 }
 
 export const SWITCH_OFF_COMMAND = "hot_water_ready/switch_off";

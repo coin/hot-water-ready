@@ -25,6 +25,7 @@ COLOURS: Final = ("blue", "green", "orange", "purple", "red", "teal", "pink", "b
 
 # Options
 CONF_KEEP_HEATING_GAP: Final = "keep_heating_gap_minutes"
+CONF_KEEP_HOT: Final = "keep_hot_minutes"  # heat now: how long to keep it hot after the message
 # Who may switch off for everyone besides admins; stored under its first name, "cancel_people".
 CONF_SWITCH_OFF_PEOPLE: Final = "cancel_people"
 CONF_RICH_NOTIFICATIONS: Final = "rich_notifications"

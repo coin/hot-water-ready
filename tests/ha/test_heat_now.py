@@ -274,7 +274,13 @@ async def test_card_sees_who_asked_and_whether_it_may_cancel(
     await client.receive_json()
     snapshot = (await client.receive_json())["event"]
 
-    assert snapshot["heat_now"] == {"requesters": [TIAGO], "asked": False, "unnamed": False}
+    assert snapshot["heat_now"] == {
+        "requesters": [TIAGO],
+        "asked": False,
+        "unnamed": False,
+        "keep_until": None,
+    }
+    assert snapshot["keep_hot_minutes"] == 5
     assert snapshot["viewer"] == MARIA
     assert snapshot["can_switch_off"] is False
 
@@ -366,3 +372,107 @@ async def test_cancelling_when_nothing_is_running_is_no_error(
     cancel = {"type": "hot_water_ready/heat_now/cancel", "entry_id": heater.entry_id}
 
     assert (await _ws(hass, hass_ws_client, cancel, maria_user))["success"]
+
+
+async def test_after_the_message_it_keeps_heating_for_five_minutes_then_stops(
+    hass: HomeAssistant,
+    heater: MockConfigEntry,
+    maria_user: MockUser,
+    phones: dict[str, str],
+    sent: list[ServiceCall],
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    _water(hass, 40.0)
+    await _press(hass, maria_user)
+    hass.states.async_set(SWITCH, "on")
+    _water(hass, 42.1)  # told; a shower then keeps the water from reaching 43
+    await hass.async_block_till_done()
+    assert len(sent) == 1
+
+    freezer.tick(timedelta(minutes=4))
+    _water(hass, 41.6)
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.cylinder_status").state == "heating"
+
+    freezer.tick(timedelta(minutes=1, seconds=30))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.cylinder_status").state != "heating"
+    assert len(sent) == 1  # no message when the time is up
+
+
+async def test_the_card_chooses_how_long_to_keep_it_hot(
+    hass: HomeAssistant,
+    heater: MockConfigEntry,
+    hass_ws_client: WebSocketGenerator,
+    maria_user: MockUser,
+    sent: list[ServiceCall],
+) -> None:
+    _water(hass, 42.0)
+    reply = await _ws(
+        hass,
+        hass_ws_client,
+        {
+            "type": "hot_water_ready/heat_now/start",
+            "entry_id": heater.entry_id,
+            "keep_minutes": 30,
+        },
+        maria_user,
+    )
+    assert reply["success"], reply
+    await hass.async_block_till_done()
+
+    heat_now = heater.runtime_data.snapshot(maria_user)["heat_now"]
+    assert heat_now["keep_until"] == "2026-11-02T05:30:00+00:00"
+
+
+async def test_the_card_cannot_ask_for_more_than_two_hours(
+    hass: HomeAssistant,
+    heater: MockConfigEntry,
+    hass_ws_client: WebSocketGenerator,
+    maria_user: MockUser,
+    sent: list[ServiceCall],
+) -> None:
+    _water(hass, 40.0)
+    reply = await _ws(
+        hass,
+        hass_ws_client,
+        {
+            "type": "hot_water_ready/heat_now/start",
+            "entry_id": heater.entry_id,
+            "keep_minutes": 121,
+        },
+        maria_user,
+    )
+
+    assert reply["error"]["code"] == "invalid_format"
+    assert heater.runtime_data.snapshot(maria_user)["heat_now"] is None
+
+
+async def test_an_automation_chooses_how_long_to_keep_it_hot(
+    hass: HomeAssistant, heater: MockConfigEntry, sent: list[ServiceCall]
+) -> None:
+    _water(hass, 42.0)
+    await hass.services.async_call(
+        DOMAIN,
+        "heat_now",
+        {"heater": heater.entry_id, "keep_minutes": 15},
+        blocking=True,
+        context=Context(),
+    )
+    await hass.async_block_till_done()
+
+    heat_now = heater.runtime_data._controller.state.heat_now
+    assert heat_now is not None
+    assert heat_now.keep_minutes == 15
+
+
+async def test_the_default_time_is_an_option(hass: HomeAssistant, heater: MockConfigEntry) -> None:
+    result = await hass.config_entries.options.async_init(heater.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"keep_hot_minutes": 10}
+    )
+    await hass.async_block_till_done()
+
+    assert heater.options["keep_hot_minutes"] == 10
+    assert heater.runtime_data._controller.settings.keep_hot_minutes == 10

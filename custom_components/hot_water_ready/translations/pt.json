@@ -213,6 +213,7 @@
         "title": "Definições do aquecedor",
         "data": {
           "keep_heating_gap_minutes": "Continuar a aquecer em intervalos menores do que",
+          "keep_hot_minutes": "Depois de \"Aquecer agora\", manter a água quente durante",
           "solar_aware": "Usar a regra solar",
           "heating_rate": "Ritmo de aquecimento definido à mão (opcional)",
           "tank_litres": "Volume do depósito (opcional)",
@@ -226,6 +227,7 @@
         },
         "data_description": {
           "keep_heating_gap_minutes": "Horários assim próximos partilham uma janela e o aquecedor continua a aquecer, em vez de deixar a água arrefecer entre eles.",
+          "keep_hot_minutes": "Conta a partir da mensagem \"água quente pronta\"; entretanto a água fica entre o alvo menos e mais a margem. 0: pára com a mensagem. Manter o botão do cartão premido escolhe outro tempo para esse pedido, até 120 minutos.",
           "cancel_people": "Além dos administradores. Quem pediu pode sempre cancelar o seu próprio pedido.",
           "rich_notifications": "Nos telemóveis com a aplicação Home Assistant, \"Duche pronto\" substitui \"a aquecer\" em vez de chegar como segunda mensagem.",
           "power_sensor": "Com um sensor de potência, também se detectam um aquecedor que não consome e um relé preso ligado.",
@@ -385,6 +387,10 @@
         "member": {
           "name": "Membro",
           "description": "Quem avisar quando estiver pronta."
+        },
+        "keep_minutes": {
+          "name": "Manter quente durante",
+          "description": "Minutos a manter a água quente depois da mensagem. Vazio: o valor definido no aquecedor."
         }
       }
     },

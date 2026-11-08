@@ -29,6 +29,7 @@ from .const import (
     CONF_HEATER_TYPE,
     CONF_HEATING_RATE,
     CONF_KEEP_HEATING_GAP,
+    CONF_KEEP_HOT,
     CONF_MAX_TEMPERATURE,
     CONF_NOTIFY_TARGETS,
     CONF_PERSON,
@@ -46,7 +47,7 @@ from .const import (
     HEATER_SWITCH,
     SUBENTRY_MEMBER,
 )
-from .core.controller import Settings
+from .core.controller import MAX_KEEP_HOT_MINUTES, Settings
 from .core.faults import FaultSettings
 
 
@@ -352,6 +353,18 @@ class HeaterOptionsFlow(OptionsFlow):
                         min=0,
                         max=180,
                         step=5,
+                        unit_of_measurement="min",
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
+                ),
+                probatio.Required(
+                    CONF_KEEP_HOT,
+                    default=options.get(CONF_KEEP_HOT, Settings().keep_hot_minutes),
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0,
+                        max=MAX_KEEP_HOT_MINUTES,
+                        step=1,
                         unit_of_measurement="min",
                         mode=selector.NumberSelectorMode.BOX,
                     )

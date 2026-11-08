@@ -10,6 +10,12 @@ heat_now:
         device:
           integration: hot_water_ready
           model: Member
+    keep_minutes:
+      selector:
+        number:
+          min: 0
+          max: 120
+          unit_of_measurement: min
 add_ready_time:
   fields:
     member:

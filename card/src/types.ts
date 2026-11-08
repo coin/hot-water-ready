@@ -75,14 +75,17 @@ export interface HeaterSnapshot {
   power_w: number | null;
   /** Off: the heater is run by hand. */
   automatic: boolean;
+  /** How long heat now keeps the water hot after the message unless the asker picks a time. */
+  keep_hot_minutes: number;
   /** Whether this viewer may ask for heat now (members and admins). */
   can_ask_heat_now: boolean;
   /**
    * The heat-now request, if one is running. `requesters` are member ids or person entities;
    * `asked` is whether the viewer is one of them; `unnamed` whether an automation asked too,
-   * which keeps it heating after the last person leaves.
+   * which keeps it heating after the last person leaves. `keep_until` is when it stops keeping
+   * the water hot, once someone has been told; null before.
    */
-  heat_now: { requesters: string[]; asked: boolean; unnamed: boolean } | null;
+  heat_now: { requesters: string[]; asked: boolean; unnamed: boolean; keep_until: string | null } | null;
   /** The viewer as the heater knows them: their member id, else their person; null for neither. */
   viewer: string | null;
   /** Whether this viewer may switch the heater off for everyone (admins and the people listed). */

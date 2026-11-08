@@ -15,6 +15,7 @@ from .parsing import aware_datetime, flag, name_list, number, optional_aware_dat
 
 # The probe reads in 0.1 C steps; compare with a little slack so 43.0 counts as reaching 43.
 _EPSILON = 1e-6
+MAX_KEEP_HOT_MINUTES = 120.0  # the longest heat now keeps the water hot after the message
 
 
 @dataclass(frozen=True)
@@ -28,6 +29,7 @@ class Settings:
     lead_cap_minutes: float = 240.0
     grace_minutes: float = 15.0
     keep_heating_gap_minutes: float = 40.0
+    keep_hot_minutes: float = 5.0  # heat now keeps the band this long after the message
     solar_aware: bool = False  # apply the solar-aware lead (spec 4.3); off, it is only recorded
     tank: Tank | None = None  # with it, a cluster the store cannot carry heats higher (spec 4.5)
 
@@ -88,6 +90,10 @@ class HeatNow:
     requesters: frozenset[str]
     told: frozenset[str] = frozenset()
     starting: bool = True  # pressed, not yet looked at by a step
+    # How long to keep the water hot after the message: the longest anyone asked for.
+    keep_minutes: float = 0.0
+    # Until when; set when someone is told, and moved on when someone else is told later.
+    keep_until: datetime | None = None
 
 
 @dataclass
@@ -124,6 +130,10 @@ class ControllerState:
                 "requesters": sorted(heat_now.requesters),
                 "told": sorted(heat_now.told),
                 "starting": heat_now.starting,
+                "keep_minutes": heat_now.keep_minutes,
+                "keep_until": None
+                if heat_now.keep_until is None
+                else heat_now.keep_until.isoformat(),
             },
             "told": sorted([member, at.isoformat()] for member, at in self.told),
             "told_heating": sorted([member, at.isoformat()] for member, at in self.told_heating),
@@ -184,6 +194,9 @@ class ControllerState:
                 requesters=name_list(raw_now["requesters"]),
                 told=name_list(raw_now["told"]),
                 starting=flag(raw_now["starting"]),
+                # Saved by earlier versions, before the time to keep it hot existed.
+                keep_minutes=number(raw_now.get("keep_minutes", Settings.keep_hot_minutes)),
+                keep_until=optional_aware_datetime(raw_now.get("keep_until")),
             )
         return cls(
             window=window,
@@ -343,14 +356,20 @@ class Controller:
         self.settings = settings
         self.state = state or ControllerState()
 
-    def request_heat_now(self, now: datetime, requester: str) -> None:
+    def request_heat_now(
+        self, now: datetime, requester: str, keep_minutes: float | None = None
+    ) -> None:
         """Someone asks for hot water now, or joins a request already running.
 
-        The request ends when everyone who asked has been told and the band has finished, when
-        it is cancelled, or after the lead cap plus the lead margin, like version 1.
+        After the message the band keeps the water hot for `keep_minutes` (the settings' time
+        when None, at most two hours); with several people the longest wins. The request ends
+        when everyone who asked has been told and that time is up, when it is cancelled, or,
+        while nobody has been told yet, after the lead cap plus the lead margin, like version 1.
         """
         now = now.astimezone(UTC)
         settings = self.settings
+        keep = settings.keep_hot_minutes if keep_minutes is None else keep_minutes
+        keep = min(max(keep, 0.0), MAX_KEEP_HOT_MINUTES)
         heat_now = self.state.heat_now
         if heat_now is None:
             limit = timedelta(minutes=settings.lead_cap_minutes + settings.lead_margin_minutes)
@@ -359,9 +378,11 @@ class Controller:
                 deadline=now + limit,
                 target=settings.target,
                 requesters=frozenset({requester}),
+                keep_minutes=keep,
             )
         else:
             heat_now.requesters |= {requester}
+            heat_now.keep_minutes = max(heat_now.keep_minutes, keep)
 
     def withdraw_heat_now(self, requester: str) -> None:
         """One person no longer wants heat now; the request ends when nobody is left."""
@@ -447,7 +468,7 @@ class Controller:
             if state.window is not None:
                 self._tell_window(state.window, temperature, events)
                 self._close_if_done(now)  # a window past its end closes the moment it is ready
-            self._tell_heat_now(temperature, events)
+            self._tell_heat_now(now, temperature, events)
         else:
             state.heating = False
         return Decision(relay_on=state.heating, events=self._once(events))
@@ -534,22 +555,30 @@ class Controller:
         if temperature < self.settings.target - _EPSILON:
             self.state.heating = True  # a request below the target heats to target + margin
 
-    def _tell_heat_now(self, temperature: float, events: list[ControllerEvent]) -> None:
+    def _tell_heat_now(
+        self, now: datetime, temperature: float, events: list[ControllerEvent]
+    ) -> None:
         heat_now = self.state.heat_now
         if heat_now is None:
             return
         waiting = heat_now.requesters - heat_now.told
         if waiting and temperature >= self.settings.target - _EPSILON:
             heat_now.told |= waiting
+            # The time starts at the message, and starts again for whoever is told later.
+            restart = now + timedelta(minutes=heat_now.keep_minutes)
+            if heat_now.keep_until is None or restart > heat_now.keep_until:
+                heat_now.keep_until = restart
             events.append(
                 ControllerEvent("heat_now_ready", heat_now.started_at, waiting, temperature)
             )
-        if heat_now.told >= heat_now.requesters and not self.state.heating:
-            self.state.heat_now = None  # everyone told and the band has finished
+        keep_until = heat_now.keep_until
+        if heat_now.told >= heat_now.requesters and keep_until is not None and now >= keep_until:
+            self.cancel_heat_now()  # everyone told and the time is up, even mid-band
 
     def _time_out_heat_now(self, now: datetime, events: list[ControllerEvent]) -> None:
         heat_now = self.state.heat_now
-        if heat_now is None or now < heat_now.deadline:
+        # Once someone is told, the time to keep it hot ends the request instead.
+        if heat_now is None or now < heat_now.deadline or heat_now.keep_until is not None:
             return
         waiting = heat_now.requesters - heat_now.told
         if waiting:

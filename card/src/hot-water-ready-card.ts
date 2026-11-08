@@ -14,6 +14,9 @@ import {
   faultBanner,
   greeting,
   heatNowActions,
+  choosesKeepTime,
+  keepHotChoices,
+  HOLD_MS,
   heaterView,
   houseTodayChips,
   listHeader,
@@ -40,6 +43,7 @@ import {
   type ReadyTimeRow,
   type Stepper,
   type ViewContext,
+  type HeatNowAction,
   type WeekView,
 } from "./view";
 
@@ -59,6 +63,8 @@ export class HotWaterReadyCard extends LitElement {
     _sheet: { state: true },
     _settingsOpen: { state: true },
     _offOpen: { state: true },
+    _keep: { state: true },
+    _holding: { state: true },
     _tab: { state: true },
     _focus: { state: true },
     _error: { state: true },
@@ -73,6 +79,13 @@ export class HotWaterReadyCard extends LitElement {
   private _settingsOpen = false;
   /** The "Desligar o aquecimento?" confirmation is open. */
   private _offOpen = false;
+  /** The choice of how long to keep it hot, open for the button that was held, and the time picked. */
+  private _keep: { action: HeatNowAction; minutes: number } | undefined;
+  /** The button is being held: its fill runs while the hold lasts. */
+  private _holding = false;
+  private _holdTimer: number | undefined;
+  /** The hold opened the choice, so the click that ends it must not also send the request. */
+  private _held = false;
   private _tab: Tab = "people";
   /** The person highlighted on the week, if any. */
   private _focus: string | undefined;
@@ -133,6 +146,9 @@ export class HotWaterReadyCard extends LitElement {
     if (changed.has("_offOpen") && this._offOpen) {
       // Focus starts on "Cancelar", never on the action that cannot be undone.
       this.renderRoot.querySelector<HTMLButtonElement>(".off-keep")?.focus();
+    }
+    if (changed.has("_keep") && this._keep && !changed.get("_keep")) {
+      this.renderRoot.querySelector<HTMLButtonElement>(".keep-chip.on")?.focus();
     }
   }
 
@@ -206,6 +222,7 @@ export class HotWaterReadyCard extends LitElement {
             `}
         ${this._error ? html`<div class="error" role="alert">${this._error}</div>` : nothing}
         ${this._offOpen ? this._renderSwitchOff(heater) : nothing}
+        ${this._keep ? this._renderKeepHot(heater, this._keep) : nothing}
       </ha-card>
     `;
   }
@@ -319,6 +336,7 @@ export class HotWaterReadyCard extends LitElement {
           <div class="headline ${view.tone}">${view.headline}</div>
           ${view.subline ? html`<div class="subline">${view.subline}</div>` : nothing}
           ${view.element ? html`<div class="subline">${view.element}</div>` : nothing}
+          ${view.keepHot ? html`<div class="subline">${view.keepHot}</div>` : nothing}
         </div>
         <div class="heat-now">
           ${switchOffShown(heater)
@@ -326,16 +344,121 @@ export class HotWaterReadyCard extends LitElement {
                 ${localize(this._language, "switch_off.link")}
               </button>`
             : nothing}
-          ${heatNowActions(heater).map(
-            (item) => html`<button
-              class="primary"
-              @click=${() => {
-                void this._call(item.message);
-              }}
-            >
-              ${localize(this._language, item.label)}
-            </button>`,
+          ${heatNowActions(heater).map((item) =>
+            choosesKeepTime(item)
+              ? html`<button
+                    class="primary holdable ${this._holding ? "holding" : ""}"
+                    @pointerdown=${() => {
+                      this._holdStart(item);
+                    }}
+                    @pointerup=${this._holdEnd}
+                    @pointerleave=${this._holdEnd}
+                    @pointercancel=${this._holdEnd}
+                    @contextmenu=${(event: Event) => {
+                      event.preventDefault();
+                    }}
+                    @click=${() => {
+                      if (this._held) {
+                        this._held = false;
+                        return;
+                      }
+                      void this._call(item.message);
+                    }}
+                  >
+                    ${localize(this._language, item.label)}
+                  </button>
+                  <button
+                    class="keep-more"
+                    aria-label=${localize(this._language, "keep_hot.more")}
+                    title=${localize(this._language, "keep_hot.more")}
+                    @click=${() => {
+                      this._openKeep(item);
+                    }}
+                  >
+                    ⋯
+                  </button>`
+              : html`<button
+                  class="primary"
+                  @click=${() => {
+                    void this._call(item.message);
+                  }}
+                >
+                  ${localize(this._language, item.label)}
+                </button>`,
           )}
+        </div>
+      </div>
+    `;
+  }
+
+  private _holdStart(action: HeatNowAction): void {
+    this._held = false;
+    this._holding = true;
+    window.clearTimeout(this._holdTimer);
+    this._holdTimer = window.setTimeout(() => {
+      this._holding = false;
+      this._held = true;
+      this._openKeep(action);
+    }, HOLD_MS);
+  }
+
+  private readonly _holdEnd = (): void => {
+    window.clearTimeout(this._holdTimer);
+    this._holding = false;
+  };
+
+  private _openKeep(action: HeatNowAction): void {
+    if (!this._heater) return;
+    this._keep = { action, minutes: this._heater.keep_hot_minutes };
+  }
+
+  /** How long to keep it hot after the message: the heater's time picked, the action's label to send. */
+  private _renderKeepHot(heater: HeaterSnapshot, keep: { action: HeatNowAction; minutes: number }): unknown {
+    const language = this._language;
+    const close = () => {
+      this._keep = undefined;
+      // The finger that held may lift over the sheet, so the button never sees its click.
+      this._held = false;
+    };
+    return html`
+      <div
+        class="off-overlay"
+        @click=${(event: Event) => {
+          if (event.target === event.currentTarget) close();
+        }}
+      >
+        <div
+          class="off-sheet"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="keep-title"
+          @keydown=${(event: KeyboardEvent) => {
+            if (event.key === "Escape") close();
+          }}
+        >
+          <div class="off-title" id="keep-title">${localize(language, "keep_hot.title")}</div>
+          <p>${localize(language, "keep_hot.hint")}</p>
+          <div class="keep-chips" role="radiogroup" aria-labelledby="keep-title">
+            ${keepHotChoices(heater, language).map(
+              (choice) => html`<button
+                class="keep-chip ${choice.minutes === keep.minutes ? "on" : ""}"
+                role="radio"
+                aria-checked=${choice.minutes === keep.minutes}
+                @click=${() => (this._keep = { ...keep, minutes: choice.minutes })}
+              >
+                ${choice.label}
+              </button>`,
+            )}
+          </div>
+          <button
+            class="keep-start primary"
+            @click=${async () => {
+              if (await this._call({ ...keep.action.message, keep_minutes: keep.minutes })) close();
+            }}
+          >
+            ${localize(language, keep.action.label)}
+          </button>
+          <button class="off-keep" @click=${close}>${localize(language, "keep_hot.cancel")}</button>
         </div>
       </div>
     `;
@@ -1586,6 +1709,65 @@ export class HotWaterReadyCard extends LitElement {
     }
     .primary[disabled] {
       opacity: 0.5;
+    }
+    /* Held for HOLD_MS, the fill crosses the button and the choice of time opens. */
+    .holdable {
+      position: relative;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      touch-action: manipulation;
+    }
+    .holdable::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.3);
+      transform: scaleX(0);
+      transform-origin: left;
+      pointer-events: none;
+    }
+    .holdable.holding::after {
+      transform: scaleX(1);
+      transition: transform 500ms linear;
+    }
+    .heat-now .keep-more {
+      min-width: 40px;
+      padding: 0 8px;
+      background: var(--secondary-background-color, rgba(127, 127, 127, 0.15));
+      color: var(--primary-text-color);
+      font-size: 18px;
+      line-height: 1;
+    }
+    .keep-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .keep-chip {
+      min-height: 44px;
+      min-width: 64px;
+      padding: 0 14px;
+      border-radius: 22px;
+      border: 1px solid var(--divider-color, #c5cad1);
+      background: none;
+      color: var(--primary-text-color);
+      font-size: 15px;
+      font-weight: 500;
+    }
+    .keep-chip.on {
+      border-color: var(--primary-color);
+      background: var(--primary-color);
+      color: var(--text-primary-color, #fff);
+    }
+    .keep-start {
+      margin-top: 6px;
+      min-height: 48px;
+      border: 0;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
     }
     .secondary {
       background: var(--secondary-background-color, rgba(127, 127, 127, 0.15));

@@ -73,9 +73,9 @@ class Cylinder:
             window = None if state.window is None else state.window.ready_at
             self.toggles.append(Toggle(self.now, self.relay, probe_value, in_window, window))
 
-    def heat_now(self, requester: str) -> None:
+    def heat_now(self, requester: str, keep_minutes: float | None = None) -> None:
         """Someone presses "Aquecer agora"; Home Assistant steps at once."""
-        self.controller.request_heat_now(self.now, requester)
+        self.controller.request_heat_now(self.now, requester, keep_minutes)
         self.step()
 
     def cancel_heat_now(self) -> None:

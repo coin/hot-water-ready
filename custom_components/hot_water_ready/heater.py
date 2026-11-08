@@ -34,6 +34,7 @@ from .const import (
     CONF_HEATER_TYPE,
     CONF_HEATING_RATE,
     CONF_KEEP_HEATING_GAP,
+    CONF_KEEP_HOT,
     CONF_MAX_TEMPERATURE,
     CONF_NOTIFY_TARGETS,
     CONF_PERSON,
@@ -280,6 +281,7 @@ class Heater:
             keep_heating_gap_minutes=float(
                 options.get(CONF_KEEP_HEATING_GAP, Settings().keep_heating_gap_minutes)
             ),
+            keep_hot_minutes=float(options.get(CONF_KEEP_HOT, Settings().keep_hot_minutes)),
             solar_aware=self.solar_aware,
             tank=self._tank(),
         )
@@ -674,16 +676,17 @@ class Heater:
     def has_asked_heat_now(self, user: User | None) -> bool:
         return self.requester_key(user) in self.heat_now_requesters
 
-    async def async_heat_now(self, requester: str) -> None:
+    async def async_heat_now(self, requester: str, keep_minutes: float | None = None) -> None:
         """Ask for hot water now, or join the request already running.
 
+        `keep_minutes` is how long to keep it hot after the message; None takes the option's.
         Refused, with the reason, while a fault stops heating (spec 4.6).
         """
         if blocking := self.faults & BLOCKING:
             raise HeatNowRefusedError(blocking)
         if not self.automatic:
             raise HeatNowRefusedError(frozenset())  # nothing would switch the heater on
-        self._controller.request_heat_now(dt_util.now(), requester)
+        self._controller.request_heat_now(dt_util.now(), requester, keep_minutes)
         await self._async_saved_and_stepped()
 
     async def async_cancel_heat_now(self, requester: str | None = None) -> None:
@@ -1077,6 +1080,7 @@ class Heater:
             "power_w": self._number(self._power_sensor),
             "heat_now_blocked": bool(self.faults & BLOCKING),
             "automatic": self.automatic,
+            "keep_hot_minutes": self._controller.settings.keep_hot_minutes,
             "heat_now": None
             if (heat_now := self._controller.state.heat_now) is None
             else {
@@ -1084,6 +1088,9 @@ class Heater:
                 "asked": self.has_asked_heat_now(user),
                 # An automation's request names nobody: it keeps heating after the last person.
                 "unnamed": NOBODY in heat_now.requesters,
+                "keep_until": None
+                if heat_now.keep_until is None
+                else dt_util.as_local(heat_now.keep_until).isoformat(),
             },
             "viewer": self.requester_key(user) or None,
             "can_switch_off": self.can_switch_off(user),

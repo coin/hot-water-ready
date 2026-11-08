@@ -13,16 +13,24 @@ from homeassistant.helpers import config_validation as cv, device_registry as dr
 import probatio
 
 from .const import DOMAIN
+from .core.controller import MAX_KEEP_HOT_MINUTES
 from .entity import async_calling_user, member_device_identifier
 from .heater import AwayDateInThePastError, Heater, HeatNowRefusedError
 
 WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 ATTR_HEATER = "heater"
 ATTR_MEMBER = "member"
+ATTR_KEEP_MINUTES = "keep_minutes"
 
 SWITCH_OFF_SCHEMA = probatio.Schema({probatio.Required(ATTR_HEATER): cv.string})
 HEAT_NOW_SCHEMA = probatio.Schema(
-    {probatio.Required(ATTR_HEATER): cv.string, probatio.Optional(ATTR_MEMBER): cv.string}
+    {
+        probatio.Required(ATTR_HEATER): cv.string,
+        probatio.Optional(ATTR_MEMBER): cv.string,
+        probatio.Optional(ATTR_KEEP_MINUTES): probatio.All(
+            probatio.Coerce(float), probatio.Range(min=0, max=MAX_KEEP_HOT_MINUTES)
+        ),
+    }
 )
 ADD_SCHEMA = probatio.Schema(
     {
@@ -113,7 +121,7 @@ async def _heat_now(call: ServiceCall) -> None:
             raise _error("member_not_found")
         await _require_editor(call, heater, requester)  # telling someone is acting for them
     try:
-        await heater.async_heat_now(requester)
+        await heater.async_heat_now(requester, call.data.get(ATTR_KEEP_MINUTES))
     except HeatNowRefusedError as err:
         raise HomeAssistantError(await heater.async_refusal_message(err)) from err
 

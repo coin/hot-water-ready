@@ -23,6 +23,7 @@ from .const import (
     MIN_TARGET,
     signal_heater_updated,
 )
+from .core.controller import MAX_KEEP_HOT_MINUTES
 from .heater import (
     AwayDateInThePastError,
     Heater,
@@ -278,6 +279,9 @@ async def ws_set_away(
     {
         probatio.Required("type"): f"{DOMAIN}/heat_now/start",
         probatio.Required("entry_id"): str,
+        probatio.Optional("keep_minutes"): probatio.All(
+            probatio.Coerce(float), probatio.Range(min=0, max=MAX_KEEP_HOT_MINUTES)
+        ),
     }
 )
 @websocket_api.async_response
@@ -295,7 +299,7 @@ async def ws_heat_now(
         )
         return
     try:
-        await heater.async_heat_now(heater.requester_key(connection.user))
+        await heater.async_heat_now(heater.requester_key(connection.user), msg.get("keep_minutes"))
     except HeatNowRefusedError as err:
         connection.send_error(msg["id"], "refused", await heater.async_refusal_message(err))
         return
