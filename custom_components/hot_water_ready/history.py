@@ -38,6 +38,7 @@ async def async_samples(
     end: datetime,
     *,
     middle: str | None = None,
+    weights: tuple[float, float] = (0.5, 0.5),
 ) -> list[Sample]:
     """The water temperature and whether it was heating, at every change between the two times.
 
@@ -79,12 +80,18 @@ async def async_samples(
             lower = _number(state)
         else:
             heating = actuator.heating_in(state)
-        samples.append((max(at, start), lead_water(top, lower), heating))
+        samples.append((max(at, start), lead_water(top, lower, weights), heating))
     return samples
 
 
-def lead_water(top: float | None, middle: float | None) -> float | None:
-    """The temperature the lead is worked out from: the top, or the probes' mean when colder."""
+def lead_water(
+    top: float | None, middle: float | None, weights: tuple[float, float] = (0.5, 0.5)
+) -> float | None:
+    """The temperature the lead is worked out from: the top, or the probes' mean when colder.
+
+    The mean is weighted by how much of the heated water each probe stands for
+    (`core.rate.probe_weights`); half each without the probes' heights.
+    """
     if top is None or middle is None:
         return top
-    return min(top, (top + middle) / 2)
+    return min(top, weights[0] * top + weights[1] * middle)

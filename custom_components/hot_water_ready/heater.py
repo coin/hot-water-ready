@@ -37,6 +37,7 @@ from .const import (
     CONF_KEEP_HEATING_GAP,
     CONF_KEEP_HOT,
     CONF_MAX_TEMPERATURE,
+    CONF_MIDDLE_PROBE_HEIGHT,
     CONF_MIDDLE_SENSOR,
     CONF_NOTIFY_TARGETS,
     CONF_PERSON,
@@ -49,6 +50,7 @@ from .const import (
     CONF_TANK_LITRES,
     CONF_TANK_ORIENTATION,
     CONF_TEMPERATURE_SENSOR,
+    CONF_TOP_PROBE_HEIGHT,
     DEFAULT_MAX_TEMPERATURE,
     DOMAIN,
     HEATER_CLIMATE,
@@ -80,6 +82,7 @@ from .core.rate import (
     RateLearner,
     heated_fraction,
     physics_rate,
+    probe_weights,
     rate_in_use,
     rate_source,
     replay,
@@ -457,7 +460,22 @@ class Heater:
         middle = self.middle_temperature
         if self._probes.state.suspect & {Probe.MIDDLE, Probe.BOTH}:
             middle = None
-        return lead_water(self.temperature, middle)
+        return lead_water(self.temperature, middle, self._probe_weights())
+
+    def _probe_weights(self) -> tuple[float, float]:
+        """How much of the heated water each probe stands for, from their heights if set."""
+        options = self.entry.options
+
+        def height(key: str) -> float | None:
+            value = options.get(key)
+            return None if value is None else float(value) / 100
+
+        return probe_weights(
+            options.get(CONF_TANK_ORIENTATION, "vertical"),
+            options.get(CONF_ELEMENT_HEIGHT, "bottom"),
+            top=height(CONF_TOP_PROBE_HEIGHT),
+            middle=height(CONF_MIDDLE_PROBE_HEIGHT),
+        )
 
     @property
     def heating(self) -> bool:
@@ -1174,7 +1192,13 @@ class Heater:
         """
         end = dt_util.utcnow()
         samples = await async_samples(
-            self.hass, self._sensor, self.actuator, end - WINDOW, end, middle=self._middle_sensor
+            self.hass,
+            self._sensor,
+            self.actuator,
+            end - WINDOW,
+            end,
+            middle=self._middle_sensor,
+            weights=self._probe_weights(),
         )
         found = replay(samples, sun_up=lambda at: is_up(self.hass, dt_util.as_utc(at)))
         self._learner.state.runs = found.runs

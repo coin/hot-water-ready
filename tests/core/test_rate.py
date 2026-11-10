@@ -10,6 +10,7 @@ from custom_components.hot_water_ready.core.rate import (
     RateState,
     heated_fraction,
     physics_rate,
+    probe_weights,
     rate_in_use,
     rate_source,
     replay,
@@ -171,3 +172,21 @@ def test_the_water_above_the_element_is_what_heats(
 ) -> None:
     """Heat rises: the water below the element barely warms, so the fast end of the range."""
     assert heated_fraction(orientation, element) == pytest.approx(fraction, abs=0.002)
+
+
+def test_without_heights_the_probes_count_the_same() -> None:
+    assert probe_weights("horizontal", "middle", top=None, middle=None) == (0.5, 0.5)
+
+
+def test_each_probe_stands_for_the_heated_water_nearest_it() -> None:
+    """Horizontal, element at the middle, probes at 80% and 45%: the heated water (above 50%)
+    splits at 62.5%; above it 0.3425 of the tank, between 50% and 62.5% 0.1575."""
+    top, middle = probe_weights("horizontal", "middle", top=0.8, middle=0.45)
+
+    assert top == pytest.approx(0.685, abs=0.002)
+    assert middle == pytest.approx(0.315, abs=0.002)
+
+
+def test_a_standing_tank_splits_by_height() -> None:
+    """Vertical, element at the bottom, probes at 80% and 40%: split at 60%."""
+    assert probe_weights("vertical", "bottom", top=0.8, middle=0.4) == pytest.approx((0.4, 0.6))

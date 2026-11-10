@@ -173,15 +173,44 @@ def replay(
     return learner.state
 
 
+def share_above(orientation: TankOrientation, height: float) -> float:
+    """The share of the tank's water above `height` (0 the bottom, 1 the top).
+
+    A standing tank's is a straight cut; a lying one's is the part of a circle above a chord.
+    """
+    height = min(1.0, max(0.0, height))
+    if orientation == "vertical":
+        return 1 - height
+    chord = 2 * height - 1  # the chord's distance from the centre, radius 1, negative below it
+    below = math.acos(-chord) + chord * math.sqrt(1 - chord * chord)
+    return 1 - below / math.pi
+
+
 def heated_fraction(orientation: TankOrientation, element: ElementHeight) -> float:
     """The share of the tank above the element: what heats when only that water mixes.
 
-    Heat rises, so the water below the element barely warms. A vertical tank's share is a
-    straight cut; a horizontal one's is the part of a circle above a chord.
+    Heat rises, so the water below the element barely warms.
     """
-    height = ELEMENT_HEIGHTS[element]
-    if orientation == "vertical":
-        return 1 - height
-    depth = 2 * height - 1  # the chord's distance below the centre, radius 1, as a negative
-    below = math.acos(-depth) - (-depth) * math.sqrt(1 - depth * depth)
-    return 1 - below / math.pi
+    return share_above(orientation, ELEMENT_HEIGHTS[element])
+
+
+def probe_weights(
+    orientation: TankOrientation,
+    element: ElementHeight,
+    *,
+    top: float | None,
+    middle: float | None,
+) -> tuple[float, float]:
+    """How much of the heated water each probe stands for: (top, middle), adding to 1.
+
+    The heated water (above the element) splits halfway between the probes: the top probe
+    reads the part above, the middle one the part below. Without both heights, half each.
+    """
+    if top is None or middle is None or top <= middle:
+        return 0.5, 0.5
+    split = (top + middle) / 2
+    heated = share_above(orientation, ELEMENT_HEIGHTS[element])
+    upper = share_above(orientation, split)
+    if heated <= 0 or upper >= heated:
+        return 0.5, 0.5
+    return upper / heated, 1 - upper / heated

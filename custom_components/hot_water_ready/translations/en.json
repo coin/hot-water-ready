@@ -239,7 +239,9 @@
           "advanced": "Fault thresholds",
           "tank_orientation": "Tank position",
           "element_height": "Where the element sits",
-          "middle_temperature_sensor": "Second probe, lower down (optional)"
+          "middle_temperature_sensor": "Second probe, lower down (optional)",
+          "top_probe_height": "Height of the main probe (optional)",
+          "middle_probe_height": "Height of the second probe (optional)"
         },
         "data_description": {
           "keep_heating_gap_minutes": "Ready times this close share one window and the heater keeps heating through, instead of letting the water cool in between.",
@@ -255,7 +257,9 @@
           "max_temperature": "50 °C is the scald limit without a mixing valve; up to 60 °C only with one.",
           "tank_orientation": "Lying down (horizontal) or standing (vertical).",
           "element_height": "Heat rises, so the water below the element barely warms. With the volume and power, this gives the range the heating speed should fall in.",
-          "middle_temperature_sensor": "A probe in the middle of the tank. The start comes forward when the water below the top is colder, and both probes are checked against how they normally behave. Ready still follows the main probe."
+          "middle_temperature_sensor": "A probe in the middle of the tank. The start comes forward when the water below the top is colder, and both probes are checked against how they normally behave. Ready still follows the main probe.",
+          "top_probe_height": "Where the main probe sits, from the bottom (0%) to the top (100%) of the tank.",
+          "middle_probe_height": "With both heights, each probe counts for the heated water nearest it, so the mean the start is worked out from is weighted. Without them, half each."
         },
         "sections": {
           "advanced": {

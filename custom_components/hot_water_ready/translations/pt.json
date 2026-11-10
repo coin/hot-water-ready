@@ -239,7 +239,9 @@
           "advanced": "Limites das avarias",
           "tank_orientation": "Posição do tanque",
           "element_height": "Onde está a resistência",
-          "middle_temperature_sensor": "Segunda sonda, mais abaixo (opcional)"
+          "middle_temperature_sensor": "Segunda sonda, mais abaixo (opcional)",
+          "top_probe_height": "Altura da sonda principal (opcional)",
+          "middle_probe_height": "Altura da segunda sonda (opcional)"
         },
         "data_description": {
           "keep_heating_gap_minutes": "Horários assim próximos partilham uma janela e o aquecedor continua a aquecer, em vez de deixar a água arrefecer entre eles.",
@@ -255,7 +257,9 @@
           "max_temperature": "50 °C é o limite para evitar queimaduras sem válvula misturadora; até 60 °C só com ela.",
           "tank_orientation": "Deitado (horizontal) ou de pé (vertical).",
           "element_height": "O calor sobe, por isso a água abaixo da resistência quase não aquece. Com o volume e a potência, dá o intervalo em que a velocidade de aquecimento deve ficar.",
-          "middle_temperature_sensor": "Uma sonda a meio do tanque. O início vem mais cedo quando a água abaixo do topo está mais fria, e as duas sondas são comparadas com o que costumam fazer. Pronta continua a depender da sonda principal."
+          "middle_temperature_sensor": "Uma sonda a meio do tanque. O início vem mais cedo quando a água abaixo do topo está mais fria, e as duas sondas são comparadas com o que costumam fazer. Pronta continua a depender da sonda principal.",
+          "top_probe_height": "Onde está a sonda principal, do fundo (0%) ao topo (100%) do tanque.",
+          "middle_probe_height": "Com as duas alturas, cada sonda conta pela água aquecida mais próxima dela, e a média de onde sai o início fica pesada. Sem elas, metade cada."
         },
         "sections": {
           "advanced": {

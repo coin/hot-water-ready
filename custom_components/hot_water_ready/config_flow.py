@@ -32,6 +32,7 @@ from .const import (
     CONF_KEEP_HEATING_GAP,
     CONF_KEEP_HOT,
     CONF_MAX_TEMPERATURE,
+    CONF_MIDDLE_PROBE_HEIGHT,
     CONF_MIDDLE_SENSOR,
     CONF_NOTIFY_TARGETS,
     CONF_PERSON,
@@ -44,6 +45,7 @@ from .const import (
     CONF_TANK_LITRES,
     CONF_TANK_ORIENTATION,
     CONF_TEMPERATURE_SENSOR,
+    CONF_TOP_PROBE_HEIGHT,
     DEFAULT_MAX_TEMPERATURE,
     DOMAIN,
     HEATER_CLIMATE,
@@ -343,6 +345,8 @@ class HeaterOptionsFlow(OptionsFlow):
                 CONF_FAULT_RECIPIENTS: [],
                 CONF_POWER_SENSOR: None,
                 CONF_MIDDLE_SENSOR: None,
+                CONF_TOP_PROBE_HEIGHT: None,
+                CONF_MIDDLE_PROBE_HEIGHT: None,
                 CONF_HEATING_RATE: None,
                 CONF_TANK_LITRES: None,
                 CONF_ELEMENT_WATTS: None,
@@ -404,6 +408,10 @@ class HeaterOptionsFlow(OptionsFlow):
                         options=list(ELEMENT_HEIGHTS), translation_key=CONF_ELEMENT_HEIGHT
                     )
                 ),
+                probatio.Optional(
+                    CONF_TOP_PROBE_HEIGHT,
+                    description={"suggested_value": options.get(CONF_TOP_PROBE_HEIGHT)},
+                ): _box(0, 100, 5, "%"),
                 probatio.Required(
                     CONF_MAX_TEMPERATURE,
                     default=options.get(CONF_MAX_TEMPERATURE, DEFAULT_MAX_TEMPERATURE),
@@ -424,6 +432,10 @@ class HeaterOptionsFlow(OptionsFlow):
                 ): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain="sensor", device_class="temperature")
                 ),
+                probatio.Optional(
+                    CONF_MIDDLE_PROBE_HEIGHT,
+                    description={"suggested_value": options.get(CONF_MIDDLE_PROBE_HEIGHT)},
+                ): _box(0, 100, 5, "%"),
                 probatio.Optional(
                     CONF_FAULT_RECIPIENTS,
                     description={"suggested_value": options.get(CONF_FAULT_RECIPIENTS, [])},

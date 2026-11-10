@@ -95,3 +95,24 @@ async def test_the_probe_check_survives_a_reload(
     state = heater.runtime_data._probes.state
     assert state.suspect == frozenset({Probe.TOP})
     assert state.rates[Probe.TOP] == [5.1, 5.5]
+
+
+async def test_with_both_heights_the_mean_is_weighted(
+    hass: HomeAssistant, heater: MockConfigEntry
+) -> None:
+    """Lying tank, element at the middle, probes at 80% and 45%: the top counts for 68.5% of the
+    heated water, so 0.685 x 39.4 + 0.315 x 33.3 = 37.5, not the plain 36.35."""
+    await _with_middle(hass, heater, "39.4", "33.3")
+    hass.config_entries.async_update_entry(
+        heater,
+        options={
+            **heater.options,
+            "tank_orientation": "horizontal",
+            "element_height": "middle",
+            "top_probe_height": 80,
+            "middle_probe_height": 45,
+        },
+    )
+    await hass.async_block_till_done()
+
+    assert heater.runtime_data.lead_temperature == pytest.approx(37.48, abs=0.02)
