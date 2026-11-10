@@ -398,7 +398,7 @@
         "step": {
           "confirm": {
             "title": "Está resolvido?",
-            "description": "O aquecedor esteve ligado muito tempo e a água quase não subiu, por isso o aquecimento parou. Verifique o aquecedor e o disjuntor e confirme aqui que está resolvido. Confirme que o aquecedor foi verificado e resolvido. O aquecimento volta a funcionar."
+            "description": "O aquecedor esteve ligado muito tempo e a água quase não subiu, por isso o aquecimento parou. Verifique o aquecedor e o disjuntor e confirme aqui que está resolvido. O aquecimento volta a funcionar."
           }
         }
       }
@@ -409,7 +409,7 @@
         "step": {
           "confirm": {
             "title": "Está resolvido?",
-            "description": "O relé estava ligado mas o aquecedor quase não consumiu energia, por isso o aquecimento parou. Verifique a resistência e o disjuntor e confirme aqui que está resolvido. Confirme que o aquecedor foi verificado e resolvido. O aquecimento volta a funcionar."
+            "description": "O relé estava ligado mas o aquecedor quase não consumiu energia, por isso o aquecimento parou. Verifique a resistência e o disjuntor e confirme aqui que está resolvido. O aquecimento volta a funcionar."
           }
         }
       }

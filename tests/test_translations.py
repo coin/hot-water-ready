@@ -1,4 +1,4 @@
-"""Every text the integration shows or sends exists in English and PT-PT (ticket 11).
+"""Every text the integration shows or sends exists in every language, English first (ticket 11).
 
 The card's texts are checked by TypeScript (its `pt` table is a `Record` over the English keys);
 these tests cover the integration's `translations/*.json`.
@@ -9,13 +9,13 @@ from pathlib import Path
 import re
 from typing import Any
 
+import pytest
 import yaml
 
 from custom_components.hot_water_ready.core.faults import Fault
 
 PACKAGE = Path(__file__).parents[1] / "custom_components" / "hot_water_ready"
 EN = json.loads((PACKAGE / "translations" / "en.json").read_text(encoding="utf-8"))
-PT = json.loads((PACKAGE / "translations" / "pt.json").read_text(encoding="utf-8"))
 PLACEHOLDER = re.compile(r"\{(\w+)\}")
 
 
@@ -30,16 +30,36 @@ def _texts(tree: dict[str, Any], path: str = "") -> dict[str, str]:
     return found
 
 
-def test_english_and_portuguese_have_the_same_texts() -> None:
-    assert sorted(_texts(EN)) == sorted(_texts(PT))
+LANGUAGES = sorted(path.stem for path in (PACKAGE / "translations").glob("*.json"))
 
 
-def test_each_text_has_the_same_placeholders_in_both_languages() -> None:
-    portuguese = _texts(PT)
+EXPECTED = ["en", "pt", "pt-BR", "de", "fr", "es", "it", "nl", "pl", "sv", "da", "nb", "cs"]
+EXPECTED += ["ru", "uk", "ja", "zh-Hans"]
+
+
+def test_the_languages_are_all_there() -> None:
+    assert sorted(EXPECTED) == LANGUAGES
+
+
+def _language(code: str) -> dict[str, Any]:
+    texts: dict[str, Any] = json.loads(
+        (PACKAGE / "translations" / f"{code}.json").read_text(encoding="utf-8")
+    )
+    return texts
+
+
+@pytest.mark.parametrize("code", LANGUAGES)
+def test_each_language_has_the_english_texts(code: str) -> None:
+    assert sorted(_texts(_language(code))) == sorted(_texts(EN))
+
+
+@pytest.mark.parametrize("code", LANGUAGES)
+def test_each_text_keeps_its_placeholders(code: str) -> None:
+    texts = _texts(_language(code))
     differ = [
         path
         for path, text in _texts(EN).items()
-        if set(PLACEHOLDER.findall(text)) != set(PLACEHOLDER.findall(portuguese.get(path, "")))
+        if set(PLACEHOLDER.findall(text)) != set(PLACEHOLDER.findall(texts.get(path, "")))
     ]
     assert differ == []
 

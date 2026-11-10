@@ -5,9 +5,17 @@ want it. Each member sets the times they want hot water; the integration works o
 the heater, keeps it in a temperature band, and tells them when the water is ready. It brings its
 own dashboard card.
 
-Requires Home Assistant 2026.10 or later. On-screen text is in English and European Portuguese.
+Requires Home Assistant 2026.10 or later. The integration and the card follow Home Assistant's
+language: English, European and Brazilian Portuguese, German, French, Spanish, Italian, Dutch,
+Polish, Swedish, Danish, Norwegian, Czech, Russian, Ukrainian, Japanese and Simplified Chinese
+(any other language shows English).
 
-<p align="center"><img src="docs/images/card.png" width="360" alt="The card: the water at 31.2 °C in a ring with the target, Ready at 06:45, starts heating around 05:50, the Heat now button, and Ana's ready times like alarms."></p>
+<table>
+  <tr>
+    <td align="center"><img src="docs/images/card.png" width="320" alt="The card: the water at 31.2 °C in a ring with the target, Ready at 06:45, starts heating around 05:50, the Heat now button, and Ana's ready times like alarms."><br>Waiting for the next ready time</td>
+    <td align="center"><img src="docs/images/heating.png" width="320" alt="The card while heating: the ring glows orange at 37.4 °C, Heating: ready in about 25 min, for Ana at 06:45, the heater drawing 2,850 W, with Tell me when it's hot and Switch off the heating."><br>Heating</td>
+  </tr>
+</table>
 
 ## What you need
 
@@ -101,12 +109,23 @@ inside), then minutes. The keyboard button types it instead.
 
 <p align="center"><img src="docs/images/clock.png" width="300" alt="The time popup: 07:00 picked on a clock face, with a keyboard button, Cancel and OK."></p>
 
+Tapping a ready time opens it to change its time or days, or to delete it; tapping the time opens
+the clock. *+ Add a ready time* opens the clock straight away.
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/images/edit.png" width="300" alt="Changing Ana's 06:45: the time, the days Monday to Friday, and Delete, Cancel and Save."><br>Changing a ready time</td>
+    <td align="center"><img src="docs/images/picker.png" width="300" alt="The clock popup open over the card while changing 06:45, hours on the dial, Cancel and OK."><br>Picking its time</td>
+  </tr>
+</table>
+
 **Away** pauses a member's ready times, optionally until a last day, after which it ends by itself.
 
 ## The card
 
 - **Top**: the water temperature in a ring with the target, a plain sentence ("Ready at 07:00",
-  "Heating: ready in about 15 min") and the *Heat now* button.
+  "Heating: ready in about 15 min") and the *Heat now* button. While the heater heats, the ring
+  glows and the button becomes *Tell me when it's hot*.
 - **People** (administrators): the members as avatars, the selected member's ready times like
   alarms (time, weekdays, on or off), *+* to add one, and the away switch.
 - **Week** (administrators): the household's week, people by day, with the number of showers and

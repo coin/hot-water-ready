@@ -1,0 +1,539 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Lägg till en varmvattenberedare",
+        "description": "Hur Home Assistant slår på värmeelementet.",
+        "menu_options": {
+          "switch": "En brytare (relä eller smart kontakt)",
+          "climate": "En befintlig termostat"
+        }
+      },
+      "switch": {
+        "title": "Lägg till en varmvattenberedare",
+        "description": "Välj brytaren som slår på beredaren och sensorn som mäter vattnet.",
+        "data": {
+          "name": "Namn",
+          "switch": "Beredarens brytare",
+          "temperature_sensor": "Sensor för vattentemperatur",
+          "power_sensor": "Beredarens effektsensor (valfritt)"
+        },
+        "data_description": {
+          "name": "Visas på kortet och på beredarens enhet, till exempel Beredare.",
+          "switch": "Reläet eller den smarta kontakten som driver värmeelementet.",
+          "temperature_sensor": "En sensor som mäter temperaturen på det lagrade vattnet.",
+          "power_sensor": "Med en effektsensor upptäcks också en beredare som inte drar någon ström och ett relä som fastnat i tillslaget läge."
+        }
+      },
+      "climate": {
+        "title": "Lägg till en varmvattenberedare med termostat",
+        "description": "Välj termostaten som styr beredaren och sensorn som mäter vattnet. Hot Water Ready ställer in dess läge och börvärde.",
+        "data": {
+          "name": "Namn",
+          "temperature_sensor": "Sensor för vattentemperatur",
+          "power_sensor": "Beredarens effektsensor (valfritt)",
+          "climate": "Termostat"
+        },
+        "data_description": {
+          "name": "Visas på kortet och på beredarens enhet, till exempel Beredare.",
+          "temperature_sensor": "En sensor som mäter temperaturen på det lagrade vattnet.",
+          "power_sensor": "Med en effektsensor upptäcks en beredare som drar ström medan termostaten är av, och, om termostaten anger när den värmer, en som inte drar någon ström.",
+          "climate": "Hot Water Ready ställer den på värme vid stopptemperaturen, eller av."
+        }
+      },
+      "reconfigure": {
+        "title": "Ändra varmvattenberedaren",
+        "description": "Hur Home Assistant slår på värmeelementet.",
+        "menu_options": {
+          "switch": "En brytare (relä eller smart kontakt)",
+          "climate": "En befintlig termostat"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Den här brytaren hör redan till en beredare.",
+      "reconfigure_successful": "Varmvattenberedaren har ändrats."
+    },
+    "error": {
+      "unsupported_thermostat": "Den här termostaten kan inte ställas på värme och av; välj en annan, eller en brytare."
+    }
+  },
+  "config_subentries": {
+    "member": {
+      "initiate_flow": {
+        "user": "Lägg till medlem"
+      },
+      "entry_type": "Medlem",
+      "step": {
+        "user": {
+          "title": "Lägg till en medlem",
+          "description": "En kopplad medlem är en person som ställer in sina egna tider och får besked när vattnet är klart. En virtuell medlem, som Gemensam eller Gäster, har ingen person; en administratör ställer in dess tider.",
+          "menu_options": {
+            "linked": "En person",
+            "virtual": "Virtuell (Gemensam, Gäster)"
+          }
+        },
+        "linked": {
+          "title": "Lägg till en person",
+          "data": {
+            "name": "Namn",
+            "person": "Person",
+            "colour": "Färg på kortet",
+            "notify_targets": "Telefoner som får besked"
+          },
+          "data_description": {
+            "notify_targets": "Lämna tomt för att hitta personens telefoner automatiskt."
+          }
+        },
+        "virtual": {
+          "title": "Lägg till en virtuell medlem",
+          "data": {
+            "name": "Namn",
+            "recipients": "Vem som får besked",
+            "colour": "Färg på kortet"
+          },
+          "data_description": {
+            "recipients": "Personer som får besked när den här medlemmens vatten är klart. Lämna tomt för att inte meddela någon."
+          }
+        },
+        "reconfigure": {
+          "title": "Ändra en medlem",
+          "data": {
+            "name": "Namn",
+            "person": "Person",
+            "recipients": "Vem som får besked",
+            "colour": "Färg på kortet",
+            "notify_targets": "Telefoner som får besked"
+          },
+          "data_description": {
+            "notify_targets": "Lämna tomt för att hitta personens telefoner automatiskt."
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "Medlemmen har ändrats."
+      }
+    }
+  },
+  "selector": {
+    "colour": {
+      "options": {
+        "blue": "Blå",
+        "green": "Grön",
+        "orange": "Orange",
+        "purple": "Lila",
+        "red": "Röd",
+        "teal": "Blågrön",
+        "pink": "Rosa",
+        "brown": "Brun"
+      }
+    },
+    "weekdays": {
+      "options": {
+        "mon": "Måndag",
+        "tue": "Tisdag",
+        "wed": "Onsdag",
+        "thu": "Torsdag",
+        "fri": "Fredag",
+        "sat": "Lördag",
+        "sun": "Söndag"
+      }
+    },
+    "tank_orientation": {
+      "options": {
+        "vertical": "Stående (vertikal)",
+        "horizontal": "Liggande (horisontell)"
+      }
+    },
+    "element_height": {
+      "options": {
+        "bottom": "Längst ner",
+        "lower_third": "Ungefär en tredjedel upp",
+        "middle": "I mitten"
+      }
+    }
+  },
+  "entity": {
+    "number": {
+      "target_temperature": {
+        "name": "Måltemperatur"
+      },
+      "margin": {
+        "name": "Marginal"
+      }
+    },
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "waiting": "Vilar",
+          "heating": "Värmer",
+          "ready": "Klart",
+          "fault": "Fel",
+          "manual": "Manuell"
+        }
+      },
+      "next_ready_time": {
+        "name": "Nästa klartid",
+        "state_attributes": {
+          "members": {
+            "name": "För"
+          }
+        }
+      },
+      "heating_rate": {
+        "name": "Inlärd uppvärmningstakt"
+      },
+      "lead": {
+        "name": "Framförhållning"
+      },
+      "solar_lead": {
+        "name": "Framförhållning med solhänsyn"
+      }
+    },
+    "switch": {
+      "away": {
+        "name": "Bortrest",
+        "state_attributes": {
+          "until": {
+            "name": "Till"
+          }
+        }
+      },
+      "automatic": {
+        "name": "Automatisk styrning"
+      }
+    },
+    "button": {
+      "heat_now": {
+        "name": "Värm nu"
+      }
+    },
+    "binary_sensor": {
+      "problem": {
+        "name": "Problem"
+      }
+    },
+    "calendar": {
+      "windows": {
+        "name": "Uppvärmningsfönster"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Beredarinställningar",
+        "data": {
+          "keep_heating_gap_minutes": "Fortsätt värma genom uppehåll kortare än",
+          "keep_hot_minutes": "Efter Värm nu, håll vattnet varmt i",
+          "solar_aware": "Använd regeln med solhänsyn",
+          "heating_rate": "Uppvärmningstakt inställd för hand (valfritt)",
+          "tank_litres": "Tankvolym (valfritt)",
+          "element_watts": "Elementets effekt (valfritt)",
+          "max_temperature": "Högsta temperatur för duschar tätt efter varandra",
+          "cancel_people": "Personer som får stänga av uppvärmningen för alla",
+          "rich_notifications": "Ersätt tidigare meddelanden på telefonerna",
+          "power_sensor": "Beredarens effektsensor (valfritt)",
+          "fault_recipients": "Vem som får besked om fel",
+          "advanced": "Feltrösklar",
+          "tank_orientation": "Tankens placering",
+          "element_height": "Var elementet sitter",
+          "middle_temperature_sensor": "Andra givaren, längre ner (valfritt)",
+          "top_probe_height": "Huvudgivarens höjd (valfritt)",
+          "middle_probe_height": "Andra givarens höjd (valfritt)"
+        },
+        "data_description": {
+          "keep_heating_gap_minutes": "Klartider så här nära varandra delar ett fönster, och beredaren fortsätter värma i stället för att låta vattnet svalna emellan.",
+          "keep_hot_minutes": "Räknas från meddelandet ”varmvattnet klart”; under tiden hålls vattnet mellan målet minus och plus marginalen. 0: stoppa vid meddelandet. Håll in kortets knapp för att välja en annan tid för den begäran, upp till 120 minuter.",
+          "cancel_people": "Utöver administratörerna. Den som bad om varmvatten kan alltid avbryta sin egen begäran.",
+          "rich_notifications": "På telefoner med Home Assistant-appen ersätter ”Varmvattnet klart” meddelandet ”värmer” i stället för att komma som ett andra meddelande.",
+          "power_sensor": "Med en effektsensor upptäcks också en beredare som inte drar någon ström och ett relä som fastnat i tillslaget läge.",
+          "fault_recipients": "Tomt: alla administratörer.",
+          "solar_aware": "Av: starten räknas ut enbart från beredaren, och resultatet med solhänsyn registreras bara, för jämförelsen i kortets inställningar.",
+          "heating_rate": "Minuter för att höja vattnet en grad. Tomt: inlärt från beredarens egna uppvärmningar.",
+          "tank_litres": "Tillsammans med elementets effekt kan beredaren värma högre för duschar tätt efter varandra som tanken vid det normala målet inte räcker till.",
+          "element_watts": "Ger också soljämförelsen dess kWh utan effektsensor.",
+          "max_temperature": "50 °C är skållningsgränsen utan blandningsventil; upp till 60 °C bara med en.",
+          "tank_orientation": "Liggande (horisontell) eller stående (vertikal).",
+          "element_height": "Värme stiger, så vattnet under elementet blir knappt varmt. Med volymen och effekten ger detta intervallet som uppvärmningstakten bör ligga inom.",
+          "middle_temperature_sensor": "En givare mitt i tanken. Starten tidigareläggs när vattnet under toppen är kallare, och båda givarna kontrolleras mot hur de normalt beter sig. Klart följer fortfarande huvudgivaren.",
+          "top_probe_height": "Var huvudgivaren sitter, från botten (0%) till toppen (100%) av tanken.",
+          "middle_probe_height": "Med båda höjderna räknas varje givare för det uppvärmda vattnet närmast den, så medelvärdet som starten räknas ut från blir viktat. Utan dem räknas de hälften var."
+        },
+        "sections": {
+          "advanced": {
+            "name": "Feltrösklar",
+            "data": {
+              "sensor_timeout_minutes": "Sensorn tyst i",
+              "sensor_recovery_minutes": "Avläsningar tillbaka i",
+              "not_rising_minutes": "Värmer utan att stiga i",
+              "not_rising_degrees": "Stiger mindre än",
+              "power_watts": "Effekttröskel",
+              "power_minutes": "Oväntad effekt i"
+            }
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "heat_now_timeout": {
+      "message": "Vattnet blev inte varmt i tid; begäran om Värm nu har avslutats. Kontrollera beredaren."
+    },
+    "no_target": {
+      "message": "Hot Water Ready hittade ingen telefon att meddela {name}: {message}"
+    },
+    "send_failed": {
+      "message": "Hot Water Ready nådde inte telefonerna för {name}: {message}"
+    },
+    "window_heating": {
+      "message": "{heater} värmer: vattnet klart om cirka {minutes} min."
+    },
+    "ready": {
+      "message": "Varmvattnet klart: vattnet håller {temperature} °C."
+    },
+    "fault_sensor_unavailable": {
+      "message": "{heater}: sensorn för vattentemperatur är tyst; uppvärmningen har stoppats."
+    },
+    "fault_not_rising": {
+      "message": "{heater}: vattnet blir inte varmare; uppvärmningen har stoppats. Kontrollera beredaren."
+    },
+    "fault_no_consumption": {
+      "message": "{heater}: beredaren drar ingen ström; uppvärmningen har stoppats. Kontrollera elementet."
+    },
+    "fault_relay_stuck": {
+      "message": "{heater}: beredaren drar ström fast den är avstängd. Kontrollera reläet."
+    },
+    "heat_now_refused": {
+      "message": "Värm nu går inte medan ett fel stoppar uppvärmningen: {faults}."
+    },
+    "fault_label_sensor_unavailable": {
+      "message": "sensorn för vattentemperatur ger inga avläsningar"
+    },
+    "fault_label_not_rising": {
+      "message": "vattnet blir inte varmare"
+    },
+    "fault_label_no_consumption": {
+      "message": "beredaren drar ingen ström"
+    },
+    "fault_label_relay_stuck": {
+      "message": "reläet verkar ha fastnat i tillslaget läge"
+    },
+    "heat_now_refused_manual": {
+      "message": "Värm nu går inte medan automatisk styrning är av: beredaren styrs för hand."
+    },
+    "calendar_window": {
+      "message": "Uppvärmning: {members}"
+    },
+    "heater_not_found": {
+      "message": "Ingen laddad Hot Water Ready-beredare med det id:t."
+    },
+    "member_not_found": {
+      "message": "Den enheten är inte medlem i den här beredaren."
+    },
+    "ready_time_not_found": {
+      "message": "Den här medlemmen har ingen klartid kl. {time}."
+    },
+    "away_date_in_past": {
+      "message": "Den sista bortadagen kan inte ligga bakåt i tiden."
+    },
+    "edit_own_only": {
+      "message": "Du får bara ändra dina egna klartider."
+    },
+    "ready_time_gone": {
+      "message": "Den klartiden finns inte längre."
+    },
+    "ask_members_only": {
+      "message": "Bara medlemmar och administratörer kan be om varmvatten."
+    },
+    "cancel_not_allowed": {
+      "message": "Bara den som bad om det kan avbryta sin begäran."
+    },
+    "settings_admin_only": {
+      "message": "Bara en administratör kan ändra inställningarna."
+    },
+    "history_unavailable": {
+      "message": "Home Assistant sparar ingen historik här, så takten kan inte räknas om."
+    },
+    "person_not_found": {
+      "message": "Den personen finns inte i Home Assistant."
+    },
+    "switched_off_by": {
+      "message": "{name} stängde av uppvärmningen."
+    },
+    "switched_off": {
+      "message": "Uppvärmningen stängdes av."
+    },
+    "switch_off_not_allowed": {
+      "message": "Bara en administratör, eller någon som en administratör har valt, kan stänga av uppvärmningen för alla."
+    },
+    "fault_top_probe": {
+      "message": "{heater}: huvudgivaren kan sitta löst. Kontrollera den; uppvärmningen fortsätter."
+    },
+    "fault_label_top_probe": {
+      "message": "huvudgivaren kan sitta löst"
+    },
+    "fault_middle_probe": {
+      "message": "{heater}: den andra givaren kan sitta löst. Kontrollera den; uppvärmningen fortsätter."
+    },
+    "fault_label_middle_probe": {
+      "message": "den andra givaren kan sitta löst"
+    },
+    "fault_probes_disagree": {
+      "message": "{heater}: de två givarna visar olika. Kontrollera dem; uppvärmningen fortsätter."
+    },
+    "fault_label_probes_disagree": {
+      "message": "de två givarna visar olika"
+    }
+  },
+  "issues": {
+    "sensor_unavailable": {
+      "title": "{heater}: sensorn för vattentemperatur är tyst",
+      "description": "Ingen avläsning från sensorn för vattentemperatur på en stund, så uppvärmningen har stoppats. Den startar igen av sig själv en minut efter att avläsningarna kommit tillbaka."
+    },
+    "not_rising": {
+      "title": "{heater}: vattnet blir inte varmare",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Är det åtgärdat?",
+            "description": "Beredaren var på länge och vattnet steg knappt, så uppvärmningen har stoppats. Kontrollera beredaren och dess säkring, och bekräfta sedan här att det är åtgärdat. Uppvärmningen startar igen."
+          }
+        }
+      }
+    },
+    "no_consumption": {
+      "title": "{heater}: beredaren drar ingen ström",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Är det åtgärdat?",
+            "description": "Reläet var på men beredaren drog nästan ingen ström, så uppvärmningen har stoppats. Kontrollera elementet och dess säkring, och bekräfta sedan här att det är åtgärdat. Uppvärmningen startar igen."
+          }
+        }
+      }
+    },
+    "relay_stuck": {
+      "title": "{heater}: beredaren drar ström fast den är avstängd",
+      "description": "Beredaren drar ström fast reläet är av. Reläet kan ha fastnat i tillslaget läge; kontrollera det. Detta försvinner av sig självt en minut efter att strömmen upphört."
+    },
+    "top_probe": {
+      "title": "{heater}: huvudgivaren kan sitta löst",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Är det åtgärdat?",
+            "description": "Huvudgivaren steg långsammare än den brukar vid två uppvärmningar i rad. Den kan vara på väg ut ur sitt dykrör eller utsatt för kyla. Kontrollera den och bekräfta sedan här; det försvinner också av sig självt efter en normal uppvärmning."
+          }
+        }
+      }
+    },
+    "middle_probe": {
+      "title": "{heater}: den andra givaren kan sitta löst",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Är det åtgärdat?",
+            "description": "Den andra givaren steg långsammare än den brukar, eller låg efter huvudgivaren, vid två uppvärmningar i rad. Tills den mäter rätt igen räknas starten ut enbart från huvudgivaren. Kontrollera den och bekräfta sedan här."
+          }
+        }
+      }
+    },
+    "probes_disagree": {
+      "title": "{heater}: de två givarna visar olika",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Är det åtgärdat?",
+            "description": "Under en halvtimme visade huvudgivaren mer än 3 °C kallare än den andra. Varmt vatten stiger, så en av dem mäter inte vattnet. Kontrollera båda och bekräfta sedan här."
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "heat_now": {
+      "name": "Värm nu",
+      "description": "Värmer vattnet nu. Den angivna medlemmen får besked när det är klart; utan medlem får den som bad om det besked, om någon.",
+      "fields": {
+        "heater": {
+          "name": "Beredare",
+          "description": "Beredaren som ska värmas."
+        },
+        "member": {
+          "name": "Medlem",
+          "description": "Vem som ska få besked när det är klart."
+        },
+        "keep_minutes": {
+          "name": "Håll varmt i",
+          "description": "Minuter att hålla vattnet varmt efter meddelandet. Tomt: beredarens inställning."
+        }
+      }
+    },
+    "add_ready_time": {
+      "name": "Lägg till en klartid",
+      "description": "Lägger till en tid då en medlem vill ha varmvatten.",
+      "fields": {
+        "member": {
+          "name": "Medlem",
+          "description": "Vems klartid det är."
+        },
+        "time": {
+          "name": "Tid",
+          "description": "När vattnet ska vara klart."
+        },
+        "weekdays": {
+          "name": "Dagar",
+          "description": "Dagarna den upprepas. Utelämnat: varje dag."
+        },
+        "enabled": {
+          "name": "På",
+          "description": "Av behåller tiden utan att agera på den."
+        }
+      }
+    },
+    "remove_ready_time": {
+      "name": "Ta bort en klartid",
+      "description": "Tar bort en medlems klartider vid en viss tid på dygnet, oavsett dagar.",
+      "fields": {
+        "member": {
+          "name": "Medlem",
+          "description": "Vems klartid det är."
+        },
+        "time": {
+          "name": "Tid",
+          "description": "Tiden som ska tas bort."
+        }
+      }
+    },
+    "set_away": {
+      "name": "Ange bortrest",
+      "description": "Pausar eller återupptar en medlems klartider.",
+      "fields": {
+        "member": {
+          "name": "Medlem",
+          "description": "Vem som är bortrest."
+        },
+        "away": {
+          "name": "Bortrest",
+          "description": "På pausar klartiderna, av återupptar dem."
+        },
+        "until": {
+          "name": "Till",
+          "description": "Den sista bortadagen; därefter upphör bortrest av sig självt."
+        }
+      }
+    },
+    "switch_off": {
+      "name": "Stäng av",
+      "description": "Stänger av beredaren nu för alla: begäran om Värm nu avslutas och klartiderna den värmde för hoppas över. Alla som blir utan får besked.",
+      "fields": {
+        "heater": {
+          "name": "Beredare",
+          "description": "Beredaren som ska stängas av."
+        }
+      }
+    }
+  }
+}

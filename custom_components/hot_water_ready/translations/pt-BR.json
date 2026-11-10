@@ -1,0 +1,539 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Adicionar um aquecedor de água",
+        "description": "Como o Home Assistant liga a resistência.",
+        "menu_options": {
+          "switch": "Um interruptor (relé ou tomada inteligente)",
+          "climate": "Um termostato existente"
+        }
+      },
+      "switch": {
+        "title": "Adicionar um aquecedor de água",
+        "description": "Escolha o interruptor que liga o aquecedor e o sensor que mede a água.",
+        "data": {
+          "name": "Nome",
+          "switch": "Interruptor do aquecedor",
+          "temperature_sensor": "Sensor de temperatura da água",
+          "power_sensor": "Sensor de potência do aquecedor (opcional)"
+        },
+        "data_description": {
+          "name": "Aparece no cartão e no dispositivo do aquecedor, por exemplo Boiler.",
+          "switch": "O relé ou a tomada inteligente que alimenta a resistência.",
+          "temperature_sensor": "Um sensor que mede a temperatura da água armazenada.",
+          "power_sensor": "Com um sensor de potência, também é detectado um aquecedor que não consome nada e um relé travado ligado."
+        }
+      },
+      "climate": {
+        "title": "Adicionar um aquecedor de água com termostato",
+        "description": "Escolha o termostato que comanda o aquecedor e o sensor que mede a água. O Hot Water Ready define o modo e o ponto de ajuste dele.",
+        "data": {
+          "name": "Nome",
+          "temperature_sensor": "Sensor de temperatura da água",
+          "power_sensor": "Sensor de potência do aquecedor (opcional)",
+          "climate": "Termostato"
+        },
+        "data_description": {
+          "name": "Aparece no cartão e no dispositivo do aquecedor, por exemplo Boiler.",
+          "temperature_sensor": "Um sensor que mede a temperatura da água armazenada.",
+          "power_sensor": "Com um sensor de potência, é detectado um aquecedor que consome energia com o termostato desligado e, se o termostato informa quando está aquecendo, um que não consome nada.",
+          "climate": "O Hot Water Ready o coloca para aquecer até a temperatura de parada, ou o desliga."
+        }
+      },
+      "reconfigure": {
+        "title": "Alterar o aquecedor de água",
+        "description": "Como o Home Assistant liga a resistência.",
+        "menu_options": {
+          "switch": "Um interruptor (relé ou tomada inteligente)",
+          "climate": "Um termostato existente"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Este interruptor já pertence a um aquecedor.",
+      "reconfigure_successful": "O aquecedor de água foi alterado."
+    },
+    "error": {
+      "unsupported_thermostat": "Não é possível colocar este termostato para aquecer e desligar; escolha outro, ou um interruptor."
+    }
+  },
+  "config_subentries": {
+    "member": {
+      "initiate_flow": {
+        "user": "Adicionar membro"
+      },
+      "entry_type": "Membro",
+      "step": {
+        "user": {
+          "title": "Adicionar um membro",
+          "description": "Um membro vinculado é uma pessoa que define os próprios horários e é avisada quando a água fica pronta. Um membro virtual, como Global ou Visitas, não tem pessoa; um administrador define os horários dele.",
+          "menu_options": {
+            "linked": "Uma pessoa",
+            "virtual": "Virtual (Global, Visitas)"
+          }
+        },
+        "linked": {
+          "title": "Adicionar uma pessoa",
+          "data": {
+            "name": "Nome",
+            "person": "Pessoa",
+            "colour": "Cor no cartão",
+            "notify_targets": "Celulares a avisar"
+          },
+          "data_description": {
+            "notify_targets": "Deixe vazio para encontrar automaticamente os celulares desta pessoa."
+          }
+        },
+        "virtual": {
+          "title": "Adicionar um membro virtual",
+          "data": {
+            "name": "Nome",
+            "recipients": "Quem é avisado",
+            "colour": "Cor no cartão"
+          },
+          "data_description": {
+            "recipients": "Pessoas avisadas quando a água deste membro fica pronta. Deixe vazio para não avisar ninguém."
+          }
+        },
+        "reconfigure": {
+          "title": "Alterar um membro",
+          "data": {
+            "name": "Nome",
+            "person": "Pessoa",
+            "recipients": "Quem é avisado",
+            "colour": "Cor no cartão",
+            "notify_targets": "Celulares a avisar"
+          },
+          "data_description": {
+            "notify_targets": "Deixe vazio para encontrar automaticamente os celulares desta pessoa."
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "O membro foi alterado."
+      }
+    }
+  },
+  "selector": {
+    "colour": {
+      "options": {
+        "blue": "Azul",
+        "green": "Verde",
+        "orange": "Laranja",
+        "purple": "Roxo",
+        "red": "Vermelho",
+        "teal": "Verde-azulado",
+        "pink": "Rosa",
+        "brown": "Marrom"
+      }
+    },
+    "weekdays": {
+      "options": {
+        "mon": "Segunda-feira",
+        "tue": "Terça-feira",
+        "wed": "Quarta-feira",
+        "thu": "Quinta-feira",
+        "fri": "Sexta-feira",
+        "sat": "Sábado",
+        "sun": "Domingo"
+      }
+    },
+    "tank_orientation": {
+      "options": {
+        "vertical": "Em pé (vertical)",
+        "horizontal": "Deitado (horizontal)"
+      }
+    },
+    "element_height": {
+      "options": {
+        "bottom": "Embaixo",
+        "lower_third": "Mais ou menos a um terço da altura",
+        "middle": "No meio"
+      }
+    }
+  },
+  "entity": {
+    "number": {
+      "target_temperature": {
+        "name": "Temperatura alvo"
+      },
+      "margin": {
+        "name": "Margem"
+      }
+    },
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "waiting": "Em espera",
+          "heating": "Aquecendo",
+          "ready": "Pronta",
+          "fault": "Falha",
+          "manual": "Manual"
+        }
+      },
+      "next_ready_time": {
+        "name": "Próximo horário",
+        "state_attributes": {
+          "members": {
+            "name": "Para"
+          }
+        }
+      },
+      "heating_rate": {
+        "name": "Taxa de aquecimento aprendida"
+      },
+      "lead": {
+        "name": "Antecedência"
+      },
+      "solar_lead": {
+        "name": "Antecedência com o sol"
+      }
+    },
+    "switch": {
+      "away": {
+        "name": "Ausente",
+        "state_attributes": {
+          "until": {
+            "name": "Até"
+          }
+        }
+      },
+      "automatic": {
+        "name": "Controle automático"
+      }
+    },
+    "button": {
+      "heat_now": {
+        "name": "Aquecer agora"
+      }
+    },
+    "binary_sensor": {
+      "problem": {
+        "name": "Problema"
+      }
+    },
+    "calendar": {
+      "windows": {
+        "name": "Janelas de aquecimento"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configurações do aquecedor",
+        "data": {
+          "keep_heating_gap_minutes": "Continuar aquecendo em intervalos menores que",
+          "keep_hot_minutes": "Depois de aquecer agora, manter a água quente por",
+          "solar_aware": "Usar a regra solar",
+          "heating_rate": "Taxa de aquecimento definida manualmente (opcional)",
+          "tank_litres": "Volume do tanque (opcional)",
+          "element_watts": "Potência da resistência (opcional)",
+          "max_temperature": "Temperatura máxima para banhos próximos",
+          "cancel_people": "Pessoas que podem desligar o aquecimento para todos",
+          "rich_notifications": "Substituir mensagens anteriores nos celulares",
+          "power_sensor": "Sensor de potência do aquecedor (opcional)",
+          "fault_recipients": "Quem é avisado sobre falhas",
+          "advanced": "Limites de falha",
+          "tank_orientation": "Posição do tanque",
+          "element_height": "Onde fica a resistência",
+          "middle_temperature_sensor": "Segunda sonda, mais abaixo (opcional)",
+          "top_probe_height": "Altura da sonda principal (opcional)",
+          "middle_probe_height": "Altura da segunda sonda (opcional)"
+        },
+        "data_description": {
+          "keep_heating_gap_minutes": "Horários assim tão próximos compartilham uma janela e o aquecedor continua aquecendo, em vez de deixar a água esfriar no meio.",
+          "keep_hot_minutes": "Contado a partir da mensagem “água quente pronta”; enquanto isso, a água é mantida entre o alvo menos e mais a margem. 0: parar na mensagem. Manter pressionado o botão do cartão escolhe outro tempo para esse pedido, até 120 minutos.",
+          "cancel_people": "Além dos administradores. Quem pediu sempre pode cancelar o próprio pedido.",
+          "rich_notifications": "Nos celulares com o app Home Assistant, “Água quente pronta” substitui “aquecendo” em vez de chegar como uma segunda mensagem.",
+          "power_sensor": "Com um sensor de potência, também é detectado um aquecedor que não consome nada e um relé travado ligado.",
+          "fault_recipients": "Vazio: todos os administradores.",
+          "solar_aware": "Desligado: o início é calculado só pelo aquecedor, e o resultado com o sol é apenas registrado, para a comparação nas configurações do cartão.",
+          "heating_rate": "Minutos para subir a água um grau. Vazio: aprendido pelos próprios ciclos do aquecedor.",
+          "tank_litres": "Com a potência da resistência, permite ao aquecedor aquecer mais para banhos próximos que o tanque na temperatura alvo normal não dá conta.",
+          "element_watts": "Também dá à comparação solar o seu kWh sem um sensor de potência.",
+          "max_temperature": "50 °C é o limite de escaldadura sem válvula misturadora; até 60 °C só com uma.",
+          "tank_orientation": "Deitado (horizontal) ou em pé (vertical).",
+          "element_height": "O calor sobe, então a água abaixo da resistência quase não esquenta. Com o volume e a potência, isto dá a faixa em que a velocidade de aquecimento deve ficar.",
+          "middle_temperature_sensor": "Uma sonda no meio do tanque. O início é antecipado quando a água abaixo do topo está mais fria, e as duas sondas são comparadas com o comportamento normal delas. A água pronta continua seguindo a sonda principal.",
+          "top_probe_height": "Onde fica a sonda principal, do fundo (0%) ao topo (100%) do tanque.",
+          "middle_probe_height": "Com as duas alturas, cada sonda vale pela água aquecida mais próxima dela, então a média usada para calcular o início é ponderada. Sem elas, metade cada uma."
+        },
+        "sections": {
+          "advanced": {
+            "name": "Limites de falha",
+            "data": {
+              "sensor_timeout_minutes": "Sensor em silêncio por",
+              "sensor_recovery_minutes": "Leituras de volta por",
+              "not_rising_minutes": "Aquecendo sem subir por",
+              "not_rising_degrees": "Subindo menos de",
+              "power_watts": "Limite de potência",
+              "power_minutes": "Potência fora do esperado por"
+            }
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "heat_now_timeout": {
+      "message": "A água não esquentou a tempo; o pedido de aquecer agora terminou. Verifique o aquecedor."
+    },
+    "no_target": {
+      "message": "O Hot Water Ready não encontrou nenhum celular para avisar {name}: {message}"
+    },
+    "send_failed": {
+      "message": "O Hot Water Ready não conseguiu chegar aos celulares de {name}: {message}"
+    },
+    "window_heating": {
+      "message": "{heater} aquecendo: água pronta em cerca de {minutes} min."
+    },
+    "ready": {
+      "message": "Água quente pronta: a água está a {temperature} °C."
+    },
+    "fault_sensor_unavailable": {
+      "message": "{heater}: o sensor de temperatura da água está em silêncio; o aquecimento foi parado."
+    },
+    "fault_not_rising": {
+      "message": "{heater}: a água não está esquentando; o aquecimento foi parado. Verifique o aquecedor."
+    },
+    "fault_no_consumption": {
+      "message": "{heater}: o aquecedor não consome energia; o aquecimento foi parado. Verifique a resistência."
+    },
+    "fault_relay_stuck": {
+      "message": "{heater}: o aquecedor consome energia mesmo desligado. Verifique o relé."
+    },
+    "heat_now_refused": {
+      "message": "Não é possível aquecer agora enquanto uma falha impede o aquecimento: {faults}."
+    },
+    "fault_label_sensor_unavailable": {
+      "message": "o sensor de temperatura da água não dá leituras"
+    },
+    "fault_label_not_rising": {
+      "message": "a água não está esquentando"
+    },
+    "fault_label_no_consumption": {
+      "message": "o aquecedor não consome energia"
+    },
+    "fault_label_relay_stuck": {
+      "message": "o relé parece travado ligado"
+    },
+    "heat_now_refused_manual": {
+      "message": "Não é possível aquecer agora com o controle automático desligado: o aquecedor está no modo manual."
+    },
+    "calendar_window": {
+      "message": "Aquecimento: {members}"
+    },
+    "heater_not_found": {
+      "message": "Não há nenhum aquecedor do Hot Water Ready carregado com esse id."
+    },
+    "member_not_found": {
+      "message": "Esse dispositivo não é membro deste aquecedor."
+    },
+    "ready_time_not_found": {
+      "message": "Este membro não tem nenhum horário às {time}."
+    },
+    "away_date_in_past": {
+      "message": "O último dia de ausência não pode estar no passado."
+    },
+    "edit_own_only": {
+      "message": "Você só pode alterar os seus próprios horários."
+    },
+    "ready_time_gone": {
+      "message": "Esse horário não existe mais."
+    },
+    "ask_members_only": {
+      "message": "Só membros e administradores podem pedir água quente."
+    },
+    "cancel_not_allowed": {
+      "message": "Só quem pediu pode cancelar o pedido."
+    },
+    "settings_admin_only": {
+      "message": "Só um administrador pode alterar as configurações."
+    },
+    "history_unavailable": {
+      "message": "O Home Assistant não guarda histórico aqui, então não é possível recalcular a taxa."
+    },
+    "person_not_found": {
+      "message": "Essa pessoa não existe no Home Assistant."
+    },
+    "switched_off_by": {
+      "message": "{name} desligou o aquecimento."
+    },
+    "switched_off": {
+      "message": "O aquecimento foi desligado."
+    },
+    "switch_off_not_allowed": {
+      "message": "Só um administrador, ou alguém escolhido por um administrador, pode desligar o aquecimento para todos."
+    },
+    "fault_top_probe": {
+      "message": "{heater}: a sonda principal pode estar solta. Verifique; o aquecimento continua."
+    },
+    "fault_label_top_probe": {
+      "message": "a sonda principal pode estar solta"
+    },
+    "fault_middle_probe": {
+      "message": "{heater}: a segunda sonda pode estar solta. Verifique; o aquecimento continua."
+    },
+    "fault_label_middle_probe": {
+      "message": "a segunda sonda pode estar solta"
+    },
+    "fault_probes_disagree": {
+      "message": "{heater}: as duas sondas não concordam. Verifique; o aquecimento continua."
+    },
+    "fault_label_probes_disagree": {
+      "message": "as duas sondas não concordam"
+    }
+  },
+  "issues": {
+    "sensor_unavailable": {
+      "title": "{heater}: o sensor de temperatura da água está em silêncio",
+      "description": "Faz algum tempo que não chega nenhuma leitura do sensor de temperatura da água, então o aquecimento foi parado. Ele volta sozinho um minuto depois que as leituras voltarem."
+    },
+    "not_rising": {
+      "title": "{heater}: a água não está esquentando",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Está resolvido?",
+            "description": "O aquecedor ficou ligado muito tempo e a água quase não subiu, então o aquecimento foi parado. Verifique o aquecedor e o disjuntor dele, depois confirme aqui que está resolvido. O aquecimento volta a funcionar."
+          }
+        }
+      }
+    },
+    "no_consumption": {
+      "title": "{heater}: o aquecedor não consome energia",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Está resolvido?",
+            "description": "O relé estava ligado, mas o aquecedor quase não consumiu energia, então o aquecimento foi parado. Verifique a resistência e o disjuntor dela, depois confirme aqui que está resolvido. O aquecimento volta a funcionar."
+          }
+        }
+      }
+    },
+    "relay_stuck": {
+      "title": "{heater}: o aquecedor consome energia mesmo desligado",
+      "description": "O aquecedor está consumindo energia embora o relé esteja desligado. O relé pode estar travado ligado; verifique. Isto se resolve sozinho um minuto depois que o consumo parar."
+    },
+    "top_probe": {
+      "title": "{heater}: a sonda principal pode estar solta",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Está resolvido?",
+            "description": "A sonda principal da água subiu mais devagar do que o normal em dois aquecimentos seguidos. Ela pode estar saindo do poço ou exposta ao frio. Verifique e depois confirme aqui; o aviso também some sozinho depois de um aquecimento normal."
+          }
+        }
+      }
+    },
+    "middle_probe": {
+      "title": "{heater}: a segunda sonda pode estar solta",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Está resolvido?",
+            "description": "A segunda sonda subiu mais devagar do que o normal, ou ficou atrás da principal, em dois aquecimentos seguidos. Até ela voltar a medir direito, o início é calculado só pela sonda principal. Verifique e depois confirme aqui."
+          }
+        }
+      }
+    },
+    "probes_disagree": {
+      "title": "{heater}: as duas sondas não concordam",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Está resolvido?",
+            "description": "Durante meia hora a sonda principal marcou mais de 3 °C a menos que a segunda. A água quente sobe, então uma delas não está medindo a água. Verifique as duas e depois confirme aqui."
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "heat_now": {
+      "name": "Aquecer agora",
+      "description": "Aquece a água agora. O membro indicado é avisado quando ela estiver pronta; sem um, a pessoa que pediu, se houver.",
+      "fields": {
+        "heater": {
+          "name": "Aquecedor",
+          "description": "O aquecedor a ligar."
+        },
+        "member": {
+          "name": "Membro",
+          "description": "Quem avisar quando estiver pronta."
+        },
+        "keep_minutes": {
+          "name": "Manter quente por",
+          "description": "Minutos para manter a água quente depois da mensagem. Vazio: a configuração do aquecedor."
+        }
+      }
+    },
+    "add_ready_time": {
+      "name": "Adicionar um horário",
+      "description": "Adiciona um horário em que um membro quer água quente.",
+      "fields": {
+        "member": {
+          "name": "Membro",
+          "description": "De quem é o horário."
+        },
+        "time": {
+          "name": "Hora",
+          "description": "Quando a água deve estar pronta."
+        },
+        "weekdays": {
+          "name": "Dias",
+          "description": "Os dias em que se repete. Se omitido: todos os dias."
+        },
+        "enabled": {
+          "name": "Ativo",
+          "description": "Desligado mantém o horário sem agir nele."
+        }
+      }
+    },
+    "remove_ready_time": {
+      "name": "Remover um horário",
+      "description": "Remove os horários de um membro a uma hora do dia, sejam quais forem os dias.",
+      "fields": {
+        "member": {
+          "name": "Membro",
+          "description": "De quem é o horário."
+        },
+        "time": {
+          "name": "Hora",
+          "description": "A hora a remover."
+        }
+      }
+    },
+    "set_away": {
+      "name": "Definir ausência",
+      "description": "Pausa ou retoma os horários de um membro.",
+      "fields": {
+        "member": {
+          "name": "Membro",
+          "description": "Quem está ausente."
+        },
+        "away": {
+          "name": "Ausente",
+          "description": "Ligado pausa os horários, desligado os retoma."
+        },
+        "until": {
+          "name": "Até",
+          "description": "O último dia de ausência; depois dele, a ausência termina sozinha."
+        }
+      }
+    },
+    "switch_off": {
+      "name": "Desligar",
+      "description": "Desliga o aquecedor agora para todos: o pedido de aquecer agora termina e os horários que ele estava aquecendo são pulados. Todos que ficam sem água quente são avisados.",
+      "fields": {
+        "heater": {
+          "name": "Aquecedor",
+          "description": "O aquecedor a desligar."
+        }
+      }
+    }
+  }
+}

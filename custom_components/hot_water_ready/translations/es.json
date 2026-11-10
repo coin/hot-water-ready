@@ -1,0 +1,539 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Añadir un calentador de agua",
+        "description": "Cómo enciende Home Assistant la resistencia.",
+        "menu_options": {
+          "switch": "Un interruptor (relé o enchufe inteligente)",
+          "climate": "Un termostato existente"
+        }
+      },
+      "switch": {
+        "title": "Añadir un calentador de agua",
+        "description": "Elige el interruptor que enciende el calentador y el sensor que mide el agua.",
+        "data": {
+          "name": "Nombre",
+          "switch": "Interruptor del calentador",
+          "temperature_sensor": "Sensor de temperatura del agua",
+          "power_sensor": "Sensor de potencia del calentador (opcional)"
+        },
+        "data_description": {
+          "name": "Se muestra en la tarjeta y en el dispositivo del calentador, por ejemplo Termo.",
+          "switch": "El relé o enchufe inteligente que alimenta la resistencia.",
+          "temperature_sensor": "Un sensor que mide la temperatura del agua acumulada.",
+          "power_sensor": "Con un sensor de potencia también se detectan un calentador que no consume nada y un relé atascado en encendido."
+        }
+      },
+      "climate": {
+        "title": "Añadir un calentador de agua con termostato",
+        "description": "Elige el termostato que controla el calentador y el sensor que mide el agua. Hot Water Ready ajusta su modo y su consigna.",
+        "data": {
+          "name": "Nombre",
+          "temperature_sensor": "Sensor de temperatura del agua",
+          "power_sensor": "Sensor de potencia del calentador (opcional)",
+          "climate": "Termostato"
+        },
+        "data_description": {
+          "name": "Se muestra en la tarjeta y en el dispositivo del calentador, por ejemplo Termo.",
+          "temperature_sensor": "Un sensor que mide la temperatura del agua acumulada.",
+          "power_sensor": "Con un sensor de potencia se detecta un calentador que consume con el termostato apagado y, si el termostato indica cuándo calienta, uno que no consume nada.",
+          "climate": "Hot Water Ready lo pone en calefacción a la temperatura de corte, o lo apaga."
+        }
+      },
+      "reconfigure": {
+        "title": "Cambiar el calentador de agua",
+        "description": "Cómo enciende Home Assistant la resistencia.",
+        "menu_options": {
+          "switch": "Un interruptor (relé o enchufe inteligente)",
+          "climate": "Un termostato existente"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Este interruptor ya pertenece a un calentador.",
+      "reconfigure_successful": "Se ha cambiado el calentador de agua."
+    },
+    "error": {
+      "unsupported_thermostat": "Este termostato no se puede poner en calefacción y apagado; elige otro, o un interruptor."
+    }
+  },
+  "config_subentries": {
+    "member": {
+      "initiate_flow": {
+        "user": "Añadir miembro"
+      },
+      "entry_type": "Miembro",
+      "step": {
+        "user": {
+          "title": "Añadir un miembro",
+          "description": "Un miembro vinculado es una persona que define sus propias horas y recibe un aviso cuando el agua está lista. Un miembro virtual, como Global o Invitados, no tiene persona; un administrador define sus horas.",
+          "menu_options": {
+            "linked": "Una persona",
+            "virtual": "Virtual (Global, Invitados)"
+          }
+        },
+        "linked": {
+          "title": "Añadir una persona",
+          "data": {
+            "name": "Nombre",
+            "person": "Persona",
+            "colour": "Color en la tarjeta",
+            "notify_targets": "Móviles a los que avisar"
+          },
+          "data_description": {
+            "notify_targets": "Déjalo vacío para encontrar automáticamente los móviles de esta persona."
+          }
+        },
+        "virtual": {
+          "title": "Añadir un miembro virtual",
+          "data": {
+            "name": "Nombre",
+            "recipients": "A quién se avisa",
+            "colour": "Color en la tarjeta"
+          },
+          "data_description": {
+            "recipients": "Personas a las que se avisa cuando el agua de este miembro está lista. Déjalo vacío para no avisar a nadie."
+          }
+        },
+        "reconfigure": {
+          "title": "Cambiar un miembro",
+          "data": {
+            "name": "Nombre",
+            "person": "Persona",
+            "recipients": "A quién se avisa",
+            "colour": "Color en la tarjeta",
+            "notify_targets": "Móviles a los que avisar"
+          },
+          "data_description": {
+            "notify_targets": "Déjalo vacío para encontrar automáticamente los móviles de esta persona."
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "Se ha cambiado el miembro."
+      }
+    }
+  },
+  "selector": {
+    "colour": {
+      "options": {
+        "blue": "Azul",
+        "green": "Verde",
+        "orange": "Naranja",
+        "purple": "Morado",
+        "red": "Rojo",
+        "teal": "Verde azulado",
+        "pink": "Rosa",
+        "brown": "Marrón"
+      }
+    },
+    "weekdays": {
+      "options": {
+        "mon": "Lunes",
+        "tue": "Martes",
+        "wed": "Miércoles",
+        "thu": "Jueves",
+        "fri": "Viernes",
+        "sat": "Sábado",
+        "sun": "Domingo"
+      }
+    },
+    "tank_orientation": {
+      "options": {
+        "vertical": "De pie (vertical)",
+        "horizontal": "Tumbado (horizontal)"
+      }
+    },
+    "element_height": {
+      "options": {
+        "bottom": "Abajo del todo",
+        "lower_third": "A un tercio de la altura, más o menos",
+        "middle": "En el medio"
+      }
+    }
+  },
+  "entity": {
+    "number": {
+      "target_temperature": {
+        "name": "Temperatura objetivo"
+      },
+      "margin": {
+        "name": "Margen"
+      }
+    },
+    "sensor": {
+      "status": {
+        "name": "Estado",
+        "state": {
+          "waiting": "En espera",
+          "heating": "Calentando",
+          "ready": "Lista",
+          "fault": "Avería",
+          "manual": "Manual"
+        }
+      },
+      "next_ready_time": {
+        "name": "Próxima hora",
+        "state_attributes": {
+          "members": {
+            "name": "Para"
+          }
+        }
+      },
+      "heating_rate": {
+        "name": "Velocidad de calentamiento aprendida"
+      },
+      "lead": {
+        "name": "Antelación"
+      },
+      "solar_lead": {
+        "name": "Antelación según el sol"
+      }
+    },
+    "switch": {
+      "away": {
+        "name": "Fuera de casa",
+        "state_attributes": {
+          "until": {
+            "name": "Hasta"
+          }
+        }
+      },
+      "automatic": {
+        "name": "Control automático"
+      }
+    },
+    "button": {
+      "heat_now": {
+        "name": "Calentar ahora"
+      }
+    },
+    "binary_sensor": {
+      "problem": {
+        "name": "Problema"
+      }
+    },
+    "calendar": {
+      "windows": {
+        "name": "Franjas de calentamiento"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Ajustes del calentador",
+        "data": {
+          "keep_heating_gap_minutes": "Seguir calentando en pausas de menos de",
+          "keep_hot_minutes": "Tras Calentar ahora, mantener el agua caliente durante",
+          "solar_aware": "Usar la regla solar",
+          "heating_rate": "Velocidad de calentamiento fijada a mano (opcional)",
+          "tank_litres": "Volumen del depósito (opcional)",
+          "element_watts": "Potencia de la resistencia (opcional)",
+          "max_temperature": "Temperatura máxima para duchas seguidas",
+          "cancel_people": "Personas que pueden apagar el calentamiento para todos",
+          "rich_notifications": "Sustituir los mensajes anteriores en los móviles",
+          "power_sensor": "Sensor de potencia del calentador (opcional)",
+          "fault_recipients": "A quién se avisa de las averías",
+          "advanced": "Umbrales de avería",
+          "tank_orientation": "Posición del depósito",
+          "element_height": "Dónde está la resistencia",
+          "middle_temperature_sensor": "Segunda sonda, más abajo (opcional)",
+          "top_probe_height": "Altura de la sonda principal (opcional)",
+          "middle_probe_height": "Altura de la segunda sonda (opcional)"
+        },
+        "data_description": {
+          "keep_heating_gap_minutes": "Las horas así de cercanas comparten una sola franja y el calentador sigue calentando, en lugar de dejar que el agua se enfríe entre ellas.",
+          "keep_hot_minutes": "Se cuenta desde el mensaje «agua caliente lista»; mientras tanto el agua se mantiene entre el objetivo menos y más el margen. 0: parar con el mensaje. Mantener pulsado el botón de la tarjeta elige otra duración para esa petición, hasta 120 minutos.",
+          "cancel_people": "Además de los administradores. Quien lo pidió siempre puede cancelar su propia petición.",
+          "rich_notifications": "En los móviles con la aplicación de Home Assistant, «Agua caliente lista» sustituye a «calentando» en lugar de llegar como un segundo mensaje.",
+          "power_sensor": "Con un sensor de potencia también se detectan un calentador que no consume nada y un relé atascado en encendido.",
+          "fault_recipients": "Vacío: todos los administradores.",
+          "solar_aware": "Desactivado: el inicio se calcula solo a partir del calentador, y el resultado solar solo se registra, para la comparación en los ajustes de la tarjeta.",
+          "heating_rate": "Minutos para subir el agua un grado. Vacío: se aprende de los calentamientos del propio calentador.",
+          "tank_litres": "Con la potencia de la resistencia, permite calentar más para duchas seguidas que el depósito a la temperatura objetivo normal no puede cubrir.",
+          "element_watts": "También da los kWh de la comparación solar sin sensor de potencia.",
+          "max_temperature": "50 °C es el límite contra quemaduras sin válvula mezcladora; hasta 60 °C solo con una.",
+          "tank_orientation": "Tumbado (horizontal) o de pie (vertical).",
+          "element_height": "El calor sube, así que el agua por debajo de la resistencia apenas se calienta. Con el volumen y la potencia, esto da el rango en el que debería estar la velocidad de calentamiento.",
+          "middle_temperature_sensor": "Una sonda en el medio del depósito. El inicio se adelanta cuando el agua por debajo de la parte superior está más fría, y ambas sondas se comparan con su comportamiento habitual. El estado lista sigue dependiendo de la sonda principal.",
+          "top_probe_height": "Dónde está la sonda principal, desde abajo (0 %) hasta arriba (100 %) del depósito.",
+          "middle_probe_height": "Con ambas alturas, cada sonda cuenta para el agua calentada más cercana a ella, así que la media con la que se calcula el inicio es ponderada. Sin ellas, la mitad cada una."
+        },
+        "sections": {
+          "advanced": {
+            "name": "Umbrales de avería",
+            "data": {
+              "sensor_timeout_minutes": "Sensor sin datos durante",
+              "sensor_recovery_minutes": "Lecturas recuperadas durante",
+              "not_rising_minutes": "Calentando sin subir durante",
+              "not_rising_degrees": "Subida de menos de",
+              "power_watts": "Umbral de potencia",
+              "power_minutes": "Potencia anómala durante"
+            }
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "heat_now_timeout": {
+      "message": "El agua no se calentó a tiempo; la petición de Calentar ahora ha terminado. Revisa el calentador."
+    },
+    "no_target": {
+      "message": "Hot Water Ready no encontró ningún móvil para avisar a {name}: {message}"
+    },
+    "send_failed": {
+      "message": "Hot Water Ready no pudo contactar con los móviles de {name}: {message}"
+    },
+    "window_heating": {
+      "message": "{heater} calentando: agua lista en unos {minutes} min."
+    },
+    "ready": {
+      "message": "Agua caliente lista: el agua está a {temperature} °C."
+    },
+    "fault_sensor_unavailable": {
+      "message": "{heater}: el sensor de temperatura del agua no envía datos; el calentamiento se ha detenido."
+    },
+    "fault_not_rising": {
+      "message": "{heater}: el agua no se calienta; el calentamiento se ha detenido. Revisa el calentador."
+    },
+    "fault_no_consumption": {
+      "message": "{heater}: el calentador no consume nada; el calentamiento se ha detenido. Revisa la resistencia."
+    },
+    "fault_relay_stuck": {
+      "message": "{heater}: el calentador consume estando apagado. Revisa el relé."
+    },
+    "heat_now_refused": {
+      "message": "No se puede Calentar ahora mientras una avería detiene el calentamiento: {faults}."
+    },
+    "fault_label_sensor_unavailable": {
+      "message": "el sensor de temperatura del agua no da lecturas"
+    },
+    "fault_label_not_rising": {
+      "message": "el agua no se calienta"
+    },
+    "fault_label_no_consumption": {
+      "message": "el calentador no consume nada"
+    },
+    "fault_label_relay_stuck": {
+      "message": "el relé parece atascado en encendido"
+    },
+    "heat_now_refused_manual": {
+      "message": "No se puede Calentar ahora mientras el control automático está desactivado: el calentador se maneja a mano."
+    },
+    "calendar_window": {
+      "message": "Calentando: {members}"
+    },
+    "heater_not_found": {
+      "message": "No hay ningún calentador de Hot Water Ready cargado con ese id."
+    },
+    "member_not_found": {
+      "message": "Ese dispositivo no es un miembro de este calentador."
+    },
+    "ready_time_not_found": {
+      "message": "Este miembro no tiene ninguna hora a las {time}."
+    },
+    "away_date_in_past": {
+      "message": "El último día fuera no puede estar en el pasado."
+    },
+    "edit_own_only": {
+      "message": "Solo puedes cambiar tus propias horas."
+    },
+    "ready_time_gone": {
+      "message": "Esa hora ya no existe."
+    },
+    "ask_members_only": {
+      "message": "Solo los miembros y los administradores pueden pedir agua caliente."
+    },
+    "cancel_not_allowed": {
+      "message": "Solo quien lo pidió puede cancelar su petición."
+    },
+    "settings_admin_only": {
+      "message": "Solo un administrador puede cambiar los ajustes."
+    },
+    "history_unavailable": {
+      "message": "Home Assistant no guarda historial aquí, así que no se puede recalcular la velocidad."
+    },
+    "person_not_found": {
+      "message": "Esa persona no existe en Home Assistant."
+    },
+    "switched_off_by": {
+      "message": "{name} ha apagado el calentamiento."
+    },
+    "switched_off": {
+      "message": "Se ha apagado el calentamiento."
+    },
+    "switch_off_not_allowed": {
+      "message": "Solo un administrador, o alguien elegido por un administrador, puede apagar el calentamiento para todos."
+    },
+    "fault_top_probe": {
+      "message": "{heater}: puede que la sonda principal esté suelta. Revísala; el calentamiento continúa."
+    },
+    "fault_label_top_probe": {
+      "message": "puede que la sonda principal esté suelta"
+    },
+    "fault_middle_probe": {
+      "message": "{heater}: puede que la segunda sonda esté suelta. Revísala; el calentamiento continúa."
+    },
+    "fault_label_middle_probe": {
+      "message": "puede que la segunda sonda esté suelta"
+    },
+    "fault_probes_disagree": {
+      "message": "{heater}: las dos sondas no coinciden. Revísalas; el calentamiento continúa."
+    },
+    "fault_label_probes_disagree": {
+      "message": "las dos sondas no coinciden"
+    }
+  },
+  "issues": {
+    "sensor_unavailable": {
+      "title": "{heater}: el sensor de temperatura del agua no envía datos",
+      "description": "El sensor de temperatura del agua lleva un rato sin dar lecturas, así que el calentamiento se ha detenido. Se reanuda solo un minuto después de que vuelvan las lecturas."
+    },
+    "not_rising": {
+      "title": "{heater}: el agua no se calienta",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "¿Está arreglado?",
+            "description": "El calentador estuvo encendido mucho tiempo y el agua apenas subió, así que el calentamiento se ha detenido. Revisa el calentador y su magnetotérmico, y luego confirma aquí que está arreglado. El calentamiento se reanuda."
+          }
+        }
+      }
+    },
+    "no_consumption": {
+      "title": "{heater}: el calentador no consume nada",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "¿Está arreglado?",
+            "description": "El relé estaba encendido pero el calentador apenas consumió, así que el calentamiento se ha detenido. Revisa la resistencia y su magnetotérmico, y luego confirma aquí que está arreglado. El calentamiento se reanuda."
+          }
+        }
+      }
+    },
+    "relay_stuck": {
+      "title": "{heater}: el calentador consume estando apagado",
+      "description": "El calentador está consumiendo aunque el relé está apagado. Puede que el relé esté atascado en encendido; revísalo. El aviso desaparece solo un minuto después de que deje de consumir."
+    },
+    "top_probe": {
+      "title": "{heater}: puede que la sonda principal esté suelta",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "¿Está arreglado?",
+            "description": "La sonda principal del agua subió más despacio de lo normal en dos calentamientos seguidos. Puede que se esté saliendo de su vaina o que esté expuesta al frío. Revísala y luego confirma aquí; el aviso también desaparece solo tras un calentamiento normal."
+          }
+        }
+      }
+    },
+    "middle_probe": {
+      "title": "{heater}: puede que la segunda sonda esté suelta",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "¿Está arreglado?",
+            "description": "La segunda sonda subió más despacio de lo normal, o se quedó por detrás de la principal, en dos calentamientos seguidos. Hasta que vuelva a medir bien, el inicio se calcula solo con la sonda principal. Revísala y luego confirma aquí."
+          }
+        }
+      }
+    },
+    "probes_disagree": {
+      "title": "{heater}: las dos sondas no coinciden",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "¿Está arreglado?",
+            "description": "Durante media hora la sonda principal marcó más de 3 °C menos que la segunda. El agua caliente sube, así que una de ellas no está midiendo el agua. Revisa las dos y luego confirma aquí."
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "heat_now": {
+      "name": "Calentar ahora",
+      "description": "Calienta el agua ahora. Se avisa al miembro indicado cuando esté lista; si no se indica ninguno, a la persona que lo pidió, si la hay.",
+      "fields": {
+        "heater": {
+          "name": "Calentador",
+          "description": "El calentador que se va a encender."
+        },
+        "member": {
+          "name": "Miembro",
+          "description": "A quién avisar cuando esté lista."
+        },
+        "keep_minutes": {
+          "name": "Mantener caliente durante",
+          "description": "Minutos que se mantiene el agua caliente después del mensaje. Vacío: el ajuste del calentador."
+        }
+      }
+    },
+    "add_ready_time": {
+      "name": "Añadir una hora",
+      "description": "Añade una hora a la que un miembro quiere agua caliente.",
+      "fields": {
+        "member": {
+          "name": "Miembro",
+          "description": "De quién es la hora."
+        },
+        "time": {
+          "name": "Hora",
+          "description": "Cuándo debe estar lista el agua."
+        },
+        "weekdays": {
+          "name": "Días",
+          "description": "Los días en que se repite. Si se omite: todos los días."
+        },
+        "enabled": {
+          "name": "Activada",
+          "description": "Desactivada, la hora se guarda sin aplicarse."
+        }
+      }
+    },
+    "remove_ready_time": {
+      "name": "Quitar una hora",
+      "description": "Quita las horas de un miembro a una hora del día, sean cuales sean sus días.",
+      "fields": {
+        "member": {
+          "name": "Miembro",
+          "description": "De quién es la hora."
+        },
+        "time": {
+          "name": "Hora",
+          "description": "La hora que se quita."
+        }
+      }
+    },
+    "set_away": {
+      "name": "Marcar fuera de casa",
+      "description": "Pausa o reanuda las horas de un miembro.",
+      "fields": {
+        "member": {
+          "name": "Miembro",
+          "description": "Quién está fuera."
+        },
+        "away": {
+          "name": "Fuera de casa",
+          "description": "Activado pausa las horas; desactivado las reanuda."
+        },
+        "until": {
+          "name": "Hasta",
+          "description": "El último día fuera; después, la ausencia termina sola."
+        }
+      }
+    },
+    "switch_off": {
+      "name": "Apagar",
+      "description": "Apaga el calentador ahora para todos: la petición de Calentar ahora termina y se omiten las horas para las que estaba calentando. Se avisa a todos los afectados.",
+      "fields": {
+        "heater": {
+          "name": "Calentador",
+          "description": "El calentador que se va a apagar."
+        }
+      }
+    }
+  }
+}

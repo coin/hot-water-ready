@@ -1,0 +1,539 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Warmwasserbereiter hinzufügen",
+        "description": "Wie Home Assistant den Heizstab einschaltet.",
+        "menu_options": {
+          "switch": "Ein Schalter (Relais oder smarte Steckdose)",
+          "climate": "Ein vorhandenes Thermostat"
+        }
+      },
+      "switch": {
+        "title": "Warmwasserbereiter hinzufügen",
+        "description": "Wähle den Schalter, der den Boiler einschaltet, und den Sensor, der das Wasser misst.",
+        "data": {
+          "name": "Name",
+          "switch": "Schalter des Boilers",
+          "temperature_sensor": "Wassertemperatursensor",
+          "power_sensor": "Leistungssensor des Boilers (optional)"
+        },
+        "data_description": {
+          "name": "Wird auf der Karte und am Gerät des Boilers angezeigt, zum Beispiel Speicher.",
+          "switch": "Das Relais oder die smarte Steckdose, die den Heizstab versorgt.",
+          "temperature_sensor": "Ein Sensor, der die Temperatur des gespeicherten Wassers misst.",
+          "power_sensor": "Mit einem Leistungssensor fallen auch ein Boiler, der keinen Strom zieht, und ein hängendes Relais auf."
+        }
+      },
+      "climate": {
+        "title": "Warmwasserbereiter mit Thermostat hinzufügen",
+        "description": "Wähle das Thermostat, das den Boiler steuert, und den Sensor, der das Wasser misst. Hot Water Ready stellt Modus und Sollwert ein.",
+        "data": {
+          "name": "Name",
+          "temperature_sensor": "Wassertemperatursensor",
+          "power_sensor": "Leistungssensor des Boilers (optional)",
+          "climate": "Thermostat"
+        },
+        "data_description": {
+          "name": "Wird auf der Karte und am Gerät des Boilers angezeigt, zum Beispiel Speicher.",
+          "temperature_sensor": "Ein Sensor, der die Temperatur des gespeicherten Wassers misst.",
+          "power_sensor": "Mit einem Leistungssensor fällt ein Boiler auf, der bei ausgeschaltetem Thermostat Strom zieht, und, wenn das Thermostat meldet, wann es heizt, auch einer, der keinen Strom zieht.",
+          "climate": "Hot Water Ready stellt es auf Heizen mit der Abschalttemperatur oder auf Aus."
+        }
+      },
+      "reconfigure": {
+        "title": "Warmwasserbereiter ändern",
+        "description": "Wie Home Assistant den Heizstab einschaltet.",
+        "menu_options": {
+          "switch": "Ein Schalter (Relais oder smarte Steckdose)",
+          "climate": "Ein vorhandenes Thermostat"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Dieser Schalter gehört bereits zu einem Boiler.",
+      "reconfigure_successful": "Der Warmwasserbereiter wurde geändert."
+    },
+    "error": {
+      "unsupported_thermostat": "Dieses Thermostat lässt sich nicht auf Heizen und Aus stellen; wähle ein anderes oder einen Schalter."
+    }
+  },
+  "config_subentries": {
+    "member": {
+      "initiate_flow": {
+        "user": "Mitglied hinzufügen"
+      },
+      "entry_type": "Mitglied",
+      "step": {
+        "user": {
+          "title": "Mitglied hinzufügen",
+          "description": "Ein verknüpftes Mitglied ist eine Person, die ihre eigenen Zeiten festlegt und benachrichtigt wird, wenn das Wasser bereit ist. Ein virtuelles Mitglied, etwa Global oder Gäste, hat keine Person; seine Zeiten legt ein Administrator fest.",
+          "menu_options": {
+            "linked": "Eine Person",
+            "virtual": "Virtuell (Global, Gäste)"
+          }
+        },
+        "linked": {
+          "title": "Person hinzufügen",
+          "data": {
+            "name": "Name",
+            "person": "Person",
+            "colour": "Farbe auf der Karte",
+            "notify_targets": "Zu benachrichtigende Handys"
+          },
+          "data_description": {
+            "notify_targets": "Leer lassen, um die Handys dieser Person automatisch zu finden."
+          }
+        },
+        "virtual": {
+          "title": "Virtuelles Mitglied hinzufügen",
+          "data": {
+            "name": "Name",
+            "recipients": "Wer benachrichtigt wird",
+            "colour": "Farbe auf der Karte"
+          },
+          "data_description": {
+            "recipients": "Personen, die benachrichtigt werden, wenn das Wasser dieses Mitglieds bereit ist. Leer lassen, um niemanden zu benachrichtigen."
+          }
+        },
+        "reconfigure": {
+          "title": "Mitglied ändern",
+          "data": {
+            "name": "Name",
+            "person": "Person",
+            "recipients": "Wer benachrichtigt wird",
+            "colour": "Farbe auf der Karte",
+            "notify_targets": "Zu benachrichtigende Handys"
+          },
+          "data_description": {
+            "notify_targets": "Leer lassen, um die Handys dieser Person automatisch zu finden."
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "Das Mitglied wurde geändert."
+      }
+    }
+  },
+  "selector": {
+    "colour": {
+      "options": {
+        "blue": "Blau",
+        "green": "Grün",
+        "orange": "Orange",
+        "purple": "Lila",
+        "red": "Rot",
+        "teal": "Petrol",
+        "pink": "Rosa",
+        "brown": "Braun"
+      }
+    },
+    "weekdays": {
+      "options": {
+        "mon": "Montag",
+        "tue": "Dienstag",
+        "wed": "Mittwoch",
+        "thu": "Donnerstag",
+        "fri": "Freitag",
+        "sat": "Samstag",
+        "sun": "Sonntag"
+      }
+    },
+    "tank_orientation": {
+      "options": {
+        "vertical": "Stehend (vertikal)",
+        "horizontal": "Liegend (horizontal)"
+      }
+    },
+    "element_height": {
+      "options": {
+        "bottom": "Ganz unten",
+        "lower_third": "Etwa im unteren Drittel",
+        "middle": "In der Mitte"
+      }
+    }
+  },
+  "entity": {
+    "number": {
+      "target_temperature": {
+        "name": "Zieltemperatur"
+      },
+      "margin": {
+        "name": "Spielraum"
+      }
+    },
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "waiting": "Bereitschaft",
+          "heating": "Heizt",
+          "ready": "Bereit",
+          "fault": "Störung",
+          "manual": "Manuell"
+        }
+      },
+      "next_ready_time": {
+        "name": "Nächste Bereitzeit",
+        "state_attributes": {
+          "members": {
+            "name": "Für"
+          }
+        }
+      },
+      "heating_rate": {
+        "name": "Gelernte Heizrate"
+      },
+      "lead": {
+        "name": "Vorlaufzeit"
+      },
+      "solar_lead": {
+        "name": "Vorlaufzeit mit Solarberücksichtigung"
+      }
+    },
+    "switch": {
+      "away": {
+        "name": "Abwesend",
+        "state_attributes": {
+          "until": {
+            "name": "Bis"
+          }
+        }
+      },
+      "automatic": {
+        "name": "Automatische Steuerung"
+      }
+    },
+    "button": {
+      "heat_now": {
+        "name": "Jetzt heizen"
+      }
+    },
+    "binary_sensor": {
+      "problem": {
+        "name": "Problem"
+      }
+    },
+    "calendar": {
+      "windows": {
+        "name": "Heizfenster"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Boiler-Einstellungen",
+        "data": {
+          "keep_heating_gap_minutes": "Durchheizen bei Lücken kürzer als",
+          "keep_hot_minutes": "Nach „Jetzt heizen“ das Wasser heiß halten für",
+          "solar_aware": "Solarregel verwenden",
+          "heating_rate": "Manuell festgelegte Heizrate (optional)",
+          "tank_litres": "Speichervolumen (optional)",
+          "element_watts": "Leistung des Heizstabs (optional)",
+          "max_temperature": "Höchsttemperatur für dicht aufeinanderfolgende Duschen",
+          "cancel_people": "Personen, die das Heizen für alle ausschalten dürfen",
+          "rich_notifications": "Frühere Nachrichten auf Handys ersetzen",
+          "power_sensor": "Leistungssensor des Boilers (optional)",
+          "fault_recipients": "Wer über Störungen benachrichtigt wird",
+          "advanced": "Störungsschwellen",
+          "tank_orientation": "Lage des Speichers",
+          "element_height": "Wo der Heizstab sitzt",
+          "middle_temperature_sensor": "Zweiter Fühler, weiter unten (optional)",
+          "top_probe_height": "Höhe des Hauptfühlers (optional)",
+          "middle_probe_height": "Höhe des zweiten Fühlers (optional)"
+        },
+        "data_description": {
+          "keep_heating_gap_minutes": "So nah beieinanderliegende Bereitzeiten teilen sich ein Fenster, und der Boiler heizt durch, statt das Wasser dazwischen abkühlen zu lassen.",
+          "keep_hot_minutes": "Gezählt ab der Nachricht „Warmwasser bereit“; währenddessen bleibt das Wasser zwischen Ziel minus und plus Spielraum. 0: bei der Nachricht aufhören. Langes Drücken der Taste auf der Karte wählt für diese Anfrage eine andere Zeit, bis zu 120 Minuten.",
+          "cancel_people": "Zusätzlich zu den Administratoren. Wer angefragt hat, kann die eigene Anfrage immer abbrechen.",
+          "rich_notifications": "Auf Handys mit der Home Assistant App ersetzt „Warmwasser bereit“ die Nachricht „heizt“, statt als zweite Nachricht zu kommen.",
+          "power_sensor": "Mit einem Leistungssensor fallen auch ein Boiler, der keinen Strom zieht, und ein hängendes Relais auf.",
+          "fault_recipients": "Leer: alle Administratoren.",
+          "solar_aware": "Aus: Der Start wird nur aus dem Boiler berechnet, das Ergebnis der Solarregel wird nur aufgezeichnet, für den Vergleich in den Einstellungen der Karte.",
+          "heating_rate": "Minuten, um das Wasser um ein Grad zu erwärmen. Leer: aus den eigenen Heizvorgängen des Boilers gelernt.",
+          "tank_litres": "Zusammen mit der Leistung des Heizstabs kann der Boiler für dicht aufeinanderfolgende Duschen höher heizen, wenn der Speicher sie beim normalen Ziel nicht schafft.",
+          "element_watts": "Liefert dem Solarvergleich auch ohne Leistungssensor die kWh.",
+          "max_temperature": "50 °C ist die Verbrühungsgrenze ohne Mischventil; bis 60 °C nur mit einem.",
+          "tank_orientation": "Liegend (horizontal) oder stehend (vertikal).",
+          "element_height": "Wärme steigt nach oben, das Wasser unter dem Heizstab wird also kaum warm. Mit Volumen und Leistung ergibt das den Bereich, in dem die Heizgeschwindigkeit liegen sollte.",
+          "middle_temperature_sensor": "Ein Fühler in der Mitte des Speichers. Der Start wird vorgezogen, wenn das Wasser unterhalb der Oberseite kälter ist, und beide Fühler werden mit ihrem üblichen Verhalten verglichen. Bereit richtet sich weiterhin nach dem Hauptfühler.",
+          "top_probe_height": "Wo der Hauptfühler sitzt, von unten (0 %) bis oben (100 %) im Speicher.",
+          "middle_probe_height": "Mit beiden Höhen zählt jeder Fühler für das beheizte Wasser in seiner Nähe, der Mittelwert, aus dem der Start berechnet wird, ist also gewichtet. Ohne sie zählt jeder zur Hälfte."
+        },
+        "sections": {
+          "advanced": {
+            "name": "Störungsschwellen",
+            "data": {
+              "sensor_timeout_minutes": "Sensor stumm seit",
+              "sensor_recovery_minutes": "Messwerte wieder da seit",
+              "not_rising_minutes": "Heizen ohne Anstieg seit",
+              "not_rising_degrees": "Anstieg kleiner als",
+              "power_watts": "Leistungsschwelle",
+              "power_minutes": "Unpassende Leistung seit"
+            }
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "heat_now_timeout": {
+      "message": "Das Wasser wurde nicht rechtzeitig heiß; die Anfrage „Jetzt heizen“ ist beendet. Prüfe den Boiler."
+    },
+    "no_target": {
+      "message": "Hot Water Ready hat kein Handy gefunden, um {name} zu benachrichtigen: {message}"
+    },
+    "send_failed": {
+      "message": "Hot Water Ready konnte die Handys von {name} nicht erreichen: {message}"
+    },
+    "window_heating": {
+      "message": "{heater} heizt: Wasser in etwa {minutes} min bereit."
+    },
+    "ready": {
+      "message": "Warmwasser bereit: Das Wasser hat {temperature} °C."
+    },
+    "fault_sensor_unavailable": {
+      "message": "{heater}: Der Wassertemperatursensor ist stumm; das Heizen ist gestoppt."
+    },
+    "fault_not_rising": {
+      "message": "{heater}: Das Wasser wird nicht wärmer; das Heizen ist gestoppt. Prüfe den Boiler."
+    },
+    "fault_no_consumption": {
+      "message": "{heater}: Der Boiler zieht keinen Strom; das Heizen ist gestoppt. Prüfe den Heizstab."
+    },
+    "fault_relay_stuck": {
+      "message": "{heater}: Der Boiler zieht Strom, obwohl er ausgeschaltet ist. Prüfe das Relais."
+    },
+    "heat_now_refused": {
+      "message": "„Jetzt heizen“ ist nicht möglich, solange eine Störung das Heizen stoppt: {faults}."
+    },
+    "fault_label_sensor_unavailable": {
+      "message": "der Wassertemperatursensor liefert keine Messwerte"
+    },
+    "fault_label_not_rising": {
+      "message": "das Wasser wird nicht wärmer"
+    },
+    "fault_label_no_consumption": {
+      "message": "der Boiler zieht keinen Strom"
+    },
+    "fault_label_relay_stuck": {
+      "message": "das Relais scheint eingeschaltet zu hängen"
+    },
+    "heat_now_refused_manual": {
+      "message": "„Jetzt heizen“ ist nicht möglich, solange die automatische Steuerung aus ist: Der Boiler wird manuell betrieben."
+    },
+    "calendar_window": {
+      "message": "Heizen: {members}"
+    },
+    "heater_not_found": {
+      "message": "Kein geladener Hot Water Ready Boiler mit dieser ID."
+    },
+    "member_not_found": {
+      "message": "Dieses Gerät ist kein Mitglied dieses Boilers."
+    },
+    "ready_time_not_found": {
+      "message": "Dieses Mitglied hat um {time} keine Bereitzeit."
+    },
+    "away_date_in_past": {
+      "message": "Der letzte Abwesenheitstag darf nicht in der Vergangenheit liegen."
+    },
+    "edit_own_only": {
+      "message": "Du kannst nur deine eigenen Bereitzeiten ändern."
+    },
+    "ready_time_gone": {
+      "message": "Diese Bereitzeit gibt es nicht mehr."
+    },
+    "ask_members_only": {
+      "message": "Nur Mitglieder und Administratoren können Warmwasser anfordern."
+    },
+    "cancel_not_allowed": {
+      "message": "Nur wer angefragt hat, kann die eigene Anfrage abbrechen."
+    },
+    "settings_admin_only": {
+      "message": "Nur ein Administrator kann die Einstellungen ändern."
+    },
+    "history_unavailable": {
+      "message": "Home Assistant speichert hier keinen Verlauf, daher kann die Rate nicht neu berechnet werden."
+    },
+    "person_not_found": {
+      "message": "Diese Person gibt es in Home Assistant nicht."
+    },
+    "switched_off_by": {
+      "message": "{name} hat das Heizen ausgeschaltet."
+    },
+    "switched_off": {
+      "message": "Das Heizen wurde ausgeschaltet."
+    },
+    "switch_off_not_allowed": {
+      "message": "Nur ein Administrator oder jemand, den ein Administrator ausgewählt hat, kann das Heizen für alle ausschalten."
+    },
+    "fault_top_probe": {
+      "message": "{heater}: Der Hauptfühler sitzt vielleicht locker. Prüfe ihn; das Heizen läuft weiter."
+    },
+    "fault_label_top_probe": {
+      "message": "der Hauptfühler sitzt vielleicht locker"
+    },
+    "fault_middle_probe": {
+      "message": "{heater}: Der zweite Fühler sitzt vielleicht locker. Prüfe ihn; das Heizen läuft weiter."
+    },
+    "fault_label_middle_probe": {
+      "message": "der zweite Fühler sitzt vielleicht locker"
+    },
+    "fault_probes_disagree": {
+      "message": "{heater}: Die beiden Fühler stimmen nicht überein. Prüfe sie; das Heizen läuft weiter."
+    },
+    "fault_label_probes_disagree": {
+      "message": "die beiden Fühler stimmen nicht überein"
+    }
+  },
+  "issues": {
+    "sensor_unavailable": {
+      "title": "{heater}: Der Wassertemperatursensor ist stumm",
+      "description": "Seit einer Weile kommt kein Messwert vom Wassertemperatursensor, daher ist das Heizen gestoppt. Es startet von selbst wieder eine Minute, nachdem wieder Messwerte kommen."
+    },
+    "not_rising": {
+      "title": "{heater}: Das Wasser wird nicht wärmer",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Ist es behoben?",
+            "description": "Der Boiler war lange eingeschaltet und das Wasser ist kaum wärmer geworden, daher ist das Heizen gestoppt. Prüfe den Boiler und seine Sicherung und bestätige dann hier, dass es behoben ist. Das Heizen startet wieder."
+          }
+        }
+      }
+    },
+    "no_consumption": {
+      "title": "{heater}: Der Boiler zieht keinen Strom",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Ist es behoben?",
+            "description": "Das Relais war eingeschaltet, aber der Boiler hat kaum Strom gezogen, daher ist das Heizen gestoppt. Prüfe den Heizstab und seine Sicherung und bestätige dann hier, dass es behoben ist. Das Heizen startet wieder."
+          }
+        }
+      }
+    },
+    "relay_stuck": {
+      "title": "{heater}: Der Boiler zieht Strom, obwohl er ausgeschaltet ist",
+      "description": "Der Boiler zieht Strom, obwohl das Relais aus ist. Das Relais hängt vielleicht eingeschaltet; prüfe es. Die Meldung verschwindet von selbst eine Minute, nachdem kein Strom mehr fließt."
+    },
+    "top_probe": {
+      "title": "{heater}: Der Hauptfühler sitzt vielleicht locker",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Ist es behoben?",
+            "description": "Der Hauptfühler ist bei zwei Heizvorgängen hintereinander langsamer gestiegen als sonst. Vielleicht rutscht er aus seiner Tauchhülse oder ist der Kälte ausgesetzt. Prüfe ihn und bestätige dann hier; die Meldung verschwindet auch nach einem normalen Heizvorgang von selbst."
+          }
+        }
+      }
+    },
+    "middle_probe": {
+      "title": "{heater}: Der zweite Fühler sitzt vielleicht locker",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Ist es behoben?",
+            "description": "Der zweite Fühler ist bei zwei Heizvorgängen hintereinander langsamer gestiegen als sonst oder hinter dem Hauptfühler zurückgeblieben. Bis er wieder richtig misst, wird der Start nur aus dem Hauptfühler berechnet. Prüfe ihn und bestätige dann hier."
+          }
+        }
+      }
+    },
+    "probes_disagree": {
+      "title": "{heater}: Die beiden Fühler stimmen nicht überein",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Ist es behoben?",
+            "description": "Eine halbe Stunde lang hat der Hauptfühler mehr als 3 °C weniger gemessen als der zweite. Warmes Wasser steigt nach oben, also misst einer von beiden nicht das Wasser. Prüfe beide und bestätige dann hier."
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "heat_now": {
+      "name": "Jetzt heizen",
+      "description": "Heizt das Wasser jetzt. Das genannte Mitglied wird benachrichtigt, wenn es bereit ist; ohne Mitglied die anfragende Person, falls vorhanden.",
+      "fields": {
+        "heater": {
+          "name": "Boiler",
+          "description": "Der Boiler, der heizen soll."
+        },
+        "member": {
+          "name": "Mitglied",
+          "description": "Wer benachrichtigt wird, wenn es bereit ist."
+        },
+        "keep_minutes": {
+          "name": "Heiß halten für",
+          "description": "Minuten, die das Wasser nach der Nachricht heiß gehalten wird. Leer: die Einstellung des Boilers."
+        }
+      }
+    },
+    "add_ready_time": {
+      "name": "Bereitzeit hinzufügen",
+      "description": "Fügt eine Zeit hinzu, zu der ein Mitglied Warmwasser möchte.",
+      "fields": {
+        "member": {
+          "name": "Mitglied",
+          "description": "Wessen Bereitzeit es ist."
+        },
+        "time": {
+          "name": "Uhrzeit",
+          "description": "Wann das Wasser bereit sein soll."
+        },
+        "weekdays": {
+          "name": "Tage",
+          "description": "Die Tage, an denen sie sich wiederholt. Weggelassen: jeden Tag."
+        },
+        "enabled": {
+          "name": "Ein",
+          "description": "Aus behält die Zeit, ohne danach zu handeln."
+        }
+      }
+    },
+    "remove_ready_time": {
+      "name": "Bereitzeit entfernen",
+      "description": "Entfernt die Bereitzeiten eines Mitglieds zu einer Uhrzeit, unabhängig von ihren Tagen.",
+      "fields": {
+        "member": {
+          "name": "Mitglied",
+          "description": "Wessen Bereitzeit es ist."
+        },
+        "time": {
+          "name": "Uhrzeit",
+          "description": "Die zu entfernende Uhrzeit."
+        }
+      }
+    },
+    "set_away": {
+      "name": "Abwesenheit festlegen",
+      "description": "Pausiert die Bereitzeiten eines Mitglieds oder setzt sie fort.",
+      "fields": {
+        "member": {
+          "name": "Mitglied",
+          "description": "Wer abwesend ist."
+        },
+        "away": {
+          "name": "Abwesend",
+          "description": "Ein pausiert die Bereitzeiten, Aus setzt sie fort."
+        },
+        "until": {
+          "name": "Bis",
+          "description": "Der letzte Abwesenheitstag; danach endet die Abwesenheit von selbst."
+        }
+      }
+    },
+    "switch_off": {
+      "name": "Ausschalten",
+      "description": "Schaltet den Boiler jetzt für alle aus: Die Anfrage „Jetzt heizen“ endet, und die Bereitzeiten, für die er geheizt hat, entfallen. Alle Betroffenen werden benachrichtigt.",
+      "fields": {
+        "heater": {
+          "name": "Boiler",
+          "description": "Der Boiler, der ausgeschaltet werden soll."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,539 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Aggiungi uno scaldacqua",
+        "description": "Come Home Assistant accende la resistenza.",
+        "menu_options": {
+          "switch": "Un interruttore (relè o presa smart)",
+          "climate": "Un termostato esistente"
+        }
+      },
+      "switch": {
+        "title": "Aggiungi uno scaldacqua",
+        "description": "Scegli l'interruttore che accende lo scaldacqua e il sensore che misura l'acqua.",
+        "data": {
+          "name": "Nome",
+          "switch": "Interruttore dello scaldacqua",
+          "temperature_sensor": "Sensore di temperatura dell'acqua",
+          "power_sensor": "Sensore di potenza dello scaldacqua (facoltativo)"
+        },
+        "data_description": {
+          "name": "Mostrato sulla scheda e sul dispositivo dello scaldacqua, per esempio Boiler.",
+          "switch": "Il relè o la presa smart che alimenta la resistenza.",
+          "temperature_sensor": "Un sensore che misura la temperatura dell'acqua accumulata.",
+          "power_sensor": "Con un sensore di potenza vengono rilevati anche uno scaldacqua che non assorbe nulla e un relè bloccato acceso."
+        }
+      },
+      "climate": {
+        "title": "Aggiungi uno scaldacqua con termostato",
+        "description": "Scegli il termostato che comanda lo scaldacqua e il sensore che misura l'acqua. Hot Water Ready ne imposta la modalità e il setpoint.",
+        "data": {
+          "name": "Nome",
+          "temperature_sensor": "Sensore di temperatura dell'acqua",
+          "power_sensor": "Sensore di potenza dello scaldacqua (facoltativo)",
+          "climate": "Termostato"
+        },
+        "data_description": {
+          "name": "Mostrato sulla scheda e sul dispositivo dello scaldacqua, per esempio Boiler.",
+          "temperature_sensor": "Un sensore che misura la temperatura dell'acqua accumulata.",
+          "power_sensor": "Con un sensore di potenza viene rilevato uno scaldacqua che assorbe corrente mentre il termostato è spento e, se il termostato indica quando scalda, uno che non assorbe nulla.",
+          "climate": "Hot Water Ready lo imposta in riscaldamento alla temperatura di arresto, oppure lo spegne."
+        }
+      },
+      "reconfigure": {
+        "title": "Modifica lo scaldacqua",
+        "description": "Come Home Assistant accende la resistenza.",
+        "menu_options": {
+          "switch": "Un interruttore (relè o presa smart)",
+          "climate": "Un termostato esistente"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Questo interruttore appartiene già a uno scaldacqua.",
+      "reconfigure_successful": "Lo scaldacqua è stato modificato."
+    },
+    "error": {
+      "unsupported_thermostat": "Questo termostato non può essere impostato su riscaldamento e spento; scegline un altro, oppure un interruttore."
+    }
+  },
+  "config_subentries": {
+    "member": {
+      "initiate_flow": {
+        "user": "Aggiungi membro"
+      },
+      "entry_type": "Membro",
+      "step": {
+        "user": {
+          "title": "Aggiungi un membro",
+          "description": "Un membro collegato è una persona che imposta i propri orari e viene avvisata quando l'acqua è pronta. Un membro virtuale, come Globale o Ospiti, non ha una persona; i suoi orari li imposta un amministratore.",
+          "menu_options": {
+            "linked": "Una persona",
+            "virtual": "Virtuale (Globale, Ospiti)"
+          }
+        },
+        "linked": {
+          "title": "Aggiungi una persona",
+          "data": {
+            "name": "Nome",
+            "person": "Persona",
+            "colour": "Colore sulla scheda",
+            "notify_targets": "Telefoni da avvisare"
+          },
+          "data_description": {
+            "notify_targets": "Lascia vuoto per trovare automaticamente i telefoni di questa persona."
+          }
+        },
+        "virtual": {
+          "title": "Aggiungi un membro virtuale",
+          "data": {
+            "name": "Nome",
+            "recipients": "Chi viene avvisato",
+            "colour": "Colore sulla scheda"
+          },
+          "data_description": {
+            "recipients": "Le persone avvisate quando l'acqua di questo membro è pronta. Lascia vuoto per non avvisare nessuno."
+          }
+        },
+        "reconfigure": {
+          "title": "Modifica un membro",
+          "data": {
+            "name": "Nome",
+            "person": "Persona",
+            "recipients": "Chi viene avvisato",
+            "colour": "Colore sulla scheda",
+            "notify_targets": "Telefoni da avvisare"
+          },
+          "data_description": {
+            "notify_targets": "Lascia vuoto per trovare automaticamente i telefoni di questa persona."
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "Il membro è stato modificato."
+      }
+    }
+  },
+  "selector": {
+    "colour": {
+      "options": {
+        "blue": "Blu",
+        "green": "Verde",
+        "orange": "Arancione",
+        "purple": "Viola",
+        "red": "Rosso",
+        "teal": "Verde acqua",
+        "pink": "Rosa",
+        "brown": "Marrone"
+      }
+    },
+    "weekdays": {
+      "options": {
+        "mon": "Lunedì",
+        "tue": "Martedì",
+        "wed": "Mercoledì",
+        "thu": "Giovedì",
+        "fri": "Venerdì",
+        "sat": "Sabato",
+        "sun": "Domenica"
+      }
+    },
+    "tank_orientation": {
+      "options": {
+        "vertical": "In piedi (verticale)",
+        "horizontal": "Sdraiato (orizzontale)"
+      }
+    },
+    "element_height": {
+      "options": {
+        "bottom": "In fondo",
+        "lower_third": "Circa a un terzo dell'altezza",
+        "middle": "A metà"
+      }
+    }
+  },
+  "entity": {
+    "number": {
+      "target_temperature": {
+        "name": "Temperatura obiettivo"
+      },
+      "margin": {
+        "name": "Margine"
+      }
+    },
+    "sensor": {
+      "status": {
+        "name": "Stato",
+        "state": {
+          "waiting": "In attesa",
+          "heating": "In riscaldamento",
+          "ready": "Pronta",
+          "fault": "Guasto",
+          "manual": "Manuale"
+        }
+      },
+      "next_ready_time": {
+        "name": "Prossimo orario",
+        "state_attributes": {
+          "members": {
+            "name": "Per"
+          }
+        }
+      },
+      "heating_rate": {
+        "name": "Velocità di riscaldamento appresa"
+      },
+      "lead": {
+        "name": "Anticipo"
+      },
+      "solar_lead": {
+        "name": "Anticipo con il solare"
+      }
+    },
+    "switch": {
+      "away": {
+        "name": "Fuori casa",
+        "state_attributes": {
+          "until": {
+            "name": "Fino al"
+          }
+        }
+      },
+      "automatic": {
+        "name": "Controllo automatico"
+      }
+    },
+    "button": {
+      "heat_now": {
+        "name": "Scalda ora"
+      }
+    },
+    "binary_sensor": {
+      "problem": {
+        "name": "Problema"
+      }
+    },
+    "calendar": {
+      "windows": {
+        "name": "Finestre di riscaldamento"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Impostazioni dello scaldacqua",
+        "data": {
+          "keep_heating_gap_minutes": "Continua a scaldare nelle pause più brevi di",
+          "keep_hot_minutes": "Dopo Scalda ora, mantieni l'acqua calda per",
+          "solar_aware": "Usa la regola solare",
+          "heating_rate": "Velocità di riscaldamento impostata a mano (facoltativo)",
+          "tank_litres": "Volume del serbatoio (facoltativo)",
+          "element_watts": "Potenza della resistenza (facoltativo)",
+          "max_temperature": "Temperatura massima per docce ravvicinate",
+          "cancel_people": "Persone che possono spegnere il riscaldamento per tutti",
+          "rich_notifications": "Sostituisci i messaggi precedenti sui telefoni",
+          "power_sensor": "Sensore di potenza dello scaldacqua (facoltativo)",
+          "fault_recipients": "Chi viene avvisato dei guasti",
+          "advanced": "Soglie di guasto",
+          "tank_orientation": "Posizione del serbatoio",
+          "element_height": "Dove si trova la resistenza",
+          "middle_temperature_sensor": "Seconda sonda, più in basso (facoltativo)",
+          "top_probe_height": "Altezza della sonda principale (facoltativo)",
+          "middle_probe_height": "Altezza della seconda sonda (facoltativo)"
+        },
+        "data_description": {
+          "keep_heating_gap_minutes": "Gli orari così vicini condividono un'unica finestra e lo scaldacqua continua a scaldare, invece di lasciare raffreddare l'acqua nel frattempo.",
+          "keep_hot_minutes": "Contato dal messaggio «acqua calda pronta»; nel frattempo l'acqua viene mantenuta tra l'obiettivo meno e più il margine. 0: si ferma al messaggio. Tenendo premuto il pulsante della scheda si sceglie un'altra durata per quella richiesta, fino a 120 minuti.",
+          "cancel_people": "Oltre agli amministratori. Chi ha fatto la richiesta può sempre annullarla.",
+          "rich_notifications": "Sui telefoni con l'app Home Assistant, «Acqua calda pronta» sostituisce «in riscaldamento» invece di arrivare come secondo messaggio.",
+          "power_sensor": "Con un sensore di potenza vengono rilevati anche uno scaldacqua che non assorbe nulla e un relè bloccato acceso.",
+          "fault_recipients": "Vuoto: tutti gli amministratori.",
+          "solar_aware": "Disattivata: l'avvio viene calcolato solo dallo scaldacqua, e il risultato solare viene solo registrato, per il confronto nelle impostazioni della scheda.",
+          "heating_rate": "Minuti per alzare l'acqua di un grado. Vuoto: appresa dai riscaldamenti dello scaldacqua stesso.",
+          "tank_litres": "Con la potenza della resistenza, permette di scaldare di più per docce ravvicinate che il serbatoio all'obiettivo normale non riesce a coprire.",
+          "element_watts": "Fornisce anche i kWh del confronto solare senza sensore di potenza.",
+          "max_temperature": "50 °C è il limite contro le scottature senza valvola miscelatrice; fino a 60 °C solo con una.",
+          "tank_orientation": "Sdraiato (orizzontale) o in piedi (verticale).",
+          "element_height": "Il calore sale, quindi l'acqua sotto la resistenza si scalda appena. Con il volume e la potenza, questo dà l'intervallo in cui dovrebbe cadere la velocità di riscaldamento.",
+          "middle_temperature_sensor": "Una sonda a metà del serbatoio. L'avvio viene anticipato quando l'acqua sotto la parte alta è più fredda, ed entrambe le sonde vengono confrontate con il loro comportamento abituale. Lo stato pronta segue sempre la sonda principale.",
+          "top_probe_height": "Dove si trova la sonda principale, dal fondo (0%) alla cima (100%) del serbatoio.",
+          "middle_probe_height": "Con entrambe le altezze, ogni sonda conta per l'acqua scaldata più vicina a essa, quindi la media da cui si calcola l'avvio è ponderata. Senza, metà ciascuna."
+        },
+        "sections": {
+          "advanced": {
+            "name": "Soglie di guasto",
+            "data": {
+              "sensor_timeout_minutes": "Sensore muto per",
+              "sensor_recovery_minutes": "Letture tornate da",
+              "not_rising_minutes": "Riscaldamento senza aumento per",
+              "not_rising_degrees": "Aumento inferiore a",
+              "power_watts": "Soglia di potenza",
+              "power_minutes": "Potenza anomala per"
+            }
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "heat_now_timeout": {
+      "message": "L'acqua non si è scaldata in tempo; la richiesta Scalda ora è terminata. Controlla lo scaldacqua."
+    },
+    "no_target": {
+      "message": "Hot Water Ready non ha trovato nessun telefono per avvisare {name}: {message}"
+    },
+    "send_failed": {
+      "message": "Hot Water Ready non è riuscito a raggiungere i telefoni di {name}: {message}"
+    },
+    "window_heating": {
+      "message": "{heater} in riscaldamento: acqua pronta tra circa {minutes} min."
+    },
+    "ready": {
+      "message": "Acqua calda pronta: l'acqua è a {temperature} °C."
+    },
+    "fault_sensor_unavailable": {
+      "message": "{heater}: il sensore di temperatura dell'acqua non risponde; il riscaldamento è fermo."
+    },
+    "fault_not_rising": {
+      "message": "{heater}: l'acqua non si scalda; il riscaldamento è fermo. Controlla lo scaldacqua."
+    },
+    "fault_no_consumption": {
+      "message": "{heater}: lo scaldacqua non assorbe corrente; il riscaldamento è fermo. Controlla la resistenza."
+    },
+    "fault_relay_stuck": {
+      "message": "{heater}: lo scaldacqua assorbe corrente anche da spento. Controlla il relè."
+    },
+    "heat_now_refused": {
+      "message": "Scalda ora non è possibile mentre un guasto blocca il riscaldamento: {faults}."
+    },
+    "fault_label_sensor_unavailable": {
+      "message": "il sensore di temperatura dell'acqua non dà letture"
+    },
+    "fault_label_not_rising": {
+      "message": "l'acqua non si scalda"
+    },
+    "fault_label_no_consumption": {
+      "message": "lo scaldacqua non assorbe corrente"
+    },
+    "fault_label_relay_stuck": {
+      "message": "il relè sembra bloccato acceso"
+    },
+    "heat_now_refused_manual": {
+      "message": "Scalda ora non è possibile mentre il controllo automatico è disattivato: lo scaldacqua è comandato a mano."
+    },
+    "calendar_window": {
+      "message": "Riscaldamento: {members}"
+    },
+    "heater_not_found": {
+      "message": "Nessuno scaldacqua Hot Water Ready caricato con quell'id."
+    },
+    "member_not_found": {
+      "message": "Quel dispositivo non è un membro di questo scaldacqua."
+    },
+    "ready_time_not_found": {
+      "message": "Questo membro non ha nessun orario alle {time}."
+    },
+    "away_date_in_past": {
+      "message": "L'ultimo giorno fuori casa non può essere nel passato."
+    },
+    "edit_own_only": {
+      "message": "Puoi modificare solo i tuoi orari."
+    },
+    "ready_time_gone": {
+      "message": "Quell'orario non esiste più."
+    },
+    "ask_members_only": {
+      "message": "Solo i membri e gli amministratori possono chiedere l'acqua calda."
+    },
+    "cancel_not_allowed": {
+      "message": "Solo chi ha fatto la richiesta può annullarla."
+    },
+    "settings_admin_only": {
+      "message": "Solo un amministratore può modificare le impostazioni."
+    },
+    "history_unavailable": {
+      "message": "Home Assistant non conserva la cronologia qui, quindi la velocità non può essere ricalcolata."
+    },
+    "person_not_found": {
+      "message": "Quella persona non esiste in Home Assistant."
+    },
+    "switched_off_by": {
+      "message": "{name} ha spento il riscaldamento."
+    },
+    "switched_off": {
+      "message": "Il riscaldamento è stato spento."
+    },
+    "switch_off_not_allowed": {
+      "message": "Solo un amministratore, o qualcuno scelto da un amministratore, può spegnere il riscaldamento per tutti."
+    },
+    "fault_top_probe": {
+      "message": "{heater}: la sonda principale potrebbe essersi allentata. Controllala; il riscaldamento continua."
+    },
+    "fault_label_top_probe": {
+      "message": "la sonda principale potrebbe essersi allentata"
+    },
+    "fault_middle_probe": {
+      "message": "{heater}: la seconda sonda potrebbe essersi allentata. Controllala; il riscaldamento continua."
+    },
+    "fault_label_middle_probe": {
+      "message": "la seconda sonda potrebbe essersi allentata"
+    },
+    "fault_probes_disagree": {
+      "message": "{heater}: le due sonde non concordano. Controllale; il riscaldamento continua."
+    },
+    "fault_label_probes_disagree": {
+      "message": "le due sonde non concordano"
+    }
+  },
+  "issues": {
+    "sensor_unavailable": {
+      "title": "{heater}: il sensore di temperatura dell'acqua non risponde",
+      "description": "Da un po' non arrivano letture dal sensore di temperatura dell'acqua, quindi il riscaldamento è fermo. Riparte da solo un minuto dopo che le letture tornano."
+    },
+    "not_rising": {
+      "title": "{heater}: l'acqua non si scalda",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "È stato risolto?",
+            "description": "Lo scaldacqua è rimasto acceso a lungo e l'acqua è salita appena, quindi il riscaldamento è fermo. Controlla lo scaldacqua e il suo interruttore magnetotermico, poi conferma qui che è risolto. Il riscaldamento riparte."
+          }
+        }
+      }
+    },
+    "no_consumption": {
+      "title": "{heater}: lo scaldacqua non assorbe corrente",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "È stato risolto?",
+            "description": "Il relè era acceso ma lo scaldacqua non ha assorbito quasi nulla, quindi il riscaldamento è fermo. Controlla la resistenza e il suo interruttore magnetotermico, poi conferma qui che è risolto. Il riscaldamento riparte."
+          }
+        }
+      }
+    },
+    "relay_stuck": {
+      "title": "{heater}: lo scaldacqua assorbe corrente anche da spento",
+      "description": "Lo scaldacqua assorbe corrente anche se il relè è spento. Il relè potrebbe essere bloccato acceso; controllalo. La segnalazione sparisce da sola un minuto dopo che l'assorbimento cessa."
+    },
+    "top_probe": {
+      "title": "{heater}: la sonda principale potrebbe essersi allentata",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "È stato risolto?",
+            "description": "La sonda principale dell'acqua è salita più lentamente del solito in due riscaldamenti di fila. Potrebbe uscire dal suo pozzetto o essere esposta al freddo. Controllala, poi conferma qui; la segnalazione sparisce anche da sola dopo un riscaldamento normale."
+          }
+        }
+      }
+    },
+    "middle_probe": {
+      "title": "{heater}: la seconda sonda potrebbe essersi allentata",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "È stato risolto?",
+            "description": "La seconda sonda è salita più lentamente del solito, o è rimasta indietro rispetto alla principale, in due riscaldamenti di fila. Finché non torna a misurare correttamente, l'avvio viene calcolato solo dalla sonda principale. Controllala, poi conferma qui."
+          }
+        }
+      }
+    },
+    "probes_disagree": {
+      "title": "{heater}: le due sonde non concordano",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "È stato risolto?",
+            "description": "Per mezz'ora la sonda principale ha misurato più di 3 °C in meno della seconda. L'acqua calda sale, quindi una delle due non sta misurando l'acqua. Controllale entrambe, poi conferma qui."
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "heat_now": {
+      "name": "Scalda ora",
+      "description": "Scalda l'acqua adesso. Il membro indicato viene avvisato quando è pronta; senza membro, la persona che l'ha chiesta, se c'è.",
+      "fields": {
+        "heater": {
+          "name": "Scaldacqua",
+          "description": "Lo scaldacqua da accendere."
+        },
+        "member": {
+          "name": "Membro",
+          "description": "Chi avvisare quando è pronta."
+        },
+        "keep_minutes": {
+          "name": "Mantieni calda per",
+          "description": "Minuti per cui mantenere l'acqua calda dopo il messaggio. Vuoto: l'impostazione dello scaldacqua."
+        }
+      }
+    },
+    "add_ready_time": {
+      "name": "Aggiungi un orario",
+      "description": "Aggiunge un orario in cui un membro vuole l'acqua calda.",
+      "fields": {
+        "member": {
+          "name": "Membro",
+          "description": "Di chi è l'orario."
+        },
+        "time": {
+          "name": "Ora",
+          "description": "Quando l'acqua deve essere pronta."
+        },
+        "weekdays": {
+          "name": "Giorni",
+          "description": "I giorni in cui si ripete. Se omesso: tutti i giorni."
+        },
+        "enabled": {
+          "name": "Attivo",
+          "description": "Disattivato, l'orario viene conservato senza essere applicato."
+        }
+      }
+    },
+    "remove_ready_time": {
+      "name": "Rimuovi un orario",
+      "description": "Rimuove gli orari di un membro a una certa ora del giorno, qualunque siano i giorni.",
+      "fields": {
+        "member": {
+          "name": "Membro",
+          "description": "Di chi è l'orario."
+        },
+        "time": {
+          "name": "Ora",
+          "description": "L'ora da rimuovere."
+        }
+      }
+    },
+    "set_away": {
+      "name": "Imposta fuori casa",
+      "description": "Mette in pausa o riprende gli orari di un membro.",
+      "fields": {
+        "member": {
+          "name": "Membro",
+          "description": "Chi è fuori casa."
+        },
+        "away": {
+          "name": "Fuori casa",
+          "description": "Attivo mette in pausa gli orari, disattivo li riprende."
+        },
+        "until": {
+          "name": "Fino al",
+          "description": "L'ultimo giorno fuori casa; dopo, l'assenza termina da sola."
+        }
+      }
+    },
+    "switch_off": {
+      "name": "Spegni",
+      "description": "Spegne subito lo scaldacqua per tutti: la richiesta Scalda ora termina e gli orari per cui stava scaldando vengono saltati. Tutte le persone interessate vengono avvisate.",
+      "fields": {
+        "heater": {
+          "name": "Scaldacqua",
+          "description": "Lo scaldacqua da spegnere."
+        }
+      }
+    }
+  }
+}

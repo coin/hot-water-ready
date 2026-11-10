@@ -1,0 +1,539 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Ajouter un chauffe-eau",
+        "description": "Comment Home Assistant allume la résistance.",
+        "menu_options": {
+          "switch": "Un interrupteur (relais ou prise connectée)",
+          "climate": "Un thermostat existant"
+        }
+      },
+      "switch": {
+        "title": "Ajouter un chauffe-eau",
+        "description": "Choisissez l'interrupteur qui allume le chauffe-eau et le capteur qui mesure l'eau.",
+        "data": {
+          "name": "Nom",
+          "switch": "Interrupteur du chauffe-eau",
+          "temperature_sensor": "Capteur de température de l'eau",
+          "power_sensor": "Capteur de puissance du chauffe-eau (facultatif)"
+        },
+        "data_description": {
+          "name": "Affiché sur la carte et sur l'appareil du chauffe-eau, par exemple Ballon.",
+          "switch": "Le relais ou la prise connectée qui alimente la résistance.",
+          "temperature_sensor": "Un capteur qui mesure la température de l'eau stockée.",
+          "power_sensor": "Avec un capteur de puissance, un chauffe-eau qui ne consomme rien et un relais bloqué en marche sont aussi détectés."
+        }
+      },
+      "climate": {
+        "title": "Ajouter un chauffe-eau avec thermostat",
+        "description": "Choisissez le thermostat qui commande le chauffe-eau et le capteur qui mesure l'eau. Hot Water Ready règle son mode et sa consigne.",
+        "data": {
+          "name": "Nom",
+          "temperature_sensor": "Capteur de température de l'eau",
+          "power_sensor": "Capteur de puissance du chauffe-eau (facultatif)",
+          "climate": "Thermostat"
+        },
+        "data_description": {
+          "name": "Affiché sur la carte et sur l'appareil du chauffe-eau, par exemple Ballon.",
+          "temperature_sensor": "Un capteur qui mesure la température de l'eau stockée.",
+          "power_sensor": "Avec un capteur de puissance, un chauffe-eau qui consomme alors que le thermostat est éteint est détecté et, si le thermostat indique quand il chauffe, un chauffe-eau qui ne consomme rien aussi.",
+          "climate": "Hot Water Ready le règle en chauffage à la température d'arrêt, ou l'éteint."
+        }
+      },
+      "reconfigure": {
+        "title": "Modifier le chauffe-eau",
+        "description": "Comment Home Assistant allume la résistance.",
+        "menu_options": {
+          "switch": "Un interrupteur (relais ou prise connectée)",
+          "climate": "Un thermostat existant"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Cet interrupteur appartient déjà à un chauffe-eau.",
+      "reconfigure_successful": "Le chauffe-eau a été modifié."
+    },
+    "error": {
+      "unsupported_thermostat": "Ce thermostat ne peut pas être réglé sur chauffage et arrêt ; choisissez-en un autre, ou un interrupteur."
+    }
+  },
+  "config_subentries": {
+    "member": {
+      "initiate_flow": {
+        "user": "Ajouter un membre"
+      },
+      "entry_type": "Membre",
+      "step": {
+        "user": {
+          "title": "Ajouter un membre",
+          "description": "Un membre lié est une personne qui règle ses propres horaires et qui est prévenue quand l'eau est prête. Un membre virtuel, comme Global ou Invités, n'a pas de personne ; un administrateur règle ses horaires.",
+          "menu_options": {
+            "linked": "Une personne",
+            "virtual": "Virtuel (Global, Invités)"
+          }
+        },
+        "linked": {
+          "title": "Ajouter une personne",
+          "data": {
+            "name": "Nom",
+            "person": "Personne",
+            "colour": "Couleur sur la carte",
+            "notify_targets": "Téléphones à prévenir"
+          },
+          "data_description": {
+            "notify_targets": "Laissez vide pour trouver automatiquement les téléphones de cette personne."
+          }
+        },
+        "virtual": {
+          "title": "Ajouter un membre virtuel",
+          "data": {
+            "name": "Nom",
+            "recipients": "Qui est prévenu",
+            "colour": "Couleur sur la carte"
+          },
+          "data_description": {
+            "recipients": "Les personnes prévenues quand l'eau de ce membre est prête. Laissez vide pour ne prévenir personne."
+          }
+        },
+        "reconfigure": {
+          "title": "Modifier un membre",
+          "data": {
+            "name": "Nom",
+            "person": "Personne",
+            "recipients": "Qui est prévenu",
+            "colour": "Couleur sur la carte",
+            "notify_targets": "Téléphones à prévenir"
+          },
+          "data_description": {
+            "notify_targets": "Laissez vide pour trouver automatiquement les téléphones de cette personne."
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "Le membre a été modifié."
+      }
+    }
+  },
+  "selector": {
+    "colour": {
+      "options": {
+        "blue": "Bleu",
+        "green": "Vert",
+        "orange": "Orange",
+        "purple": "Violet",
+        "red": "Rouge",
+        "teal": "Bleu canard",
+        "pink": "Rose",
+        "brown": "Marron"
+      }
+    },
+    "weekdays": {
+      "options": {
+        "mon": "Lundi",
+        "tue": "Mardi",
+        "wed": "Mercredi",
+        "thu": "Jeudi",
+        "fri": "Vendredi",
+        "sat": "Samedi",
+        "sun": "Dimanche"
+      }
+    },
+    "tank_orientation": {
+      "options": {
+        "vertical": "Debout (vertical)",
+        "horizontal": "Couché (horizontal)"
+      }
+    },
+    "element_height": {
+      "options": {
+        "bottom": "En bas",
+        "lower_third": "Environ au tiers de la hauteur",
+        "middle": "Au milieu"
+      }
+    }
+  },
+  "entity": {
+    "number": {
+      "target_temperature": {
+        "name": "Température cible"
+      },
+      "margin": {
+        "name": "Marge"
+      }
+    },
+    "sensor": {
+      "status": {
+        "name": "État",
+        "state": {
+          "waiting": "En attente",
+          "heating": "Chauffe",
+          "ready": "Prête",
+          "fault": "Panne",
+          "manual": "Manuel"
+        }
+      },
+      "next_ready_time": {
+        "name": "Prochain horaire",
+        "state_attributes": {
+          "members": {
+            "name": "Pour"
+          }
+        }
+      },
+      "heating_rate": {
+        "name": "Vitesse de chauffe apprise"
+      },
+      "lead": {
+        "name": "Avance"
+      },
+      "solar_lead": {
+        "name": "Avance tenant compte du solaire"
+      }
+    },
+    "switch": {
+      "away": {
+        "name": "Absent",
+        "state_attributes": {
+          "until": {
+            "name": "Jusqu'au"
+          }
+        }
+      },
+      "automatic": {
+        "name": "Contrôle automatique"
+      }
+    },
+    "button": {
+      "heat_now": {
+        "name": "Chauffer maintenant"
+      }
+    },
+    "binary_sensor": {
+      "problem": {
+        "name": "Problème"
+      }
+    },
+    "calendar": {
+      "windows": {
+        "name": "Plages de chauffe"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Réglages du chauffe-eau",
+        "data": {
+          "keep_heating_gap_minutes": "Continuer à chauffer pendant les intervalles de moins de",
+          "keep_hot_minutes": "Après Chauffer maintenant, garder l'eau chaude pendant",
+          "solar_aware": "Utiliser la règle solaire",
+          "heating_rate": "Vitesse de chauffe fixée à la main (facultatif)",
+          "tank_litres": "Volume du ballon (facultatif)",
+          "element_watts": "Puissance de la résistance (facultatif)",
+          "max_temperature": "Température maximale pour des douches rapprochées",
+          "cancel_people": "Personnes autorisées à arrêter la chauffe pour tous",
+          "rich_notifications": "Remplacer les messages précédents sur les téléphones",
+          "power_sensor": "Capteur de puissance du chauffe-eau (facultatif)",
+          "fault_recipients": "Qui est prévenu des pannes",
+          "advanced": "Seuils de panne",
+          "tank_orientation": "Position du ballon",
+          "element_height": "Emplacement de la résistance",
+          "middle_temperature_sensor": "Deuxième sonde, plus bas (facultatif)",
+          "top_probe_height": "Hauteur de la sonde principale (facultatif)",
+          "middle_probe_height": "Hauteur de la deuxième sonde (facultatif)"
+        },
+        "data_description": {
+          "keep_heating_gap_minutes": "Les horaires aussi proches partagent une seule plage et le chauffe-eau continue de chauffer, au lieu de laisser l'eau refroidir entre les deux.",
+          "keep_hot_minutes": "Compté à partir du message « eau chaude prête » ; pendant ce temps l'eau est maintenue entre la cible moins et plus la marge. 0 : arrêt au message. Un appui long sur le bouton de la carte choisit une autre durée pour cette demande, jusqu'à 120 minutes.",
+          "cancel_people": "En plus des administrateurs. La personne qui a demandé peut toujours annuler sa propre demande.",
+          "rich_notifications": "Sur les téléphones avec l'application Home Assistant, « Eau chaude prête » remplace « en chauffe » au lieu d'arriver comme un second message.",
+          "power_sensor": "Avec un capteur de puissance, un chauffe-eau qui ne consomme rien et un relais bloqué en marche sont aussi détectés.",
+          "fault_recipients": "Vide : tous les administrateurs.",
+          "solar_aware": "Désactivé : le début est calculé à partir du chauffe-eau seul, et le résultat solaire est seulement enregistré, pour la comparaison dans les réglages de la carte.",
+          "heating_rate": "Minutes pour élever l'eau d'un degré. Vide : apprise à partir des chauffes du chauffe-eau.",
+          "tank_litres": "Avec la puissance de la résistance, permet de chauffer plus haut pour des douches rapprochées que le ballon à la cible normale ne peut pas assurer.",
+          "element_watts": "Donne aussi les kWh de la comparaison solaire sans capteur de puissance.",
+          "max_temperature": "50 °C est la limite de brûlure sans mitigeur thermostatique ; jusqu'à 60 °C seulement avec un mitigeur.",
+          "tank_orientation": "Couché (horizontal) ou debout (vertical).",
+          "element_height": "La chaleur monte, donc l'eau sous la résistance chauffe à peine. Avec le volume et la puissance, cela donne la plage dans laquelle la vitesse de chauffe devrait se situer.",
+          "middle_temperature_sensor": "Une sonde au milieu du ballon. Le début est avancé quand l'eau sous le haut est plus froide, et les deux sondes sont comparées à leur comportement habituel. L'état prête suit toujours la sonde principale.",
+          "top_probe_height": "L'emplacement de la sonde principale, du bas (0 %) au haut (100 %) du ballon.",
+          "middle_probe_height": "Avec les deux hauteurs, chaque sonde compte pour l'eau chauffée la plus proche d'elle, donc la moyenne servant à calculer le début est pondérée. Sans elles, moitié chacune."
+        },
+        "sections": {
+          "advanced": {
+            "name": "Seuils de panne",
+            "data": {
+              "sensor_timeout_minutes": "Capteur muet pendant",
+              "sensor_recovery_minutes": "Mesures revenues depuis",
+              "not_rising_minutes": "Chauffe sans hausse pendant",
+              "not_rising_degrees": "Hausse inférieure à",
+              "power_watts": "Seuil de puissance",
+              "power_minutes": "Puissance anormale pendant"
+            }
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "heat_now_timeout": {
+      "message": "L'eau n'a pas chauffé à temps ; la demande Chauffer maintenant est terminée. Vérifiez le chauffe-eau."
+    },
+    "no_target": {
+      "message": "Hot Water Ready n'a trouvé aucun téléphone pour prévenir {name} : {message}"
+    },
+    "send_failed": {
+      "message": "Hot Water Ready n'a pas pu joindre les téléphones de {name} : {message}"
+    },
+    "window_heating": {
+      "message": "{heater} en chauffe : eau prête dans environ {minutes} min."
+    },
+    "ready": {
+      "message": "Eau chaude prête : l'eau est à {temperature} °C."
+    },
+    "fault_sensor_unavailable": {
+      "message": "{heater} : le capteur de température de l'eau est muet ; la chauffe est arrêtée."
+    },
+    "fault_not_rising": {
+      "message": "{heater} : l'eau ne chauffe pas ; la chauffe est arrêtée. Vérifiez le chauffe-eau."
+    },
+    "fault_no_consumption": {
+      "message": "{heater} : le chauffe-eau ne consomme rien ; la chauffe est arrêtée. Vérifiez la résistance."
+    },
+    "fault_relay_stuck": {
+      "message": "{heater} : le chauffe-eau consomme alors qu'il est éteint. Vérifiez le relais."
+    },
+    "heat_now_refused": {
+      "message": "Chauffer maintenant est impossible tant qu'une panne arrête la chauffe : {faults}."
+    },
+    "fault_label_sensor_unavailable": {
+      "message": "le capteur de température de l'eau ne donne aucune mesure"
+    },
+    "fault_label_not_rising": {
+      "message": "l'eau ne chauffe pas"
+    },
+    "fault_label_no_consumption": {
+      "message": "le chauffe-eau ne consomme rien"
+    },
+    "fault_label_relay_stuck": {
+      "message": "le relais semble bloqué en marche"
+    },
+    "heat_now_refused_manual": {
+      "message": "Chauffer maintenant est impossible tant que le contrôle automatique est désactivé : le chauffe-eau est commandé à la main."
+    },
+    "calendar_window": {
+      "message": "Chauffe : {members}"
+    },
+    "heater_not_found": {
+      "message": "Aucun chauffe-eau Hot Water Ready chargé avec cet identifiant."
+    },
+    "member_not_found": {
+      "message": "Cet appareil n'est pas un membre de ce chauffe-eau."
+    },
+    "ready_time_not_found": {
+      "message": "Ce membre n'a pas d'horaire à {time}."
+    },
+    "away_date_in_past": {
+      "message": "Le dernier jour d'absence ne peut pas être dans le passé."
+    },
+    "edit_own_only": {
+      "message": "Vous ne pouvez modifier que vos propres horaires."
+    },
+    "ready_time_gone": {
+      "message": "Cet horaire n'existe plus."
+    },
+    "ask_members_only": {
+      "message": "Seuls les membres et les administrateurs peuvent demander de l'eau chaude."
+    },
+    "cancel_not_allowed": {
+      "message": "Seule la personne qui a demandé peut annuler sa demande."
+    },
+    "settings_admin_only": {
+      "message": "Seul un administrateur peut modifier les réglages."
+    },
+    "history_unavailable": {
+      "message": "Home Assistant ne conserve pas d'historique ici, la vitesse ne peut donc pas être recalculée."
+    },
+    "person_not_found": {
+      "message": "Cette personne n'existe pas dans Home Assistant."
+    },
+    "switched_off_by": {
+      "message": "{name} a arrêté la chauffe."
+    },
+    "switched_off": {
+      "message": "La chauffe a été arrêtée."
+    },
+    "switch_off_not_allowed": {
+      "message": "Seul un administrateur, ou une personne choisie par un administrateur, peut arrêter la chauffe pour tous."
+    },
+    "fault_top_probe": {
+      "message": "{heater} : la sonde principale est peut-être mal fixée. Vérifiez-la ; la chauffe continue."
+    },
+    "fault_label_top_probe": {
+      "message": "la sonde principale est peut-être mal fixée"
+    },
+    "fault_middle_probe": {
+      "message": "{heater} : la deuxième sonde est peut-être mal fixée. Vérifiez-la ; la chauffe continue."
+    },
+    "fault_label_middle_probe": {
+      "message": "la deuxième sonde est peut-être mal fixée"
+    },
+    "fault_probes_disagree": {
+      "message": "{heater} : les deux sondes ne concordent pas. Vérifiez-les ; la chauffe continue."
+    },
+    "fault_label_probes_disagree": {
+      "message": "les deux sondes ne concordent pas"
+    }
+  },
+  "issues": {
+    "sensor_unavailable": {
+      "title": "{heater} : le capteur de température de l'eau est muet",
+      "description": "Aucune mesure du capteur de température de l'eau depuis un moment, la chauffe est donc arrêtée. Elle reprend d'elle-même une minute après le retour des mesures."
+    },
+    "not_rising": {
+      "title": "{heater} : l'eau ne chauffe pas",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Est-ce réparé ?",
+            "description": "Le chauffe-eau est resté allumé longtemps et l'eau a à peine monté, la chauffe est donc arrêtée. Vérifiez le chauffe-eau et son disjoncteur, puis confirmez ici que c'est réparé. La chauffe reprend."
+          }
+        }
+      }
+    },
+    "no_consumption": {
+      "title": "{heater} : le chauffe-eau ne consomme rien",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Est-ce réparé ?",
+            "description": "Le relais était fermé mais le chauffe-eau n'a presque rien consommé, la chauffe est donc arrêtée. Vérifiez la résistance et son disjoncteur, puis confirmez ici que c'est réparé. La chauffe reprend."
+          }
+        }
+      }
+    },
+    "relay_stuck": {
+      "title": "{heater} : le chauffe-eau consomme alors qu'il est éteint",
+      "description": "Le chauffe-eau consomme alors que le relais est ouvert. Le relais est peut-être bloqué en marche ; vérifiez-le. Ce problème disparaît de lui-même une minute après l'arrêt de la consommation."
+    },
+    "top_probe": {
+      "title": "{heater} : la sonde principale est peut-être mal fixée",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Est-ce réparé ?",
+            "description": "La sonde principale de l'eau a monté plus lentement que d'habitude lors de deux chauffes de suite. Elle sort peut-être de son doigt de gant ou est exposée au froid. Vérifiez-la, puis confirmez ici ; le problème disparaît aussi de lui-même après une chauffe normale."
+          }
+        }
+      }
+    },
+    "middle_probe": {
+      "title": "{heater} : la deuxième sonde est peut-être mal fixée",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Est-ce réparé ?",
+            "description": "La deuxième sonde a monté plus lentement que d'habitude, ou est restée en retard sur la principale, lors de deux chauffes de suite. Tant qu'elle ne mesure pas correctement, le début est calculé à partir de la sonde principale seule. Vérifiez-la, puis confirmez ici."
+          }
+        }
+      }
+    },
+    "probes_disagree": {
+      "title": "{heater} : les deux sondes ne concordent pas",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Est-ce réparé ?",
+            "description": "Pendant une demi-heure, la sonde principale a indiqué plus de 3 °C de moins que la deuxième. L'eau chaude monte, donc l'une des deux ne mesure pas l'eau. Vérifiez les deux, puis confirmez ici."
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "heat_now": {
+      "name": "Chauffer maintenant",
+      "description": "Chauffe l'eau maintenant. Le membre indiqué est prévenu quand elle est prête ; sans membre, la personne qui a demandé, s'il y en a une.",
+      "fields": {
+        "heater": {
+          "name": "Chauffe-eau",
+          "description": "Le chauffe-eau à faire chauffer."
+        },
+        "member": {
+          "name": "Membre",
+          "description": "Qui prévenir quand elle est prête."
+        },
+        "keep_minutes": {
+          "name": "Garder chaude pendant",
+          "description": "Minutes pendant lesquelles garder l'eau chaude après le message. Vide : le réglage du chauffe-eau."
+        }
+      }
+    },
+    "add_ready_time": {
+      "name": "Ajouter un horaire",
+      "description": "Ajoute une heure à laquelle un membre veut de l'eau chaude.",
+      "fields": {
+        "member": {
+          "name": "Membre",
+          "description": "À qui appartient l'horaire."
+        },
+        "time": {
+          "name": "Heure",
+          "description": "Quand l'eau doit être prête."
+        },
+        "weekdays": {
+          "name": "Jours",
+          "description": "Les jours où il se répète. Non renseigné : tous les jours."
+        },
+        "enabled": {
+          "name": "Activé",
+          "description": "Désactivé conserve l'horaire sans l'appliquer."
+        }
+      }
+    },
+    "remove_ready_time": {
+      "name": "Supprimer un horaire",
+      "description": "Supprime les horaires d'un membre à une heure donnée, quels que soient leurs jours.",
+      "fields": {
+        "member": {
+          "name": "Membre",
+          "description": "À qui appartient l'horaire."
+        },
+        "time": {
+          "name": "Heure",
+          "description": "L'heure à supprimer."
+        }
+      }
+    },
+    "set_away": {
+      "name": "Définir l'absence",
+      "description": "Met en pause ou reprend les horaires d'un membre.",
+      "fields": {
+        "member": {
+          "name": "Membre",
+          "description": "Qui est absent."
+        },
+        "away": {
+          "name": "Absent",
+          "description": "Activé met les horaires en pause, désactivé les reprend."
+        },
+        "until": {
+          "name": "Jusqu'au",
+          "description": "Le dernier jour d'absence ; ensuite, l'absence se termine d'elle-même."
+        }
+      }
+    },
+    "switch_off": {
+      "name": "Arrêter",
+      "description": "Arrête le chauffe-eau maintenant pour tous : la demande Chauffer maintenant se termine et les horaires pour lesquels il chauffait sont sautés. Toutes les personnes concernées sont prévenues.",
+      "fields": {
+        "heater": {
+          "name": "Chauffe-eau",
+          "description": "Le chauffe-eau à arrêter."
+        }
+      }
+    }
+  }
+}

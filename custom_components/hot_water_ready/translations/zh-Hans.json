@@ -1,0 +1,539 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "添加热水器",
+        "description": "Home Assistant 如何打开加热管。",
+        "menu_options": {
+          "switch": "开关（继电器或智能插座）",
+          "climate": "现有的温控器"
+        }
+      },
+      "switch": {
+        "title": "添加热水器",
+        "description": "选择打开热水器的开关和测量水温的传感器。",
+        "data": {
+          "name": "名称",
+          "switch": "热水器开关",
+          "temperature_sensor": "水温传感器",
+          "power_sensor": "热水器功率传感器（可选）"
+        },
+        "data_description": {
+          "name": "显示在卡片和热水器设备上，例如“储水罐”。",
+          "switch": "为加热管供电的继电器或智能插座。",
+          "temperature_sensor": "测量储水温度的传感器。",
+          "power_sensor": "有了功率传感器，也能发现不耗电的热水器和卡在接通状态的继电器。"
+        }
+      },
+      "climate": {
+        "title": "添加带温控器的热水器",
+        "description": "选择控制热水器的温控器和测量水温的传感器。Hot Water Ready 会设置它的模式和设定温度。",
+        "data": {
+          "name": "名称",
+          "temperature_sensor": "水温传感器",
+          "power_sensor": "热水器功率传感器（可选）",
+          "climate": "温控器"
+        },
+        "data_description": {
+          "name": "显示在卡片和热水器设备上，例如“储水罐”。",
+          "temperature_sensor": "测量储水温度的传感器。",
+          "power_sensor": "有了功率传感器，能发现温控器关闭时仍在耗电的热水器；如果温控器会报告何时在加热，也能发现不耗电的热水器。",
+          "climate": "Hot Water Ready 会把它设为加热到停止温度，或关闭。"
+        }
+      },
+      "reconfigure": {
+        "title": "更改热水器",
+        "description": "Home Assistant 如何打开加热管。",
+        "menu_options": {
+          "switch": "开关（继电器或智能插座）",
+          "climate": "现有的温控器"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "此开关已属于一台热水器。",
+      "reconfigure_successful": "热水器已更改。"
+    },
+    "error": {
+      "unsupported_thermostat": "此温控器无法设为加热和关闭；请选择其他温控器或开关。"
+    }
+  },
+  "config_subentries": {
+    "member": {
+      "initiate_flow": {
+        "user": "添加成员"
+      },
+      "entry_type": "成员",
+      "step": {
+        "user": {
+          "title": "添加成员",
+          "description": "关联成员是一个人，自己设置时间，并在热水准备好时收到通知。虚拟成员（如“全家”或“客人”）没有对应的人，由管理员设置它的时间。",
+          "menu_options": {
+            "linked": "一个人",
+            "virtual": "虚拟（全家、客人）"
+          }
+        },
+        "linked": {
+          "title": "添加人员",
+          "data": {
+            "name": "名称",
+            "person": "人员",
+            "colour": "卡片上的颜色",
+            "notify_targets": "要通知的手机"
+          },
+          "data_description": {
+            "notify_targets": "留空则自动查找此人的手机。"
+          }
+        },
+        "virtual": {
+          "title": "添加虚拟成员",
+          "data": {
+            "name": "名称",
+            "recipients": "通知谁",
+            "colour": "卡片上的颜色"
+          },
+          "data_description": {
+            "recipients": "此成员的热水准备好时要通知的人。留空则不通知任何人。"
+          }
+        },
+        "reconfigure": {
+          "title": "更改成员",
+          "data": {
+            "name": "名称",
+            "person": "人员",
+            "recipients": "通知谁",
+            "colour": "卡片上的颜色",
+            "notify_targets": "要通知的手机"
+          },
+          "data_description": {
+            "notify_targets": "留空则自动查找此人的手机。"
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "成员已更改。"
+      }
+    }
+  },
+  "selector": {
+    "colour": {
+      "options": {
+        "blue": "蓝色",
+        "green": "绿色",
+        "orange": "橙色",
+        "purple": "紫色",
+        "red": "红色",
+        "teal": "青色",
+        "pink": "粉色",
+        "brown": "棕色"
+      }
+    },
+    "weekdays": {
+      "options": {
+        "mon": "星期一",
+        "tue": "星期二",
+        "wed": "星期三",
+        "thu": "星期四",
+        "fri": "星期五",
+        "sat": "星期六",
+        "sun": "星期日"
+      }
+    },
+    "tank_orientation": {
+      "options": {
+        "vertical": "立式（竖直）",
+        "horizontal": "卧式（水平）"
+      }
+    },
+    "element_height": {
+      "options": {
+        "bottom": "在底部",
+        "lower_third": "大约在三分之一高度",
+        "middle": "在中间"
+      }
+    }
+  },
+  "entity": {
+    "number": {
+      "target_temperature": {
+        "name": "目标温度"
+      },
+      "margin": {
+        "name": "余量"
+      }
+    },
+    "sensor": {
+      "status": {
+        "name": "状态",
+        "state": {
+          "waiting": "空闲",
+          "heating": "加热中",
+          "ready": "已就绪",
+          "fault": "故障",
+          "manual": "手动"
+        }
+      },
+      "next_ready_time": {
+        "name": "下一个就绪时间",
+        "state_attributes": {
+          "members": {
+            "name": "对象"
+          }
+        }
+      },
+      "heating_rate": {
+        "name": "学习到的加热速率"
+      },
+      "lead": {
+        "name": "提前量"
+      },
+      "solar_lead": {
+        "name": "考虑太阳能的提前量"
+      }
+    },
+    "switch": {
+      "away": {
+        "name": "外出",
+        "state_attributes": {
+          "until": {
+            "name": "直到"
+          }
+        }
+      },
+      "automatic": {
+        "name": "自动控制"
+      }
+    },
+    "button": {
+      "heat_now": {
+        "name": "立即加热"
+      }
+    },
+    "binary_sensor": {
+      "problem": {
+        "name": "问题"
+      }
+    },
+    "calendar": {
+      "windows": {
+        "name": "加热时段"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "热水器设置",
+        "data": {
+          "keep_heating_gap_minutes": "间隔短于此时长时持续加热",
+          "keep_hot_minutes": "立即加热后，保温时长",
+          "solar_aware": "使用太阳能规则",
+          "heating_rate": "手动设置的加热速率（可选）",
+          "tank_litres": "水箱容量（可选）",
+          "element_watts": "加热管功率（可选）",
+          "max_temperature": "连续淋浴时的最高温度",
+          "cancel_people": "可以为所有人关闭加热的人",
+          "rich_notifications": "替换手机上之前的消息",
+          "power_sensor": "热水器功率传感器（可选）",
+          "fault_recipients": "故障通知对象",
+          "advanced": "故障阈值",
+          "tank_orientation": "水箱摆放方式",
+          "element_height": "加热管的位置",
+          "middle_temperature_sensor": "第二个探头，位置较低（可选）",
+          "top_probe_height": "主探头的高度（可选）",
+          "middle_probe_height": "第二个探头的高度（可选）"
+        },
+        "data_description": {
+          "keep_heating_gap_minutes": "间隔这么近的就绪时间会合并为一个时段，热水器持续加热，而不是让水在中间变凉。",
+          "keep_hot_minutes": "从“热水已就绪”消息开始计算；其间水温保持在目标温度上下一个余量的范围内。0：在消息发出时停止。长按卡片上的按钮可为该请求另选时长，最多 120 分钟。",
+          "cancel_people": "管理员之外的人。发起请求的人始终可以取消自己的请求。",
+          "rich_notifications": "在装有 Home Assistant 应用的手机上，“热水已就绪”会替换“加热中”，而不是作为第二条消息发送。",
+          "power_sensor": "有了功率传感器，也能发现不耗电的热水器和卡在接通状态的继电器。",
+          "fault_recipients": "留空：所有管理员。",
+          "solar_aware": "关闭：开始时间只根据热水器计算，考虑太阳能的结果仅作记录，用于卡片设置中的对比。",
+          "heating_rate": "水温升高一度所需的分钟数。留空：根据热水器自身的运行记录学习。",
+          "tank_litres": "结合加热管功率，让热水器在连续淋浴时加热到更高温度，以应对水箱在常规目标温度下无法满足的情况。",
+          "element_watts": "没有功率传感器时，也能为太阳能对比提供 kWh 数值。",
+          "max_temperature": "没有混水阀时，50 °C 是防烫上限；只有装了混水阀才可以到 60 °C。",
+          "tank_orientation": "卧式（水平）或立式（竖直）。",
+          "element_height": "热量向上升，所以加热管下方的水几乎不会变热。结合容量和功率，可以得出加热速度应处的范围。",
+          "middle_temperature_sensor": "位于水箱中部的探头。当顶部以下的水较冷时，开始时间会提前，并且两个探头都会与其正常表现进行比对。是否就绪仍以主探头为准。",
+          "top_probe_height": "主探头的位置，从水箱底部（0%）到顶部（100%）。",
+          "middle_probe_height": "有了两个高度，每个探头代表离它最近的那部分受热水，因此用于计算开始时间的平均值是加权的。没有高度时，各占一半。"
+        },
+        "sections": {
+          "advanced": {
+            "name": "故障阈值",
+            "data": {
+              "sensor_timeout_minutes": "传感器无数据时长",
+              "sensor_recovery_minutes": "读数恢复时长",
+              "not_rising_minutes": "加热但温度不升的时长",
+              "not_rising_degrees": "升温低于",
+              "power_watts": "功率阈值",
+              "power_minutes": "功率异常时长"
+            }
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "heat_now_timeout": {
+      "message": "水未能按时加热好；立即加热请求已结束。请检查热水器。"
+    },
+    "no_target": {
+      "message": "Hot Water Ready 找不到可通知 {name} 的手机：{message}"
+    },
+    "send_failed": {
+      "message": "Hot Water Ready 无法联系到 {name} 的手机：{message}"
+    },
+    "window_heating": {
+      "message": "{heater} 加热中：约 {minutes} 分钟后热水就绪。"
+    },
+    "ready": {
+      "message": "热水已就绪：水温为 {temperature} °C。"
+    },
+    "fault_sensor_unavailable": {
+      "message": "{heater}：水温传感器没有数据；加热已停止。"
+    },
+    "fault_not_rising": {
+      "message": "{heater}：水温没有升高；加热已停止。请检查热水器。"
+    },
+    "fault_no_consumption": {
+      "message": "{heater}：热水器不耗电；加热已停止。请检查加热管。"
+    },
+    "fault_relay_stuck": {
+      "message": "{heater}：热水器在关闭时仍在耗电。请检查继电器。"
+    },
+    "heat_now_refused": {
+      "message": "有故障导致加热停止，无法立即加热：{faults}。"
+    },
+    "fault_label_sensor_unavailable": {
+      "message": "水温传感器没有读数"
+    },
+    "fault_label_not_rising": {
+      "message": "水温没有升高"
+    },
+    "fault_label_no_consumption": {
+      "message": "热水器不耗电"
+    },
+    "fault_label_relay_stuck": {
+      "message": "继电器似乎卡在接通状态"
+    },
+    "heat_now_refused_manual": {
+      "message": "自动控制已关闭，无法立即加热：热水器由手动控制。"
+    },
+    "calendar_window": {
+      "message": "加热：{members}"
+    },
+    "heater_not_found": {
+      "message": "没有已加载的、使用该 ID 的 Hot Water Ready 热水器。"
+    },
+    "member_not_found": {
+      "message": "该设备不是此热水器的成员。"
+    },
+    "ready_time_not_found": {
+      "message": "此成员在 {time} 没有就绪时间。"
+    },
+    "away_date_in_past": {
+      "message": "外出的最后一天不能是过去的日期。"
+    },
+    "edit_own_only": {
+      "message": "您只能更改自己的就绪时间。"
+    },
+    "ready_time_gone": {
+      "message": "该就绪时间已不存在。"
+    },
+    "ask_members_only": {
+      "message": "只有成员和管理员可以请求热水。"
+    },
+    "cancel_not_allowed": {
+      "message": "只有发起请求的人可以取消该请求。"
+    },
+    "settings_admin_only": {
+      "message": "只有管理员可以更改设置。"
+    },
+    "history_unavailable": {
+      "message": "Home Assistant 在此没有保存历史记录，因此无法重新计算速率。"
+    },
+    "person_not_found": {
+      "message": "Home Assistant 中不存在此人员。"
+    },
+    "switched_off_by": {
+      "message": "{name} 关闭了加热。"
+    },
+    "switched_off": {
+      "message": "加热已关闭。"
+    },
+    "switch_off_not_allowed": {
+      "message": "只有管理员或管理员指定的人可以为所有人关闭加热。"
+    },
+    "fault_top_probe": {
+      "message": "{heater}：主探头可能松动。请检查；加热继续进行。"
+    },
+    "fault_label_top_probe": {
+      "message": "主探头可能松动"
+    },
+    "fault_middle_probe": {
+      "message": "{heater}：第二个探头可能松动。请检查；加热继续进行。"
+    },
+    "fault_label_middle_probe": {
+      "message": "第二个探头可能松动"
+    },
+    "fault_probes_disagree": {
+      "message": "{heater}：两个探头读数不一致。请检查；加热继续进行。"
+    },
+    "fault_label_probes_disagree": {
+      "message": "两个探头读数不一致"
+    }
+  },
+  "issues": {
+    "sensor_unavailable": {
+      "title": "{heater}：水温传感器没有数据",
+      "description": "水温传感器已有一段时间没有读数，因此加热已停止。读数恢复一分钟后会自动重新开始。"
+    },
+    "not_rising": {
+      "title": "{heater}：水温没有升高",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "已修好了吗？",
+            "description": "热水器开了很长时间，水温几乎没有升高，因此加热已停止。请检查热水器及其断路器，然后在此确认已修好。加热将重新开始。"
+          }
+        }
+      }
+    },
+    "no_consumption": {
+      "title": "{heater}：热水器不耗电",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "已修好了吗？",
+            "description": "继电器已接通，但热水器几乎不耗电，因此加热已停止。请检查加热管及其断路器，然后在此确认已修好。加热将重新开始。"
+          }
+        }
+      }
+    },
+    "relay_stuck": {
+      "title": "{heater}：热水器在关闭时仍在耗电",
+      "description": "继电器已断开，但热水器仍在耗电。继电器可能卡在接通状态，请检查。耗电停止一分钟后，此问题会自动清除。"
+    },
+    "top_probe": {
+      "title": "{heater}：主探头可能松动",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "已修好了吗？",
+            "description": "主水温探头连续两次加热时升温都比平时慢。它可能正从探头套管中脱出，或暴露在冷处。请检查后在此确认；正常加热一次后，此问题也会自动清除。"
+          }
+        }
+      }
+    },
+    "middle_probe": {
+      "title": "{heater}：第二个探头可能松动",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "已修好了吗？",
+            "description": "第二个探头连续两次加热时升温都比平时慢，或落后于主探头。在它恢复正常读数之前，开始时间只根据主探头计算。请检查后在此确认。"
+          }
+        }
+      }
+    },
+    "probes_disagree": {
+      "title": "{heater}：两个探头读数不一致",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "已修好了吗？",
+            "description": "在半小时内，主探头的读数比第二个探头低 3 °C 以上。热水会上升，所以其中一个探头没有测到水温。请检查两个探头，然后在此确认。"
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "heat_now": {
+      "name": "立即加热",
+      "description": "立即加热热水。就绪时通知指定的成员；未指定时，通知发起请求的人（如果有）。",
+      "fields": {
+        "heater": {
+          "name": "热水器",
+          "description": "要加热的热水器。"
+        },
+        "member": {
+          "name": "成员",
+          "description": "就绪时通知谁。"
+        },
+        "keep_minutes": {
+          "name": "保温时长",
+          "description": "消息发出后保持热水的分钟数。留空：使用热水器的设置。"
+        }
+      }
+    },
+    "add_ready_time": {
+      "name": "添加就绪时间",
+      "description": "添加成员需要热水的时间。",
+      "fields": {
+        "member": {
+          "name": "成员",
+          "description": "就绪时间所属的成员。"
+        },
+        "time": {
+          "name": "时间",
+          "description": "热水应就绪的时间。"
+        },
+        "weekdays": {
+          "name": "日期",
+          "description": "重复的星期。省略：每天。"
+        },
+        "enabled": {
+          "name": "启用",
+          "description": "关闭时保留该时间，但不执行。"
+        }
+      }
+    },
+    "remove_ready_time": {
+      "name": "删除就绪时间",
+      "description": "删除成员在某个时刻的就绪时间，无论是哪几天。",
+      "fields": {
+        "member": {
+          "name": "成员",
+          "description": "就绪时间所属的成员。"
+        },
+        "time": {
+          "name": "时间",
+          "description": "要删除的时间。"
+        }
+      }
+    },
+    "set_away": {
+      "name": "设置外出",
+      "description": "暂停或恢复成员的就绪时间。",
+      "fields": {
+        "member": {
+          "name": "成员",
+          "description": "外出的人。"
+        },
+        "away": {
+          "name": "外出",
+          "description": "开启时暂停就绪时间，关闭时恢复。"
+        },
+        "until": {
+          "name": "直到",
+          "description": "外出的最后一天；之后外出状态自动结束。"
+        }
+      }
+    },
+    "switch_off": {
+      "name": "关闭",
+      "description": "立即为所有人关闭热水器：立即加热请求结束，正在为之加热的就绪时间将被跳过。所有受影响的人都会收到通知。",
+      "fields": {
+        "heater": {
+          "name": "热水器",
+          "description": "要关闭的热水器。"
+        }
+      }
+    }
+  }
+}

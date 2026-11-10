@@ -1,0 +1,539 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "給湯器を追加",
+        "description": "Home Assistant がヒーターをオンにする方法を選んでください。",
+        "menu_options": {
+          "switch": "スイッチ（リレーまたはスマートプラグ）",
+          "climate": "既存のサーモスタット"
+        }
+      },
+      "switch": {
+        "title": "給湯器を追加",
+        "description": "ヒーターをオンにするスイッチと、水温を測るセンサーを選んでください。",
+        "data": {
+          "name": "名前",
+          "switch": "ヒーターのスイッチ",
+          "temperature_sensor": "水温センサー",
+          "power_sensor": "ヒーターの電力センサー（任意）"
+        },
+        "data_description": {
+          "name": "カードとヒーターのデバイスに表示されます（例: 貯湯タンク）。",
+          "switch": "ヒーターに電気を供給するリレーまたはスマートプラグ。",
+          "temperature_sensor": "タンク内の水温を測るセンサー。",
+          "power_sensor": "電力センサーがあれば、電気を使わないヒーターや、オンのまま固着したリレーも検知します。"
+        }
+      },
+      "climate": {
+        "title": "サーモスタット付きの給湯器を追加",
+        "description": "ヒーターを動かすサーモスタットと、水温を測るセンサーを選んでください。モードと設定温度は Hot Water Ready が設定します。",
+        "data": {
+          "name": "名前",
+          "temperature_sensor": "水温センサー",
+          "power_sensor": "ヒーターの電力センサー（任意）",
+          "climate": "サーモスタット"
+        },
+        "data_description": {
+          "name": "カードとヒーターのデバイスに表示されます（例: 貯湯タンク）。",
+          "temperature_sensor": "タンク内の水温を測るセンサー。",
+          "power_sensor": "電力センサーがあれば、サーモスタットがオフなのに電気を使うヒーターを検知します。サーモスタットが加熱中かどうかを知らせる場合は、電気を使わないヒーターも検知します。",
+          "climate": "Hot Water Ready が停止温度での加熱、またはオフに設定します。"
+        }
+      },
+      "reconfigure": {
+        "title": "給湯器を変更",
+        "description": "Home Assistant がヒーターをオンにする方法を選んでください。",
+        "menu_options": {
+          "switch": "スイッチ（リレーまたはスマートプラグ）",
+          "climate": "既存のサーモスタット"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "このスイッチはすでに別のヒーターで使われています。",
+      "reconfigure_successful": "給湯器を変更しました。"
+    },
+    "error": {
+      "unsupported_thermostat": "このサーモスタットは加熱とオフに設定できません。別のサーモスタットかスイッチを選んでください。"
+    }
+  },
+  "config_subentries": {
+    "member": {
+      "initiate_flow": {
+        "user": "メンバーを追加"
+      },
+      "entry_type": "メンバー",
+      "step": {
+        "user": {
+          "title": "メンバーを追加",
+          "description": "リンクされたメンバーは、自分で時刻を設定し、お湯が沸いたら通知を受け取る人です。「全体」や「来客」などの仮想メンバーには人が紐づかず、管理者が時刻を設定します。",
+          "menu_options": {
+            "linked": "人",
+            "virtual": "仮想（全体、来客）"
+          }
+        },
+        "linked": {
+          "title": "人を追加",
+          "data": {
+            "name": "名前",
+            "person": "人",
+            "colour": "カードでの色",
+            "notify_targets": "通知するスマートフォン"
+          },
+          "data_description": {
+            "notify_targets": "空欄にすると、この人のスマートフォンを自動で探します。"
+          }
+        },
+        "virtual": {
+          "title": "仮想メンバーを追加",
+          "data": {
+            "name": "名前",
+            "recipients": "通知する人",
+            "colour": "カードでの色"
+          },
+          "data_description": {
+            "recipients": "このメンバーのお湯が沸いたときに通知する人。空欄にすると誰にも通知しません。"
+          }
+        },
+        "reconfigure": {
+          "title": "メンバーを変更",
+          "data": {
+            "name": "名前",
+            "person": "人",
+            "recipients": "通知する人",
+            "colour": "カードでの色",
+            "notify_targets": "通知するスマートフォン"
+          },
+          "data_description": {
+            "notify_targets": "空欄にすると、この人のスマートフォンを自動で探します。"
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "メンバーを変更しました。"
+      }
+    }
+  },
+  "selector": {
+    "colour": {
+      "options": {
+        "blue": "青",
+        "green": "緑",
+        "orange": "オレンジ",
+        "purple": "紫",
+        "red": "赤",
+        "teal": "青緑",
+        "pink": "ピンク",
+        "brown": "茶"
+      }
+    },
+    "weekdays": {
+      "options": {
+        "mon": "月曜日",
+        "tue": "火曜日",
+        "wed": "水曜日",
+        "thu": "木曜日",
+        "fri": "金曜日",
+        "sat": "土曜日",
+        "sun": "日曜日"
+      }
+    },
+    "tank_orientation": {
+      "options": {
+        "vertical": "縦置き（垂直）",
+        "horizontal": "横置き（水平）"
+      }
+    },
+    "element_height": {
+      "options": {
+        "bottom": "底部",
+        "lower_third": "下から約3分の1の高さ",
+        "middle": "中央"
+      }
+    }
+  },
+  "entity": {
+    "number": {
+      "target_temperature": {
+        "name": "目標温度"
+      },
+      "margin": {
+        "name": "マージン"
+      }
+    },
+    "sensor": {
+      "status": {
+        "name": "状態",
+        "state": {
+          "waiting": "待機中",
+          "heating": "加熱中",
+          "ready": "準備完了",
+          "fault": "故障",
+          "manual": "手動"
+        }
+      },
+      "next_ready_time": {
+        "name": "次の準備時刻",
+        "state_attributes": {
+          "members": {
+            "name": "対象"
+          }
+        }
+      },
+      "heating_rate": {
+        "name": "学習した加熱速度"
+      },
+      "lead": {
+        "name": "先行時間"
+      },
+      "solar_lead": {
+        "name": "太陽光を考慮した先行時間"
+      }
+    },
+    "switch": {
+      "away": {
+        "name": "不在",
+        "state_attributes": {
+          "until": {
+            "name": "終了日"
+          }
+        }
+      },
+      "automatic": {
+        "name": "自動制御"
+      }
+    },
+    "button": {
+      "heat_now": {
+        "name": "今すぐ加熱"
+      }
+    },
+    "binary_sensor": {
+      "problem": {
+        "name": "問題"
+      }
+    },
+    "calendar": {
+      "windows": {
+        "name": "加熱時間帯"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "ヒーターの設定",
+        "data": {
+          "keep_heating_gap_minutes": "この時間より短い間隔は加熱を続ける",
+          "keep_hot_minutes": "今すぐ加熱の後、お湯を保温する時間",
+          "solar_aware": "太陽光を考慮するルールを使う",
+          "heating_rate": "手動で設定する加熱速度（任意）",
+          "tank_litres": "タンク容量（任意）",
+          "element_watts": "ヒーターの出力（任意）",
+          "max_temperature": "シャワーが続くときの最高温度",
+          "cancel_people": "全員分の加熱をオフにできる人",
+          "rich_notifications": "スマートフォンの以前のメッセージを置き換える",
+          "power_sensor": "ヒーターの電力センサー（任意）",
+          "fault_recipients": "故障を通知する人",
+          "advanced": "故障のしきい値",
+          "tank_orientation": "タンクの向き",
+          "element_height": "ヒーターの位置",
+          "middle_temperature_sensor": "下側の2つ目のプローブ（任意）",
+          "top_probe_height": "メインプローブの高さ（任意）",
+          "middle_probe_height": "2つ目のプローブの高さ（任意）"
+        },
+        "data_description": {
+          "keep_heating_gap_minutes": "この間隔より近い準備時刻は1つの時間帯にまとめられ、間でお湯を冷まさずにヒーターが加熱を続けます。",
+          "keep_hot_minutes": "「お湯の準備ができました」のメッセージから数えます。その間、お湯は目標温度±マージンの範囲に保たれます。0: メッセージの時点で停止。カードのボタンを長押しすると、その要求に別の時間（最大120分）を選べます。",
+          "cancel_people": "管理者に加えて。要求した本人はいつでも自分の要求を取り消せます。",
+          "rich_notifications": "Home Assistant アプリを使っているスマートフォンでは、「お湯の準備ができました」が2通目として届かず、「加熱中」を置き換えます。",
+          "power_sensor": "電力センサーがあれば、電気を使わないヒーターや、オンのまま固着したリレーも検知します。",
+          "fault_recipients": "空欄: すべての管理者。",
+          "solar_aware": "オフ: 開始時刻はヒーターだけから計算し、太陽光を考慮した結果はカードの設定での比較用に記録するだけです。",
+          "heating_rate": "水温を1度上げるのにかかる分数。空欄: ヒーター自身の運転から学習します。",
+          "tank_litres": "ヒーターの出力と合わせて、通常の目標温度ではタンクがまかなえない続けてのシャワーのために、より高い温度まで加熱できるようにします。",
+          "element_watts": "電力センサーがなくても、太陽光の比較に kWh を出せるようにします。",
+          "max_temperature": "混合水栓がない場合、やけどの上限は 50 °C です。60 °C までは混合水栓がある場合のみ。",
+          "tank_orientation": "横置き（水平）または縦置き（垂直）。",
+          "element_height": "熱は上に昇るため、ヒーターより下の水はほとんど温まりません。容量と出力と合わせて、加熱速度が収まるべき範囲を求めます。",
+          "middle_temperature_sensor": "タンクの中ほどにあるプローブ。上部より下の水が冷たいときは開始が早まり、両方のプローブがふだんの挙動と比べてチェックされます。準備完了の判断は引き続きメインプローブに従います。",
+          "top_probe_height": "メインプローブの位置。タンクの底（0%）から上端（100%）までで指定します。",
+          "middle_probe_height": "両方の高さがあれば、各プローブはそれぞれに近い加熱される水の分だけ重みを持ち、開始時刻の計算に使う平均は加重平均になります。ない場合は半分ずつです。"
+        },
+        "sections": {
+          "advanced": {
+            "name": "故障のしきい値",
+            "data": {
+              "sensor_timeout_minutes": "センサーが応答しない時間",
+              "sensor_recovery_minutes": "読み取りが戻ってからの時間",
+              "not_rising_minutes": "温度が上がらずに加熱している時間",
+              "not_rising_degrees": "温度上昇がこれ未満",
+              "power_watts": "電力のしきい値",
+              "power_minutes": "電力が想定外の状態の時間"
+            }
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "heat_now_timeout": {
+      "message": "時間内にお湯が温まらなかったため、今すぐ加熱の要求を終了しました。ヒーターを確認してください。"
+    },
+    "no_target": {
+      "message": "Hot Water Ready は {name} に通知するスマートフォンを見つけられませんでした: {message}"
+    },
+    "send_failed": {
+      "message": "Hot Water Ready は {name} のスマートフォンに通知できませんでした: {message}"
+    },
+    "window_heating": {
+      "message": "{heater} 加熱中: 約 {minutes} 分でお湯の準備ができます。"
+    },
+    "ready": {
+      "message": "お湯の準備ができました: 水温は {temperature} °C です。"
+    },
+    "fault_sensor_unavailable": {
+      "message": "{heater}: 水温センサーが応答しないため、加熱を停止しました。"
+    },
+    "fault_not_rising": {
+      "message": "{heater}: 水温が上がらないため、加熱を停止しました。ヒーターを確認してください。"
+    },
+    "fault_no_consumption": {
+      "message": "{heater}: ヒーターが電気を使っていないため、加熱を停止しました。ヒーターの発熱体を確認してください。"
+    },
+    "fault_relay_stuck": {
+      "message": "{heater}: オフなのにヒーターが電気を使っています。リレーを確認してください。"
+    },
+    "heat_now_refused": {
+      "message": "故障で加熱が止まっているため、今すぐ加熱はできません: {faults}。"
+    },
+    "fault_label_sensor_unavailable": {
+      "message": "水温センサーから読み取りがない"
+    },
+    "fault_label_not_rising": {
+      "message": "水温が上がらない"
+    },
+    "fault_label_no_consumption": {
+      "message": "ヒーターが電気を使っていない"
+    },
+    "fault_label_relay_stuck": {
+      "message": "リレーがオンのまま固着している可能性"
+    },
+    "heat_now_refused_manual": {
+      "message": "自動制御がオフのため、今すぐ加熱はできません。ヒーターは手動で操作されています。"
+    },
+    "calendar_window": {
+      "message": "加熱: {members}"
+    },
+    "heater_not_found": {
+      "message": "その ID の Hot Water Ready ヒーターは読み込まれていません。"
+    },
+    "member_not_found": {
+      "message": "そのデバイスはこのヒーターのメンバーではありません。"
+    },
+    "ready_time_not_found": {
+      "message": "このメンバーには {time} の準備時刻がありません。"
+    },
+    "away_date_in_past": {
+      "message": "不在の最終日を過去の日付にはできません。"
+    },
+    "edit_own_only": {
+      "message": "変更できるのは自分の準備時刻だけです。"
+    },
+    "ready_time_gone": {
+      "message": "その準備時刻はもう存在しません。"
+    },
+    "ask_members_only": {
+      "message": "お湯を要求できるのはメンバーと管理者だけです。"
+    },
+    "cancel_not_allowed": {
+      "message": "要求を取り消せるのは要求した本人だけです。"
+    },
+    "settings_admin_only": {
+      "message": "設定を変更できるのは管理者だけです。"
+    },
+    "history_unavailable": {
+      "message": "Home Assistant にここの履歴が保存されていないため、速度を再計算できません。"
+    },
+    "person_not_found": {
+      "message": "その人は Home Assistant に存在しません。"
+    },
+    "switched_off_by": {
+      "message": "{name} が加熱をオフにしました。"
+    },
+    "switched_off": {
+      "message": "加熱がオフになりました。"
+    },
+    "switch_off_not_allowed": {
+      "message": "全員分の加熱をオフにできるのは、管理者または管理者が選んだ人だけです。"
+    },
+    "fault_top_probe": {
+      "message": "{heater}: メインプローブが緩んでいる可能性があります。確認してください。加熱は続きます。"
+    },
+    "fault_label_top_probe": {
+      "message": "メインプローブが緩んでいる可能性"
+    },
+    "fault_middle_probe": {
+      "message": "{heater}: 2つ目のプローブが緩んでいる可能性があります。確認してください。加熱は続きます。"
+    },
+    "fault_label_middle_probe": {
+      "message": "2つ目のプローブが緩んでいる可能性"
+    },
+    "fault_probes_disagree": {
+      "message": "{heater}: 2つのプローブの値が一致しません。確認してください。加熱は続きます。"
+    },
+    "fault_label_probes_disagree": {
+      "message": "2つのプローブの値が一致しない"
+    }
+  },
+  "issues": {
+    "sensor_unavailable": {
+      "title": "{heater}: 水温センサーが応答しません",
+      "description": "しばらく水温センサーから読み取りがないため、加熱を停止しました。読み取りが戻ってから1分後に自動で再開します。"
+    },
+    "not_rising": {
+      "title": "{heater}: 水温が上がりません",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "解決しましたか？",
+            "description": "ヒーターが長時間オンだったのに水温がほとんど上がらなかったため、加熱を停止しました。ヒーターとそのブレーカーを確認し、直ったらここで確認してください。加熱が再開します。"
+          }
+        }
+      }
+    },
+    "no_consumption": {
+      "title": "{heater}: ヒーターが電気を使っていません",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "解決しましたか？",
+            "description": "リレーはオンでしたが、ヒーターがほとんど電気を使わなかったため、加熱を停止しました。発熱体とそのブレーカーを確認し、直ったらここで確認してください。加熱が再開します。"
+          }
+        }
+      }
+    },
+    "relay_stuck": {
+      "title": "{heater}: オフなのにヒーターが電気を使っています",
+      "description": "リレーがオフなのに、ヒーターが電気を使っています。リレーがオンのまま固着している可能性があるので、確認してください。電気の使用が止まってから1分後に自動で解除されます。"
+    },
+    "top_probe": {
+      "title": "{heater}: メインプローブが緩んでいる可能性があります",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "解決しましたか？",
+            "description": "メインの水温プローブの上昇が、2回続けていつもより遅くなりました。保護管から抜けかけているか、冷気にさらされている可能性があります。確認してから、ここで確認してください。通常の加熱が1回あれば自動でも解除されます。"
+          }
+        }
+      }
+    },
+    "middle_probe": {
+      "title": "{heater}: 2つ目のプローブが緩んでいる可能性があります",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "解決しましたか？",
+            "description": "2つ目のプローブの上昇が、2回続けていつもより遅いか、メインプローブより遅れました。正しく測れるようになるまで、開始時刻はメインプローブだけから計算します。確認してから、ここで確認してください。"
+          }
+        }
+      }
+    },
+    "probes_disagree": {
+      "title": "{heater}: 2つのプローブの値が一致しません",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "解決しましたか？",
+            "description": "30分間、メインプローブが2つ目のプローブより 3 °C 以上低い値を示しました。お湯は上に昇るので、どちらかが水温を測れていません。両方を確認してから、ここで確認してください。"
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "heat_now": {
+      "name": "今すぐ加熱",
+      "description": "今すぐお湯を沸かします。準備ができたら指定したメンバーに通知します。指定がなければ、要求した人がいればその人に通知します。",
+      "fields": {
+        "heater": {
+          "name": "ヒーター",
+          "description": "加熱するヒーター。"
+        },
+        "member": {
+          "name": "メンバー",
+          "description": "準備ができたときに通知する人。"
+        },
+        "keep_minutes": {
+          "name": "保温時間",
+          "description": "メッセージの後にお湯を保温する分数。空欄: ヒーターの設定値。"
+        }
+      }
+    },
+    "add_ready_time": {
+      "name": "準備時刻を追加",
+      "description": "メンバーがお湯を使いたい時刻を追加します。",
+      "fields": {
+        "member": {
+          "name": "メンバー",
+          "description": "準備時刻の対象メンバー。"
+        },
+        "time": {
+          "name": "時刻",
+          "description": "お湯の準備ができているべき時刻。"
+        },
+        "weekdays": {
+          "name": "曜日",
+          "description": "繰り返す曜日。省略時: 毎日。"
+        },
+        "enabled": {
+          "name": "有効",
+          "description": "オフにすると、時刻は残したまま動作しません。"
+        }
+      }
+    },
+    "remove_ready_time": {
+      "name": "準備時刻を削除",
+      "description": "指定した時刻のメンバーの準備時刻を、曜日に関係なく削除します。",
+      "fields": {
+        "member": {
+          "name": "メンバー",
+          "description": "準備時刻の対象メンバー。"
+        },
+        "time": {
+          "name": "時刻",
+          "description": "削除する時刻。"
+        }
+      }
+    },
+    "set_away": {
+      "name": "不在を設定",
+      "description": "メンバーの準備時刻を一時停止または再開します。",
+      "fields": {
+        "member": {
+          "name": "メンバー",
+          "description": "不在の人。"
+        },
+        "away": {
+          "name": "不在",
+          "description": "オンで準備時刻を一時停止し、オフで再開します。"
+        },
+        "until": {
+          "name": "終了日",
+          "description": "不在の最終日。その翌日に不在は自動で終了します。"
+        }
+      }
+    },
+    "switch_off": {
+      "name": "オフにする",
+      "description": "全員分のヒーターを今すぐオフにします。今すぐ加熱の要求は終了し、加熱対象だった準備時刻はスキップされます。影響を受ける全員に通知します。",
+      "fields": {
+        "heater": {
+          "name": "ヒーター",
+          "description": "オフにするヒーター。"
+        }
+      }
+    }
+  }
+}

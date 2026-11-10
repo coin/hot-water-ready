@@ -1,0 +1,539 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Dodaj podgrzewacz wody",
+        "description": "Jak Home Assistant włącza grzałkę.",
+        "menu_options": {
+          "switch": "Przełącznik (przekaźnik lub inteligentne gniazdko)",
+          "climate": "Istniejący termostat"
+        }
+      },
+      "switch": {
+        "title": "Dodaj podgrzewacz wody",
+        "description": "Wybierz przełącznik, który włącza podgrzewacz, i czujnik, który mierzy temperaturę wody.",
+        "data": {
+          "name": "Nazwa",
+          "switch": "Przełącznik podgrzewacza",
+          "temperature_sensor": "Czujnik temperatury wody",
+          "power_sensor": "Czujnik mocy podgrzewacza (opcjonalnie)"
+        },
+        "data_description": {
+          "name": "Widoczna na karcie i na urządzeniu podgrzewacza, na przykład Bojler.",
+          "switch": "Przekaźnik lub inteligentne gniazdko zasilające grzałkę.",
+          "temperature_sensor": "Czujnik mierzący temperaturę wody w zbiorniku.",
+          "power_sensor": "Z czujnikiem mocy wykrywany jest też podgrzewacz, który nie pobiera prądu, i zablokowany włączony przekaźnik."
+        }
+      },
+      "climate": {
+        "title": "Dodaj podgrzewacz wody z termostatem",
+        "description": "Wybierz termostat sterujący podgrzewaczem i czujnik, który mierzy temperaturę wody. Hot Water Ready ustawia jego tryb i temperaturę zadaną.",
+        "data": {
+          "name": "Nazwa",
+          "temperature_sensor": "Czujnik temperatury wody",
+          "power_sensor": "Czujnik mocy podgrzewacza (opcjonalnie)",
+          "climate": "Termostat"
+        },
+        "data_description": {
+          "name": "Widoczna na karcie i na urządzeniu podgrzewacza, na przykład Bojler.",
+          "temperature_sensor": "Czujnik mierzący temperaturę wody w zbiorniku.",
+          "power_sensor": "Z czujnikiem mocy wykrywany jest podgrzewacz, który pobiera prąd przy wyłączonym termostacie, a jeśli termostat podaje, kiedy grzeje, także taki, który nie pobiera prądu.",
+          "climate": "Hot Water Ready ustawia go na grzanie do temperatury wyłączenia albo na wyłączony."
+        }
+      },
+      "reconfigure": {
+        "title": "Zmień podgrzewacz wody",
+        "description": "Jak Home Assistant włącza grzałkę.",
+        "menu_options": {
+          "switch": "Przełącznik (przekaźnik lub inteligentne gniazdko)",
+          "climate": "Istniejący termostat"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Ten przełącznik należy już do podgrzewacza.",
+      "reconfigure_successful": "Podgrzewacz wody został zmieniony."
+    },
+    "error": {
+      "unsupported_thermostat": "Tego termostatu nie można ustawić na grzanie i wyłączenie; wybierz inny albo przełącznik."
+    }
+  },
+  "config_subentries": {
+    "member": {
+      "initiate_flow": {
+        "user": "Dodaj domownika"
+      },
+      "entry_type": "Domownik",
+      "step": {
+        "user": {
+          "title": "Dodaj domownika",
+          "description": "Powiązany domownik to osoba, która sama ustawia swoje godziny i dostaje powiadomienie, gdy woda jest gotowa. Domownik wirtualny, na przykład Wszyscy albo Goście, nie jest osobą; jego godziny ustawia administrator.",
+          "menu_options": {
+            "linked": "Osoba",
+            "virtual": "Wirtualny (Wszyscy, Goście)"
+          }
+        },
+        "linked": {
+          "title": "Dodaj osobę",
+          "data": {
+            "name": "Nazwa",
+            "person": "Osoba",
+            "colour": "Kolor na karcie",
+            "notify_targets": "Telefony do powiadomień"
+          },
+          "data_description": {
+            "notify_targets": "Pozostaw puste, aby telefony tej osoby zostały znalezione automatycznie."
+          }
+        },
+        "virtual": {
+          "title": "Dodaj wirtualnego domownika",
+          "data": {
+            "name": "Nazwa",
+            "recipients": "Kto dostaje powiadomienia",
+            "colour": "Kolor na karcie"
+          },
+          "data_description": {
+            "recipients": "Osoby powiadamiane, gdy woda dla tego domownika jest gotowa. Pozostaw puste, aby nikogo nie powiadamiać."
+          }
+        },
+        "reconfigure": {
+          "title": "Zmień domownika",
+          "data": {
+            "name": "Nazwa",
+            "person": "Osoba",
+            "recipients": "Kto dostaje powiadomienia",
+            "colour": "Kolor na karcie",
+            "notify_targets": "Telefony do powiadomień"
+          },
+          "data_description": {
+            "notify_targets": "Pozostaw puste, aby telefony tej osoby zostały znalezione automatycznie."
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "Domownik został zmieniony."
+      }
+    }
+  },
+  "selector": {
+    "colour": {
+      "options": {
+        "blue": "Niebieski",
+        "green": "Zielony",
+        "orange": "Pomarańczowy",
+        "purple": "Fioletowy",
+        "red": "Czerwony",
+        "teal": "Morski",
+        "pink": "Różowy",
+        "brown": "Brązowy"
+      }
+    },
+    "weekdays": {
+      "options": {
+        "mon": "Poniedziałek",
+        "tue": "Wtorek",
+        "wed": "Środa",
+        "thu": "Czwartek",
+        "fri": "Piątek",
+        "sat": "Sobota",
+        "sun": "Niedziela"
+      }
+    },
+    "tank_orientation": {
+      "options": {
+        "vertical": "Stojący (pionowy)",
+        "horizontal": "Leżący (poziomy)"
+      }
+    },
+    "element_height": {
+      "options": {
+        "bottom": "Na dole",
+        "lower_third": "Mniej więcej na jednej trzeciej wysokości",
+        "middle": "W środku"
+      }
+    }
+  },
+  "entity": {
+    "number": {
+      "target_temperature": {
+        "name": "Temperatura docelowa"
+      },
+      "margin": {
+        "name": "Margines"
+      }
+    },
+    "sensor": {
+      "status": {
+        "name": "Stan",
+        "state": {
+          "waiting": "Bezczynny",
+          "heating": "Grzanie",
+          "ready": "Gotowa",
+          "fault": "Awaria",
+          "manual": "Ręczny"
+        }
+      },
+      "next_ready_time": {
+        "name": "Następna godzina gotowości",
+        "state_attributes": {
+          "members": {
+            "name": "Dla"
+          }
+        }
+      },
+      "heating_rate": {
+        "name": "Nauczona szybkość grzania"
+      },
+      "lead": {
+        "name": "Wyprzedzenie"
+      },
+      "solar_lead": {
+        "name": "Wyprzedzenie z uwzględnieniem słońca"
+      }
+    },
+    "switch": {
+      "away": {
+        "name": "Nieobecność",
+        "state_attributes": {
+          "until": {
+            "name": "Do"
+          }
+        }
+      },
+      "automatic": {
+        "name": "Sterowanie automatyczne"
+      }
+    },
+    "button": {
+      "heat_now": {
+        "name": "Grzej teraz"
+      }
+    },
+    "binary_sensor": {
+      "problem": {
+        "name": "Problem"
+      }
+    },
+    "calendar": {
+      "windows": {
+        "name": "Okna grzania"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Ustawienia podgrzewacza",
+        "data": {
+          "keep_heating_gap_minutes": "Grzej bez przerwy, gdy odstęp jest krótszy niż",
+          "keep_hot_minutes": "Po „Grzej teraz” utrzymuj ciepłą wodę przez",
+          "solar_aware": "Używaj reguły uwzględniającej słońce",
+          "heating_rate": "Szybkość grzania ustawiona ręcznie (opcjonalnie)",
+          "tank_litres": "Pojemność zbiornika (opcjonalnie)",
+          "element_watts": "Moc grzałki (opcjonalnie)",
+          "max_temperature": "Najwyższa temperatura dla pryszniców jeden po drugim",
+          "cancel_people": "Osoby, które mogą wyłączyć grzanie dla wszystkich",
+          "rich_notifications": "Zastępuj wcześniejsze wiadomości na telefonach",
+          "power_sensor": "Czujnik mocy podgrzewacza (opcjonalnie)",
+          "fault_recipients": "Kto dostaje powiadomienia o awariach",
+          "advanced": "Progi awarii",
+          "tank_orientation": "Położenie zbiornika",
+          "element_height": "Gdzie jest grzałka",
+          "middle_temperature_sensor": "Druga sonda, niżej (opcjonalnie)",
+          "top_probe_height": "Wysokość głównej sondy (opcjonalnie)",
+          "middle_probe_height": "Wysokość drugiej sondy (opcjonalnie)"
+        },
+        "data_description": {
+          "keep_heating_gap_minutes": "Godziny gotowości tak blisko siebie mają wspólne okno i podgrzewacz grzeje bez przerwy, zamiast pozwolić wodzie ostygnąć pomiędzy nimi.",
+          "keep_hot_minutes": "Liczone od wiadomości „ciepła woda gotowa”; w tym czasie woda jest utrzymywana między temperaturą docelową minus i plus margines. 0: koniec przy wiadomości. Przytrzymanie przycisku na karcie pozwala wybrać inny czas dla tego żądania, do 120 minut.",
+          "cancel_people": "Oprócz administratorów. Osoba, która poprosiła, zawsze może anulować własne żądanie.",
+          "rich_notifications": "Na telefonach z aplikacją Home Assistant „Ciepła woda gotowa” zastępuje „grzanie”, zamiast przychodzić jako druga wiadomość.",
+          "power_sensor": "Z czujnikiem mocy wykrywany jest też podgrzewacz, który nie pobiera prądu, i zablokowany włączony przekaźnik.",
+          "fault_recipients": "Puste: wszyscy administratorzy.",
+          "solar_aware": "Wyłączone: start jest wyliczany tylko z podgrzewacza, a wynik z uwzględnieniem słońca jest jedynie zapisywany, do porównania w ustawieniach karty.",
+          "heating_rate": "Minuty potrzebne, aby podnieść temperaturę wody o jeden stopień. Puste: nauczone z własnych cykli podgrzewacza.",
+          "tank_litres": "Razem z mocą grzałki pozwala podgrzać wodę wyżej dla pryszniców jeden po drugim, których zbiornik przy zwykłej temperaturze docelowej nie wystarczy.",
+          "element_watts": "Daje też porównaniu solarnemu kWh bez czujnika mocy.",
+          "max_temperature": "50 °C to granica poparzenia bez zaworu mieszającego; do 60 °C tylko z takim zaworem.",
+          "tank_orientation": "Leżący (poziomy) albo stojący (pionowy).",
+          "element_height": "Ciepło idzie w górę, więc woda poniżej grzałki prawie się nie nagrzewa. Razem z pojemnością i mocą daje to zakres, w jakim powinna mieścić się szybkość grzania.",
+          "middle_temperature_sensor": "Sonda w środku zbiornika. Start przesuwa się wcześniej, gdy woda poniżej góry jest zimniejsza, a obie sondy są porównywane z tym, jak zwykle się zachowują. Gotowość nadal zależy od głównej sondy.",
+          "top_probe_height": "Gdzie jest główna sonda, od dołu (0%) do góry (100%) zbiornika.",
+          "middle_probe_height": "Gdy podane są obie wysokości, każda sonda odpowiada za najbliższą jej podgrzaną wodę, więc średnia, z której wyliczany jest start, jest ważona. Bez nich po połowie."
+        },
+        "sections": {
+          "advanced": {
+            "name": "Progi awarii",
+            "data": {
+              "sensor_timeout_minutes": "Czujnik milczy przez",
+              "sensor_recovery_minutes": "Odczyty wracają przez",
+              "not_rising_minutes": "Grzanie bez wzrostu przez",
+              "not_rising_degrees": "Wzrost mniejszy niż",
+              "power_watts": "Próg mocy",
+              "power_minutes": "Nieoczekiwana moc przez"
+            }
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "heat_now_timeout": {
+      "message": "Woda nie nagrzała się na czas; żądanie „Grzej teraz” zostało zakończone. Sprawdź podgrzewacz."
+    },
+    "no_target": {
+      "message": "Hot Water Ready nie znalazł telefonu osoby {name}: {message}"
+    },
+    "send_failed": {
+      "message": "Hot Water Ready nie mógł połączyć się z telefonami osoby {name}: {message}"
+    },
+    "window_heating": {
+      "message": "{heater} grzeje: woda gotowa za około {minutes} min."
+    },
+    "ready": {
+      "message": "Ciepła woda gotowa: woda ma {temperature} °C."
+    },
+    "fault_sensor_unavailable": {
+      "message": "{heater}: czujnik temperatury wody milczy; grzanie zatrzymane."
+    },
+    "fault_not_rising": {
+      "message": "{heater}: woda nie robi się cieplejsza; grzanie zatrzymane. Sprawdź podgrzewacz."
+    },
+    "fault_no_consumption": {
+      "message": "{heater}: podgrzewacz nie pobiera prądu; grzanie zatrzymane. Sprawdź grzałkę."
+    },
+    "fault_relay_stuck": {
+      "message": "{heater}: podgrzewacz pobiera prąd, choć jest wyłączony. Sprawdź przekaźnik."
+    },
+    "heat_now_refused": {
+      "message": "„Grzej teraz” nie jest możliwe, gdy awaria zatrzymuje grzanie: {faults}."
+    },
+    "fault_label_sensor_unavailable": {
+      "message": "czujnik temperatury wody nie podaje odczytów"
+    },
+    "fault_label_not_rising": {
+      "message": "woda nie robi się cieplejsza"
+    },
+    "fault_label_no_consumption": {
+      "message": "podgrzewacz nie pobiera prądu"
+    },
+    "fault_label_relay_stuck": {
+      "message": "przekaźnik chyba zablokował się w stanie włączonym"
+    },
+    "heat_now_refused_manual": {
+      "message": "„Grzej teraz” nie jest możliwe, gdy sterowanie automatyczne jest wyłączone: podgrzewacz jest obsługiwany ręcznie."
+    },
+    "calendar_window": {
+      "message": "Grzanie: {members}"
+    },
+    "heater_not_found": {
+      "message": "Brak załadowanego podgrzewacza Hot Water Ready o tym identyfikatorze."
+    },
+    "member_not_found": {
+      "message": "To urządzenie nie jest domownikiem tego podgrzewacza."
+    },
+    "ready_time_not_found": {
+      "message": "Ten domownik nie ma godziny gotowości o {time}."
+    },
+    "away_date_in_past": {
+      "message": "Ostatni dzień nieobecności nie może być w przeszłości."
+    },
+    "edit_own_only": {
+      "message": "Możesz zmieniać tylko własne godziny gotowości."
+    },
+    "ready_time_gone": {
+      "message": "Ta godzina gotowości już nie istnieje."
+    },
+    "ask_members_only": {
+      "message": "O ciepłą wodę mogą prosić tylko domownicy i administratorzy."
+    },
+    "cancel_not_allowed": {
+      "message": "Tylko osoba, która poprosiła, może anulować swoje żądanie."
+    },
+    "settings_admin_only": {
+      "message": "Tylko administrator może zmieniać ustawienia."
+    },
+    "history_unavailable": {
+      "message": "Home Assistant nie przechowuje tu historii, więc nie można ponownie przeliczyć szybkości."
+    },
+    "person_not_found": {
+      "message": "Ta osoba nie istnieje w Home Assistant."
+    },
+    "switched_off_by": {
+      "message": "Grzanie wyłączone przez: {name}."
+    },
+    "switched_off": {
+      "message": "Grzanie zostało wyłączone."
+    },
+    "switch_off_not_allowed": {
+      "message": "Tylko administrator albo osoba wybrana przez administratora może wyłączyć grzanie dla wszystkich."
+    },
+    "fault_top_probe": {
+      "message": "{heater}: główna sonda mogła się obluzować. Sprawdź ją; grzanie trwa dalej."
+    },
+    "fault_label_top_probe": {
+      "message": "główna sonda mogła się obluzować"
+    },
+    "fault_middle_probe": {
+      "message": "{heater}: druga sonda mogła się obluzować. Sprawdź ją; grzanie trwa dalej."
+    },
+    "fault_label_middle_probe": {
+      "message": "druga sonda mogła się obluzować"
+    },
+    "fault_probes_disagree": {
+      "message": "{heater}: obie sondy podają sprzeczne odczyty. Sprawdź je; grzanie trwa dalej."
+    },
+    "fault_label_probes_disagree": {
+      "message": "obie sondy podają sprzeczne odczyty"
+    }
+  },
+  "issues": {
+    "sensor_unavailable": {
+      "title": "{heater}: czujnik temperatury wody milczy",
+      "description": "Od pewnego czasu brak odczytu z czujnika temperatury wody, więc grzanie jest zatrzymane. Wznowi się samo minutę po powrocie odczytów."
+    },
+    "not_rising": {
+      "title": "{heater}: woda nie robi się cieplejsza",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Czy to naprawione?",
+            "description": "Podgrzewacz był długo włączony, a temperatura wody prawie nie wzrosła, więc grzanie jest zatrzymane. Sprawdź podgrzewacz i jego bezpiecznik, a potem potwierdź tutaj, że jest naprawiony. Grzanie zostanie wznowione."
+          }
+        }
+      }
+    },
+    "no_consumption": {
+      "title": "{heater}: podgrzewacz nie pobiera prądu",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Czy to naprawione?",
+            "description": "Przekaźnik był włączony, ale podgrzewacz prawie nie pobierał prądu, więc grzanie jest zatrzymane. Sprawdź grzałkę i jej bezpiecznik, a potem potwierdź tutaj, że jest naprawiona. Grzanie zostanie wznowione."
+          }
+        }
+      }
+    },
+    "relay_stuck": {
+      "title": "{heater}: podgrzewacz pobiera prąd, choć jest wyłączony",
+      "description": "Podgrzewacz pobiera prąd, chociaż przekaźnik jest wyłączony. Przekaźnik mógł się zablokować w stanie włączonym; sprawdź go. To zgłoszenie zniknie samo minutę po ustaniu poboru prądu."
+    },
+    "top_probe": {
+      "title": "{heater}: główna sonda mogła się obluzować",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Czy to naprawione?",
+            "description": "Przy dwóch kolejnych grzaniach temperatura na głównej sondzie rosła wolniej niż zwykle. Sonda mogła wysunąć się z tulei albo być wystawiona na zimno. Sprawdź ją, a potem potwierdź tutaj; zgłoszenie zniknie też samo po normalnym grzaniu."
+          }
+        }
+      }
+    },
+    "middle_probe": {
+      "title": "{heater}: druga sonda mogła się obluzować",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Czy to naprawione?",
+            "description": "Przy dwóch kolejnych grzaniach temperatura na drugiej sondzie rosła wolniej niż zwykle albo zostawała w tyle za główną. Dopóki znów nie będzie poprawnie mierzyć, start jest wyliczany tylko z głównej sondy. Sprawdź ją, a potem potwierdź tutaj."
+          }
+        }
+      }
+    },
+    "probes_disagree": {
+      "title": "{heater}: obie sondy podają sprzeczne odczyty",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Czy to naprawione?",
+            "description": "Przez pół godziny główna sonda pokazywała ponad 3 °C mniej niż druga. Ciepła woda idzie w górę, więc jedna z nich nie mierzy wody. Sprawdź obie, a potem potwierdź tutaj."
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "heat_now": {
+      "name": "Grzej teraz",
+      "description": "Podgrzewa wodę teraz. Wskazany domownik dostaje powiadomienie, gdy woda jest gotowa; bez niego osoba, która poprosiła, jeśli jest.",
+      "fields": {
+        "heater": {
+          "name": "Podgrzewacz",
+          "description": "Podgrzewacz, który ma grzać."
+        },
+        "member": {
+          "name": "Domownik",
+          "description": "Kogo powiadomić, gdy woda jest gotowa."
+        },
+        "keep_minutes": {
+          "name": "Utrzymuj ciepłą przez",
+          "description": "Minuty utrzymywania ciepłej wody po wiadomości. Puste: ustawienie podgrzewacza."
+        }
+      }
+    },
+    "add_ready_time": {
+      "name": "Dodaj godzinę gotowości",
+      "description": "Dodaje godzinę, o której domownik chce mieć ciepłą wodę.",
+      "fields": {
+        "member": {
+          "name": "Domownik",
+          "description": "Czyja to godzina gotowości."
+        },
+        "time": {
+          "name": "Godzina",
+          "description": "Kiedy woda ma być gotowa."
+        },
+        "weekdays": {
+          "name": "Dni",
+          "description": "Dni, w które się powtarza. Pominięte: codziennie."
+        },
+        "enabled": {
+          "name": "Włączona",
+          "description": "Wyłączona godzina zostaje zapisana, ale nie działa."
+        }
+      }
+    },
+    "remove_ready_time": {
+      "name": "Usuń godzinę gotowości",
+      "description": "Usuwa godziny gotowości domownika o danej porze dnia, niezależnie od ich dni.",
+      "fields": {
+        "member": {
+          "name": "Domownik",
+          "description": "Czyja to godzina gotowości."
+        },
+        "time": {
+          "name": "Godzina",
+          "description": "Godzina do usunięcia."
+        }
+      }
+    },
+    "set_away": {
+      "name": "Ustaw nieobecność",
+      "description": "Wstrzymuje lub wznawia godziny gotowości domownika.",
+      "fields": {
+        "member": {
+          "name": "Domownik",
+          "description": "Kto jest nieobecny."
+        },
+        "away": {
+          "name": "Nieobecność",
+          "description": "Włączona wstrzymuje godziny gotowości, wyłączona je wznawia."
+        },
+        "until": {
+          "name": "Do",
+          "description": "Ostatni dzień nieobecności; po nim nieobecność kończy się sama."
+        }
+      }
+    },
+    "switch_off": {
+      "name": "Wyłącz",
+      "description": "Wyłącza podgrzewacz teraz dla wszystkich: żądanie „Grzej teraz” się kończy, a godziny gotowości, dla których grzał, są pomijane. Wszyscy, których to dotyczy, dostają powiadomienie.",
+      "fields": {
+        "heater": {
+          "name": "Podgrzewacz",
+          "description": "Podgrzewacz do wyłączenia."
+        }
+      }
+    }
+  }
+}

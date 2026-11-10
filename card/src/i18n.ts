@@ -1,4 +1,20 @@
-// On-screen texts. English and European Portuguese; Portuguese (any region) gets pt.
+// On-screen texts. English and European Portuguese live here; the other languages are in
+// locales/, one file each, typed against the English keys so none can miss a text.
+import { cs } from "./locales/cs";
+import { da } from "./locales/da";
+import { de } from "./locales/de";
+import { es } from "./locales/es";
+import { fr } from "./locales/fr";
+import { it } from "./locales/it";
+import { ja } from "./locales/ja";
+import { nb } from "./locales/nb";
+import { nl } from "./locales/nl";
+import { pl } from "./locales/pl";
+import { ptBR } from "./locales/pt-BR";
+import { ru } from "./locales/ru";
+import { sv } from "./locales/sv";
+import { uk } from "./locales/uk";
+import { zhHans } from "./locales/zh-Hans";
 
 const en = {
   "status.waiting": "Idle",
@@ -324,17 +340,51 @@ const pt: Record<TextKey, string> = {
   "settings.no_people": "Ainda não há pessoas no Home Assistant para escolher.",
 };
 
-export const translations: Record<"en" | "pt", Record<TextKey, string>> = { en, pt };
+/** Home Assistant's language codes, each with the locale its numbers and dates are written in. */
+const LANGUAGES = {
+  en: ["en-GB", en],
+  pt: ["pt-PT", pt],
+  "pt-BR": ["pt-BR", ptBR],
+  de: ["de-DE", de],
+  fr: ["fr-FR", fr],
+  es: ["es-ES", es],
+  it: ["it-IT", it],
+  nl: ["nl-NL", nl],
+  pl: ["pl-PL", pl],
+  sv: ["sv-SE", sv],
+  da: ["da-DK", da],
+  nb: ["nb-NO", nb],
+  cs: ["cs-CZ", cs],
+  ru: ["ru-RU", ru],
+  uk: ["uk-UA", uk],
+  ja: ["ja-JP", ja],
+  "zh-Hans": ["zh-CN", zhHans],
+} as const satisfies Record<string, readonly [string, Record<TextKey, string>]>;
 
-export type Language = keyof typeof translations;
+export type Language = keyof typeof LANGUAGES;
 
+export const translations = Object.fromEntries(
+  Object.entries(LANGUAGES).map(([code, [, texts]]) => [code, texts]),
+) as Record<Language, Record<TextKey, string>>;
+
+/**
+ * The language to show for Home Assistant's: the exact code, else its family ("de-CH" → de,
+ * "no"/"nn" → nb, any Chinese → zh-Hans, Portuguese other than Brazil's → pt), else English.
+ */
 export function pickLanguage(language: string | undefined): Language {
-  return language?.toLowerCase().startsWith("pt") ? "pt" : "en";
+  if (!language) return "en";
+  if (language in LANGUAGES) return language as Language;
+  const lower = language.toLowerCase();
+  if (lower === "pt-br") return "pt-BR";
+  const family = lower.split("-")[0] ?? "";
+  if (family === "no" || family === "nn") return "nb";
+  if (family === "zh") return "zh-Hans";
+  return family in LANGUAGES ? (family as Language) : "en";
 }
 
 /** The locale used for numbers, times and weekday names. */
 export function localeOf(language: string | undefined): string {
-  return pickLanguage(language) === "pt" ? "pt-PT" : "en-GB";
+  return LANGUAGES[pickLanguage(language)][0];
 }
 
 /** One letter per weekday, Monday first. */

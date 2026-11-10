@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { translations } from "../src/i18n";
+import { localeOf, pickLanguage, translations } from "../src/i18n";
 import type { AdminSettings, HeaterSnapshot, MemberSnapshot, RateInfo } from "../src/types";
 import {
   avatarViews,
@@ -283,12 +283,14 @@ describe("heaterView", () => {
     expect(view.fill).toBe(0);
   });
 
-  it("falls back to English for other languages", () => {
-    expect(heaterView(cold, { ...pt, language: "de" }).headline).toBe("Idle");
+  it("falls back to English for a language it does not have", () => {
+    expect(heaterView(cold, { ...pt, language: "ko" }).headline).toBe("Idle");
   });
 
-  it("uses European Portuguese for Brazilian Portuguese too", () => {
-    expect(heaterView(cold, { ...pt, language: "pt-BR" }).headline).toBe("Em espera");
+  it("speaks each language it has, Brazilian Portuguese apart from European", () => {
+    expect(heaterView(cold, { ...pt, language: "de" }).headline).toBe(translations.de["status.waiting"]);
+    expect(heaterView(cold, { ...pt, language: "pt-BR" }).headline).toBe(translations["pt-BR"]["status.waiting"]);
+    expect(translations["pt-BR"]).not.toBe(translations.pt);
   });
 });
 
@@ -385,8 +387,25 @@ describe("readyTimeRows", () => {
 });
 
 describe("translations", () => {
-  it("has every English text in Portuguese", () => {
-    expect(Object.keys(translations.pt).sort()).toEqual(Object.keys(translations.en).sort());
+  const placeholders = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
+
+  it.each(Object.keys(translations))("%s has every English text, with the same placeholders", (code) => {
+    const texts = translations[code as keyof typeof translations];
+    expect(Object.keys(texts).sort()).toEqual(Object.keys(translations.en).sort());
+    for (const [key, english] of Object.entries(translations.en)) {
+      expect([key, placeholders(texts[key as keyof typeof texts])]).toEqual([key, placeholders(english)]);
+    }
+    expect(texts["weekday.letters"].split(",")).toHaveLength(7);
+  });
+
+  it("picks the language Home Assistant names, or its family", () => {
+    expect(pickLanguage("pt")).toBe("pt");
+    expect(pickLanguage("pt-BR")).toBe("pt-BR");
+    expect(pickLanguage("de-CH")).toBe("de");
+    expect(pickLanguage("nn")).toBe("nb");
+    expect(pickLanguage("zh-Hant")).toBe("zh-Hans");
+    expect(pickLanguage("ko")).toBe("en");
+    expect(localeOf("pt-BR")).toBe("pt-BR");
   });
 });
 

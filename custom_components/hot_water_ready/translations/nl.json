@@ -1,0 +1,539 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Boiler toevoegen",
+        "description": "Hoe Home Assistant het verwarmingselement aanzet.",
+        "menu_options": {
+          "switch": "Een schakelaar (relais of slimme stekker)",
+          "climate": "Een bestaande thermostaat"
+        }
+      },
+      "switch": {
+        "title": "Boiler toevoegen",
+        "description": "Kies de schakelaar die de boiler aanzet en de sensor die het water meet.",
+        "data": {
+          "name": "Naam",
+          "switch": "Schakelaar van de boiler",
+          "temperature_sensor": "Watertemperatuursensor",
+          "power_sensor": "Vermogenssensor van de boiler (optioneel)"
+        },
+        "data_description": {
+          "name": "Wordt getoond op de kaart en bij het apparaat van de boiler, bijvoorbeeld Boilervat.",
+          "switch": "Het relais of de slimme stekker die het verwarmingselement van stroom voorziet.",
+          "temperature_sensor": "Een sensor die de temperatuur van het opgeslagen water meet.",
+          "power_sensor": "Met een vermogenssensor valt ook een boiler op die niets verbruikt, en een relais dat blijft hangen."
+        }
+      },
+      "climate": {
+        "title": "Boiler met thermostaat toevoegen",
+        "description": "Kies de thermostaat die de boiler aanstuurt en de sensor die het water meet. Hot Water Ready stelt de modus en het setpoint in.",
+        "data": {
+          "name": "Naam",
+          "temperature_sensor": "Watertemperatuursensor",
+          "power_sensor": "Vermogenssensor van de boiler (optioneel)",
+          "climate": "Thermostaat"
+        },
+        "data_description": {
+          "name": "Wordt getoond op de kaart en bij het apparaat van de boiler, bijvoorbeeld Boilervat.",
+          "temperature_sensor": "Een sensor die de temperatuur van het opgeslagen water meet.",
+          "power_sensor": "Met een vermogenssensor valt een boiler op die stroom verbruikt terwijl de thermostaat uit staat, en, als de thermostaat meldt wanneer hij verwarmt, ook een die niets verbruikt.",
+          "climate": "Hot Water Ready zet hem op verwarmen tot de stoptemperatuur, of op uit."
+        }
+      },
+      "reconfigure": {
+        "title": "Boiler wijzigen",
+        "description": "Hoe Home Assistant het verwarmingselement aanzet.",
+        "menu_options": {
+          "switch": "Een schakelaar (relais of slimme stekker)",
+          "climate": "Een bestaande thermostaat"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Deze schakelaar hoort al bij een boiler.",
+      "reconfigure_successful": "De boiler is gewijzigd."
+    },
+    "error": {
+      "unsupported_thermostat": "Deze thermostaat kan niet op verwarmen en uit worden gezet; kies een andere, of een schakelaar."
+    }
+  },
+  "config_subentries": {
+    "member": {
+      "initiate_flow": {
+        "user": "Lid toevoegen"
+      },
+      "entry_type": "Lid",
+      "step": {
+        "user": {
+          "title": "Lid toevoegen",
+          "description": "Een gekoppeld lid is een persoon die zelf de tijden instelt en een bericht krijgt als het water klaar is. Een virtueel lid, zoals Algemeen of Gasten, heeft geen persoon; een beheerder stelt de tijden in.",
+          "menu_options": {
+            "linked": "Een persoon",
+            "virtual": "Virtueel (Algemeen, Gasten)"
+          }
+        },
+        "linked": {
+          "title": "Persoon toevoegen",
+          "data": {
+            "name": "Naam",
+            "person": "Persoon",
+            "colour": "Kleur op de kaart",
+            "notify_targets": "Telefoons om te berichten"
+          },
+          "data_description": {
+            "notify_targets": "Laat leeg om de telefoons van deze persoon automatisch te vinden."
+          }
+        },
+        "virtual": {
+          "title": "Virtueel lid toevoegen",
+          "data": {
+            "name": "Naam",
+            "recipients": "Wie een bericht krijgt",
+            "colour": "Kleur op de kaart"
+          },
+          "data_description": {
+            "recipients": "Personen die een bericht krijgen als het water van dit lid klaar is. Laat leeg om niemand te berichten."
+          }
+        },
+        "reconfigure": {
+          "title": "Lid wijzigen",
+          "data": {
+            "name": "Naam",
+            "person": "Persoon",
+            "recipients": "Wie een bericht krijgt",
+            "colour": "Kleur op de kaart",
+            "notify_targets": "Telefoons om te berichten"
+          },
+          "data_description": {
+            "notify_targets": "Laat leeg om de telefoons van deze persoon automatisch te vinden."
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "Het lid is gewijzigd."
+      }
+    }
+  },
+  "selector": {
+    "colour": {
+      "options": {
+        "blue": "Blauw",
+        "green": "Groen",
+        "orange": "Oranje",
+        "purple": "Paars",
+        "red": "Rood",
+        "teal": "Blauwgroen",
+        "pink": "Roze",
+        "brown": "Bruin"
+      }
+    },
+    "weekdays": {
+      "options": {
+        "mon": "Maandag",
+        "tue": "Dinsdag",
+        "wed": "Woensdag",
+        "thu": "Donderdag",
+        "fri": "Vrijdag",
+        "sat": "Zaterdag",
+        "sun": "Zondag"
+      }
+    },
+    "tank_orientation": {
+      "options": {
+        "vertical": "Staand (verticaal)",
+        "horizontal": "Liggend (horizontaal)"
+      }
+    },
+    "element_height": {
+      "options": {
+        "bottom": "Onderaan",
+        "lower_third": "Ongeveer op een derde van de hoogte",
+        "middle": "In het midden"
+      }
+    }
+  },
+  "entity": {
+    "number": {
+      "target_temperature": {
+        "name": "Doeltemperatuur"
+      },
+      "margin": {
+        "name": "Marge"
+      }
+    },
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "waiting": "Inactief",
+          "heating": "Verwarmen",
+          "ready": "Klaar",
+          "fault": "Storing",
+          "manual": "Handmatig"
+        }
+      },
+      "next_ready_time": {
+        "name": "Volgende klaartijd",
+        "state_attributes": {
+          "members": {
+            "name": "Voor"
+          }
+        }
+      },
+      "heating_rate": {
+        "name": "Geleerde opwarmsnelheid"
+      },
+      "lead": {
+        "name": "Voorsprong"
+      },
+      "solar_lead": {
+        "name": "Voorsprong met zonrekening"
+      }
+    },
+    "switch": {
+      "away": {
+        "name": "Afwezig",
+        "state_attributes": {
+          "until": {
+            "name": "Tot"
+          }
+        }
+      },
+      "automatic": {
+        "name": "Automatische besturing"
+      }
+    },
+    "button": {
+      "heat_now": {
+        "name": "Nu verwarmen"
+      }
+    },
+    "binary_sensor": {
+      "problem": {
+        "name": "Probleem"
+      }
+    },
+    "calendar": {
+      "windows": {
+        "name": "Verwarmingsvensters"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Boilerinstellingen",
+        "data": {
+          "keep_heating_gap_minutes": "Doorverwarmen bij tussenpozen korter dan",
+          "keep_hot_minutes": "Na ‘Nu verwarmen’ het water warm houden gedurende",
+          "solar_aware": "Zonregel gebruiken",
+          "heating_rate": "Handmatig ingestelde opwarmsnelheid (optioneel)",
+          "tank_litres": "Inhoud van het vat (optioneel)",
+          "element_watts": "Vermogen van het element (optioneel)",
+          "max_temperature": "Hoogste temperatuur voor douches kort na elkaar",
+          "cancel_people": "Personen die het verwarmen voor iedereen mogen uitzetten",
+          "rich_notifications": "Eerdere berichten op telefoons vervangen",
+          "power_sensor": "Vermogenssensor van de boiler (optioneel)",
+          "fault_recipients": "Wie een bericht krijgt bij storingen",
+          "advanced": "Storingsdrempels",
+          "tank_orientation": "Stand van het vat",
+          "element_height": "Waar het element zit",
+          "middle_temperature_sensor": "Tweede voeler, lager (optioneel)",
+          "top_probe_height": "Hoogte van de hoofdvoeler (optioneel)",
+          "middle_probe_height": "Hoogte van de tweede voeler (optioneel)"
+        },
+        "data_description": {
+          "keep_heating_gap_minutes": "Klaartijden die zo dicht bij elkaar liggen delen één venster en de boiler blijft doorverwarmen, in plaats van het water ertussen te laten afkoelen.",
+          "keep_hot_minutes": "Geteld vanaf het bericht ‘warm water klaar’; intussen blijft het water tussen het doel min en plus de marge. 0: stoppen bij het bericht. De knop op de kaart ingedrukt houden kiest een andere tijd voor dat verzoek, tot 120 minuten.",
+          "cancel_people": "Naast de beheerders. Wie het vroeg, kan het eigen verzoek altijd annuleren.",
+          "rich_notifications": "Op telefoons met de Home Assistant-app vervangt ‘Warm water klaar’ het bericht ‘verwarmen’, in plaats van als tweede bericht te komen.",
+          "power_sensor": "Met een vermogenssensor valt ook een boiler op die niets verbruikt, en een relais dat blijft hangen.",
+          "fault_recipients": "Leeg: alle beheerders.",
+          "solar_aware": "Uit: de start wordt alleen uit de boiler berekend, en het resultaat van de zonregel wordt alleen vastgelegd, voor de vergelijking in de instellingen van de kaart.",
+          "heating_rate": "Minuten om het water één graad op te warmen. Leeg: geleerd uit de eigen verwarmingsbeurten van de boiler.",
+          "tank_litres": "Samen met het vermogen van het element kan de boiler hoger verwarmen voor douches kort na elkaar die het vat bij het normale doel niet aankan.",
+          "element_watts": "Geeft de zonvergelijking ook zonder vermogenssensor de kWh.",
+          "max_temperature": "50 °C is de grens tegen verbranding zonder mengkraan; tot 60 °C alleen met een mengkraan.",
+          "tank_orientation": "Liggend (horizontaal) of staand (verticaal).",
+          "element_height": "Warmte stijgt op, dus het water onder het element wordt nauwelijks warm. Met de inhoud en het vermogen geeft dit het bereik waarin de opwarmsnelheid hoort te liggen.",
+          "middle_temperature_sensor": "Een voeler in het midden van het vat. De start wordt vervroegd als het water onder de bovenkant kouder is, en beide voelers worden vergeleken met hoe ze zich normaal gedragen. Klaar volgt nog steeds de hoofdvoeler.",
+          "top_probe_height": "Waar de hoofdvoeler zit, van de onderkant (0%) tot de bovenkant (100%) van het vat.",
+          "middle_probe_height": "Met beide hoogtes telt elke voeler voor het verwarmde water het dichtst bij hem, dus het gemiddelde waaruit de start wordt berekend is gewogen. Zonder hoogtes telt elk voor de helft."
+        },
+        "sections": {
+          "advanced": {
+            "name": "Storingsdrempels",
+            "data": {
+              "sensor_timeout_minutes": "Sensor stil gedurende",
+              "sensor_recovery_minutes": "Metingen terug gedurende",
+              "not_rising_minutes": "Verwarmen zonder stijging gedurende",
+              "not_rising_degrees": "Stijging minder dan",
+              "power_watts": "Vermogensdrempel",
+              "power_minutes": "Onverwacht vermogen gedurende"
+            }
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "heat_now_timeout": {
+      "message": "Het water werd niet op tijd warm; het verzoek ‘Nu verwarmen’ is beëindigd. Controleer de boiler."
+    },
+    "no_target": {
+      "message": "Hot Water Ready vond geen telefoon om {name} te berichten: {message}"
+    },
+    "send_failed": {
+      "message": "Hot Water Ready kon de telefoons van {name} niet bereiken: {message}"
+    },
+    "window_heating": {
+      "message": "{heater} verwarmt: water klaar over ongeveer {minutes} min."
+    },
+    "ready": {
+      "message": "Warm water klaar: het water is {temperature} °C."
+    },
+    "fault_sensor_unavailable": {
+      "message": "{heater}: de watertemperatuursensor zwijgt; het verwarmen is gestopt."
+    },
+    "fault_not_rising": {
+      "message": "{heater}: het water wordt niet warmer; het verwarmen is gestopt. Controleer de boiler."
+    },
+    "fault_no_consumption": {
+      "message": "{heater}: de boiler verbruikt geen stroom; het verwarmen is gestopt. Controleer het element."
+    },
+    "fault_relay_stuck": {
+      "message": "{heater}: de boiler verbruikt stroom terwijl hij uit staat. Controleer het relais."
+    },
+    "heat_now_refused": {
+      "message": "Nu verwarmen kan niet zolang een storing het verwarmen stopt: {faults}."
+    },
+    "fault_label_sensor_unavailable": {
+      "message": "de watertemperatuursensor geeft geen metingen"
+    },
+    "fault_label_not_rising": {
+      "message": "het water wordt niet warmer"
+    },
+    "fault_label_no_consumption": {
+      "message": "de boiler verbruikt geen stroom"
+    },
+    "fault_label_relay_stuck": {
+      "message": "het relais lijkt aan te blijven hangen"
+    },
+    "heat_now_refused_manual": {
+      "message": "Nu verwarmen kan niet zolang de automatische besturing uit staat: de boiler wordt handmatig bediend."
+    },
+    "calendar_window": {
+      "message": "Verwarmen: {members}"
+    },
+    "heater_not_found": {
+      "message": "Geen geladen Hot Water Ready-boiler met dat ID."
+    },
+    "member_not_found": {
+      "message": "Dat apparaat is geen lid van deze boiler."
+    },
+    "ready_time_not_found": {
+      "message": "Dit lid heeft geen klaartijd om {time}."
+    },
+    "away_date_in_past": {
+      "message": "De laatste dag van afwezigheid kan niet in het verleden liggen."
+    },
+    "edit_own_only": {
+      "message": "Je mag alleen je eigen klaartijden wijzigen."
+    },
+    "ready_time_gone": {
+      "message": "Die klaartijd bestaat niet meer."
+    },
+    "ask_members_only": {
+      "message": "Alleen leden en beheerders mogen om warm water vragen."
+    },
+    "cancel_not_allowed": {
+      "message": "Alleen wie het vroeg, mag het verzoek annuleren."
+    },
+    "settings_admin_only": {
+      "message": "Alleen een beheerder mag de instellingen wijzigen."
+    },
+    "history_unavailable": {
+      "message": "Home Assistant bewaart hier geen geschiedenis, dus de snelheid kan niet opnieuw worden berekend."
+    },
+    "person_not_found": {
+      "message": "Die persoon bestaat niet in Home Assistant."
+    },
+    "switched_off_by": {
+      "message": "{name} heeft het verwarmen uitgezet."
+    },
+    "switched_off": {
+      "message": "Het verwarmen is uitgezet."
+    },
+    "switch_off_not_allowed": {
+      "message": "Alleen een beheerder, of iemand die een beheerder heeft gekozen, mag het verwarmen voor iedereen uitzetten."
+    },
+    "fault_top_probe": {
+      "message": "{heater}: de hoofdvoeler zit misschien los. Controleer hem; het verwarmen gaat door."
+    },
+    "fault_label_top_probe": {
+      "message": "de hoofdvoeler zit misschien los"
+    },
+    "fault_middle_probe": {
+      "message": "{heater}: de tweede voeler zit misschien los. Controleer hem; het verwarmen gaat door."
+    },
+    "fault_label_middle_probe": {
+      "message": "de tweede voeler zit misschien los"
+    },
+    "fault_probes_disagree": {
+      "message": "{heater}: de twee voelers komen niet overeen. Controleer ze; het verwarmen gaat door."
+    },
+    "fault_label_probes_disagree": {
+      "message": "de twee voelers komen niet overeen"
+    }
+  },
+  "issues": {
+    "sensor_unavailable": {
+      "title": "{heater}: de watertemperatuursensor zwijgt",
+      "description": "Al een tijdje geen meting van de watertemperatuursensor, dus het verwarmen is gestopt. Het start vanzelf weer een minuut nadat de metingen terug zijn."
+    },
+    "not_rising": {
+      "title": "{heater}: het water wordt niet warmer",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Is het opgelost?",
+            "description": "De boiler stond lang aan en het water werd nauwelijks warmer, dus het verwarmen is gestopt. Controleer de boiler en de zekering en bevestig dan hier dat het is opgelost. Het verwarmen start weer."
+          }
+        }
+      }
+    },
+    "no_consumption": {
+      "title": "{heater}: de boiler verbruikt geen stroom",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Is het opgelost?",
+            "description": "Het relais stond aan maar de boiler verbruikte bijna geen stroom, dus het verwarmen is gestopt. Controleer het element en de zekering en bevestig dan hier dat het is opgelost. Het verwarmen start weer."
+          }
+        }
+      }
+    },
+    "relay_stuck": {
+      "title": "{heater}: de boiler verbruikt stroom terwijl hij uit staat",
+      "description": "De boiler verbruikt stroom hoewel het relais uit staat. Het relais blijft misschien hangen; controleer het. Dit verdwijnt vanzelf een minuut nadat het verbruik stopt."
+    },
+    "top_probe": {
+      "title": "{heater}: de hoofdvoeler zit misschien los",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Is het opgelost?",
+            "description": "De hoofdvoeler steeg twee verwarmingsbeurten achter elkaar langzamer dan normaal. Misschien schuift hij uit zijn dompelhuls of zit hij in de kou. Controleer hem en bevestig dan hier; het verdwijnt ook vanzelf na een normale verwarmingsbeurt."
+          }
+        }
+      }
+    },
+    "middle_probe": {
+      "title": "{heater}: de tweede voeler zit misschien los",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Is het opgelost?",
+            "description": "De tweede voeler steeg twee verwarmingsbeurten achter elkaar langzamer dan normaal, of bleef achter bij de hoofdvoeler. Tot hij weer goed meet, wordt de start alleen uit de hoofdvoeler berekend. Controleer hem en bevestig dan hier."
+          }
+        }
+      }
+    },
+    "probes_disagree": {
+      "title": "{heater}: de twee voelers komen niet overeen",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Is het opgelost?",
+            "description": "Een half uur lang mat de hoofdvoeler meer dan 3 °C kouder dan de tweede. Warm water stijgt op, dus een van de twee meet het water niet. Controleer beide en bevestig dan hier."
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "heat_now": {
+      "name": "Nu verwarmen",
+      "description": "Verwarmt het water nu. Het genoemde lid krijgt een bericht als het klaar is; zonder lid de persoon die het vroeg, als die er is.",
+      "fields": {
+        "heater": {
+          "name": "Boiler",
+          "description": "De boiler die moet verwarmen."
+        },
+        "member": {
+          "name": "Lid",
+          "description": "Wie een bericht krijgt als het klaar is."
+        },
+        "keep_minutes": {
+          "name": "Warm houden gedurende",
+          "description": "Minuten om het water na het bericht warm te houden. Leeg: de instelling van de boiler."
+        }
+      }
+    },
+    "add_ready_time": {
+      "name": "Klaartijd toevoegen",
+      "description": "Voegt een tijd toe waarop een lid warm water wil.",
+      "fields": {
+        "member": {
+          "name": "Lid",
+          "description": "Van wie de klaartijd is."
+        },
+        "time": {
+          "name": "Tijd",
+          "description": "Wanneer het water klaar moet zijn."
+        },
+        "weekdays": {
+          "name": "Dagen",
+          "description": "De dagen waarop het zich herhaalt. Weggelaten: elke dag."
+        },
+        "enabled": {
+          "name": "Aan",
+          "description": "Uit bewaart de tijd zonder ernaar te handelen."
+        }
+      }
+    },
+    "remove_ready_time": {
+      "name": "Klaartijd verwijderen",
+      "description": "Verwijdert de klaartijden van een lid op een tijdstip, ongeacht de dagen.",
+      "fields": {
+        "member": {
+          "name": "Lid",
+          "description": "Van wie de klaartijd is."
+        },
+        "time": {
+          "name": "Tijd",
+          "description": "De tijd om te verwijderen."
+        }
+      }
+    },
+    "set_away": {
+      "name": "Afwezigheid instellen",
+      "description": "Pauzeert of hervat de klaartijden van een lid.",
+      "fields": {
+        "member": {
+          "name": "Lid",
+          "description": "Wie afwezig is."
+        },
+        "away": {
+          "name": "Afwezig",
+          "description": "Aan pauzeert de klaartijden, uit hervat ze."
+        },
+        "until": {
+          "name": "Tot",
+          "description": "De laatste dag van afwezigheid; daarna eindigt de afwezigheid vanzelf."
+        }
+      }
+    },
+    "switch_off": {
+      "name": "Uitzetten",
+      "description": "Zet de boiler nu voor iedereen uit: het verzoek ‘Nu verwarmen’ eindigt en de klaartijden waarvoor hij verwarmde, vervallen. Iedereen die erdoor getroffen wordt, krijgt een bericht.",
+      "fields": {
+        "heater": {
+          "name": "Boiler",
+          "description": "De boiler om uit te zetten."
+        }
+      }
+    }
+  }
+}

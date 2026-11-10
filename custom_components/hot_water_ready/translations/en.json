@@ -398,7 +398,7 @@
         "step": {
           "confirm": {
             "title": "Is it fixed?",
-            "description": "The heater was on for a long time and the water barely rose, so heating is stopped. Check the heater and its breaker, then confirm here that it is fixed. Confirm that the heater has been checked and fixed. Heating starts again."
+            "description": "The heater was on for a long time and the water barely rose, so heating is stopped. Check the heater and its breaker, then confirm here that it is fixed. Heating starts again."
           }
         }
       }
@@ -409,7 +409,7 @@
         "step": {
           "confirm": {
             "title": "Is it fixed?",
-            "description": "The relay was on but the heater drew almost no power, so heating is stopped. Check the element and its breaker, then confirm here that it is fixed. Confirm that the heater has been checked and fixed. Heating starts again."
+            "description": "The relay was on but the heater drew almost no power, so heating is stopped. Check the element and its breaker, then confirm here that it is fixed. Heating starts again."
           }
         }
       }

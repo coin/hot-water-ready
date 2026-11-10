@@ -107,8 +107,18 @@ async function shoot(name, snapshot, act, { height = 900, clip = "card", now = N
 }
 
 await shoot("card", waiting, undefined, { now: "2026-11-10T04:40:00Z" });
+// Rui, an administrator, while the heater heats for Ana: he can join in or switch it off.
+await shoot("heating", { ...admin, me: "rui", viewer: "rui" });
 await shoot("week", admin, (card) => card.locator(".tab").nth(1).click());
 await shoot("clock", admin, (card) => card.locator("button.add").click(), { clip: ".clock-dialog" });
+const early = { now: "2026-11-10T04:40:00Z" };
+// Editing Ana's 06:45: the sheet, then the clock popup over it.
+const edit = (card) => card.locator(".row-text").first().click();
+await shoot("edit", waiting, edit, early);
+await shoot("picker", waiting, async (card) => {
+  await edit(card);
+  await card.locator(".sheet-time").click();
+}, early);
 await shoot("settings", admin, (card) => card.locator("button.settings-button").click(), { height: 1800, clip: ".sheet.settings" });
 await shoot("member", memberView);
 await browser.close();

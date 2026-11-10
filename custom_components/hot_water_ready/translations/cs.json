@@ -1,0 +1,539 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Přidat ohřívač vody",
+        "description": "Jak Home Assistant zapíná topné těleso.",
+        "menu_options": {
+          "switch": "Spínač (relé nebo chytrá zásuvka)",
+          "climate": "Stávající termostat"
+        }
+      },
+      "switch": {
+        "title": "Přidat ohřívač vody",
+        "description": "Vyberte spínač, který zapíná ohřívač, a senzor, který měří teplotu vody.",
+        "data": {
+          "name": "Název",
+          "switch": "Spínač ohřívače",
+          "temperature_sensor": "Senzor teploty vody",
+          "power_sensor": "Senzor příkonu ohřívače (volitelné)"
+        },
+        "data_description": {
+          "name": "Zobrazí se na kartě a u zařízení ohřívače, například Bojler.",
+          "switch": "Relé nebo chytrá zásuvka, která napájí topné těleso.",
+          "temperature_sensor": "Senzor, který měří teplotu vody v zásobníku.",
+          "power_sensor": "Se senzorem příkonu se pozná i ohřívač, který nic neodebírá, a relé zaseknuté v sepnuté poloze."
+        }
+      },
+      "climate": {
+        "title": "Přidat ohřívač vody s termostatem",
+        "description": "Vyberte termostat, který řídí ohřívač, a senzor, který měří teplotu vody. Hot Water Ready nastavuje jeho režim a cílovou teplotu.",
+        "data": {
+          "name": "Název",
+          "temperature_sensor": "Senzor teploty vody",
+          "power_sensor": "Senzor příkonu ohřívače (volitelné)",
+          "climate": "Termostat"
+        },
+        "data_description": {
+          "name": "Zobrazí se na kartě a u zařízení ohřívače, například Bojler.",
+          "temperature_sensor": "Senzor, který měří teplotu vody v zásobníku.",
+          "power_sensor": "Se senzorem příkonu se pozná ohřívač, který odebírá proud při vypnutém termostatu, a pokud termostat hlásí, kdy topí, i ohřívač, který nic neodebírá.",
+          "climate": "Hot Water Ready ho nastaví na ohřev na vypínací teplotu, nebo na vypnuto."
+        }
+      },
+      "reconfigure": {
+        "title": "Změnit ohřívač vody",
+        "description": "Jak Home Assistant zapíná topné těleso.",
+        "menu_options": {
+          "switch": "Spínač (relé nebo chytrá zásuvka)",
+          "climate": "Stávající termostat"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Tento spínač už patří k některému ohřívači.",
+      "reconfigure_successful": "Ohřívač vody byl změněn."
+    },
+    "error": {
+      "unsupported_thermostat": "Tento termostat nejde nastavit na ohřev a vypnuto; vyberte jiný, nebo spínač."
+    }
+  },
+  "config_subentries": {
+    "member": {
+      "initiate_flow": {
+        "user": "Přidat člena"
+      },
+      "entry_type": "Člen",
+      "step": {
+        "user": {
+          "title": "Přidat člena",
+          "description": "Propojený člen je osoba, která si sama nastavuje časy a dostane zprávu, když je voda připravená. Virtuální člen, například Všichni nebo Hosté, není osoba; jeho časy nastavuje správce.",
+          "menu_options": {
+            "linked": "Osoba",
+            "virtual": "Virtuální (Všichni, Hosté)"
+          }
+        },
+        "linked": {
+          "title": "Přidat osobu",
+          "data": {
+            "name": "Název",
+            "person": "Osoba",
+            "colour": "Barva na kartě",
+            "notify_targets": "Telefony pro oznámení"
+          },
+          "data_description": {
+            "notify_targets": "Ponechte prázdné a telefony této osoby se najdou automaticky."
+          }
+        },
+        "virtual": {
+          "title": "Přidat virtuálního člena",
+          "data": {
+            "name": "Název",
+            "recipients": "Komu dát vědět",
+            "colour": "Barva na kartě"
+          },
+          "data_description": {
+            "recipients": "Lidé, kteří dostanou zprávu, když je voda pro tohoto člena připravená. Ponechte prázdné, pokud nemá dostat zprávu nikdo."
+          }
+        },
+        "reconfigure": {
+          "title": "Změnit člena",
+          "data": {
+            "name": "Název",
+            "person": "Osoba",
+            "recipients": "Komu dát vědět",
+            "colour": "Barva na kartě",
+            "notify_targets": "Telefony pro oznámení"
+          },
+          "data_description": {
+            "notify_targets": "Ponechte prázdné a telefony této osoby se najdou automaticky."
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "Člen byl změněn."
+      }
+    }
+  },
+  "selector": {
+    "colour": {
+      "options": {
+        "blue": "Modrá",
+        "green": "Zelená",
+        "orange": "Oranžová",
+        "purple": "Fialová",
+        "red": "Červená",
+        "teal": "Modrozelená",
+        "pink": "Růžová",
+        "brown": "Hnědá"
+      }
+    },
+    "weekdays": {
+      "options": {
+        "mon": "Pondělí",
+        "tue": "Úterý",
+        "wed": "Středa",
+        "thu": "Čtvrtek",
+        "fri": "Pátek",
+        "sat": "Sobota",
+        "sun": "Neděle"
+      }
+    },
+    "tank_orientation": {
+      "options": {
+        "vertical": "Stojatý (svislý)",
+        "horizontal": "Ležatý (vodorovný)"
+      }
+    },
+    "element_height": {
+      "options": {
+        "bottom": "Dole",
+        "lower_third": "Asi v jedné třetině výšky",
+        "middle": "Uprostřed"
+      }
+    }
+  },
+  "entity": {
+    "number": {
+      "target_temperature": {
+        "name": "Cílová teplota"
+      },
+      "margin": {
+        "name": "Rezerva"
+      }
+    },
+    "sensor": {
+      "status": {
+        "name": "Stav",
+        "state": {
+          "waiting": "Nečinný",
+          "heating": "Ohřívá",
+          "ready": "Připraveno",
+          "fault": "Porucha",
+          "manual": "Ručně"
+        }
+      },
+      "next_ready_time": {
+        "name": "Příští čas připravenosti",
+        "state_attributes": {
+          "members": {
+            "name": "Pro"
+          }
+        }
+      },
+      "heating_rate": {
+        "name": "Naučená rychlost ohřevu"
+      },
+      "lead": {
+        "name": "Předstih"
+      },
+      "solar_lead": {
+        "name": "Předstih se zohledněním slunce"
+      }
+    },
+    "switch": {
+      "away": {
+        "name": "Nepřítomnost",
+        "state_attributes": {
+          "until": {
+            "name": "Do"
+          }
+        }
+      },
+      "automatic": {
+        "name": "Automatické řízení"
+      }
+    },
+    "button": {
+      "heat_now": {
+        "name": "Ohřát hned"
+      }
+    },
+    "binary_sensor": {
+      "problem": {
+        "name": "Problém"
+      }
+    },
+    "calendar": {
+      "windows": {
+        "name": "Okna ohřevu"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Nastavení ohřívače",
+        "data": {
+          "keep_heating_gap_minutes": "Ohřívat bez přestávky, když je mezera kratší než",
+          "keep_hot_minutes": "Po „Ohřát hned“ udržovat vodu teplou po dobu",
+          "solar_aware": "Použít pravidlo se zohledněním slunce",
+          "heating_rate": "Rychlost ohřevu nastavená ručně (volitelné)",
+          "tank_litres": "Objem zásobníku (volitelné)",
+          "element_watts": "Příkon topného tělesa (volitelné)",
+          "max_temperature": "Nejvyšší teplota pro sprchy krátce po sobě",
+          "cancel_people": "Lidé, kteří smějí vypnout ohřev pro všechny",
+          "rich_notifications": "Nahrazovat dřívější zprávy na telefonech",
+          "power_sensor": "Senzor příkonu ohřívače (volitelné)",
+          "fault_recipients": "Komu hlásit poruchy",
+          "advanced": "Prahy poruch",
+          "tank_orientation": "Poloha zásobníku",
+          "element_height": "Kde je topné těleso",
+          "middle_temperature_sensor": "Druhé čidlo, níže (volitelné)",
+          "top_probe_height": "Výška hlavního čidla (volitelné)",
+          "middle_probe_height": "Výška druhého čidla (volitelné)"
+        },
+        "data_description": {
+          "keep_heating_gap_minutes": "Časy připravenosti takto blízko sebe sdílejí jedno okno a ohřívač topí bez přestávky, místo aby voda mezi nimi vychladla.",
+          "keep_hot_minutes": "Počítá se od zprávy „teplá voda připravená“; mezitím se voda drží mezi cílovou teplotou mínus a plus rezerva. 0: konec při zprávě. Podržením tlačítka na kartě zvolíte pro tento požadavek jinou dobu, až 120 minut.",
+          "cancel_people": "Kromě správců. Kdo o ohřev požádal, může svůj požadavek vždy zrušit.",
+          "rich_notifications": "Na telefonech s aplikací Home Assistant nahradí „Teplá voda připravená“ zprávu „ohřívá se“, místo aby přišla jako druhá zpráva.",
+          "power_sensor": "Se senzorem příkonu se pozná i ohřívač, který nic neodebírá, a relé zaseknuté v sepnuté poloze.",
+          "fault_recipients": "Prázdné: všichni správci.",
+          "solar_aware": "Vypnuto: začátek se počítá jen podle ohřívače a výsledek se zohledněním slunce se pouze zaznamená, pro porovnání v nastavení karty.",
+          "heating_rate": "Počet minut na ohřátí vody o jeden stupeň. Prázdné: naučí se z vlastních ohřevů ohřívače.",
+          "tank_litres": "Spolu s příkonem tělesa umožní ohřát vodu výš pro sprchy krátce po sobě, na které by zásobník při běžné cílové teplotě nestačil.",
+          "element_watts": "Dodá také kWh do solárního porovnání bez senzoru příkonu.",
+          "max_temperature": "50 °C je hranice opaření bez směšovacího ventilu; až 60 °C jen s ním.",
+          "tank_orientation": "Ležatý (vodorovný) nebo stojatý (svislý).",
+          "element_height": "Teplo stoupá, takže voda pod tělesem se skoro neohřeje. Spolu s objemem a příkonem to dává rozsah, ve kterém by rychlost ohřevu měla být.",
+          "middle_temperature_sensor": "Čidlo uprostřed zásobníku. Začátek se posune dřív, když je voda pod horní částí chladnější, a obě čidla se porovnávají s tím, jak se obvykle chovají. Připravenost se dál řídí hlavním čidlem.",
+          "top_probe_height": "Kde je hlavní čidlo, od dna (0 %) po vršek (100 %) zásobníku.",
+          "middle_probe_height": "Když jsou zadané obě výšky, každé čidlo se počítá pro ohřátou vodu nejblíž k němu, takže průměr, ze kterého se počítá začátek, je vážený. Bez nich každé napůl."
+        },
+        "sections": {
+          "advanced": {
+            "name": "Prahy poruch",
+            "data": {
+              "sensor_timeout_minutes": "Senzor mlčí po dobu",
+              "sensor_recovery_minutes": "Hodnoty jsou zpět po dobu",
+              "not_rising_minutes": "Ohřev bez nárůstu po dobu",
+              "not_rising_degrees": "Nárůst menší než",
+              "power_watts": "Práh příkonu",
+              "power_minutes": "Neočekávaný příkon po dobu"
+            }
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "heat_now_timeout": {
+      "message": "Voda se neohřála včas; požadavek „Ohřát hned“ skončil. Zkontrolujte ohřívač."
+    },
+    "no_target": {
+      "message": "Hot Water Ready nenašel žádný telefon, kterým by dal vědět osobě {name}: {message}"
+    },
+    "send_failed": {
+      "message": "Hot Water Ready se nespojil s telefony osoby {name}: {message}"
+    },
+    "window_heating": {
+      "message": "{heater} ohřívá: voda bude připravená asi za {minutes} min."
+    },
+    "ready": {
+      "message": "Teplá voda připravená: voda má {temperature} °C."
+    },
+    "fault_sensor_unavailable": {
+      "message": "{heater}: senzor teploty vody mlčí; ohřev je zastavený."
+    },
+    "fault_not_rising": {
+      "message": "{heater}: voda se neohřívá; ohřev je zastavený. Zkontrolujte ohřívač."
+    },
+    "fault_no_consumption": {
+      "message": "{heater}: ohřívač neodebírá žádný proud; ohřev je zastavený. Zkontrolujte topné těleso."
+    },
+    "fault_relay_stuck": {
+      "message": "{heater}: ohřívač odebírá proud, i když je vypnutý. Zkontrolujte relé."
+    },
+    "heat_now_refused": {
+      "message": "„Ohřát hned“ není možné, dokud porucha zastavuje ohřev: {faults}."
+    },
+    "fault_label_sensor_unavailable": {
+      "message": "senzor teploty vody nedává hodnoty"
+    },
+    "fault_label_not_rising": {
+      "message": "voda se neohřívá"
+    },
+    "fault_label_no_consumption": {
+      "message": "ohřívač neodebírá žádný proud"
+    },
+    "fault_label_relay_stuck": {
+      "message": "relé se zřejmě zaseklo v sepnuté poloze"
+    },
+    "heat_now_refused_manual": {
+      "message": "„Ohřát hned“ není možné, když je automatické řízení vypnuté: ohřívač se ovládá ručně."
+    },
+    "calendar_window": {
+      "message": "Ohřev: {members}"
+    },
+    "heater_not_found": {
+      "message": "Žádný načtený ohřívač Hot Water Ready s tímto ID."
+    },
+    "member_not_found": {
+      "message": "Toto zařízení není členem tohoto ohřívače."
+    },
+    "ready_time_not_found": {
+      "message": "Tento člen nemá čas připravenosti v {time}."
+    },
+    "away_date_in_past": {
+      "message": "Poslední den nepřítomnosti nemůže být v minulosti."
+    },
+    "edit_own_only": {
+      "message": "Můžete měnit jen své vlastní časy připravenosti."
+    },
+    "ready_time_gone": {
+      "message": "Tento čas připravenosti už neexistuje."
+    },
+    "ask_members_only": {
+      "message": "O teplou vodu mohou požádat jen členové a správci."
+    },
+    "cancel_not_allowed": {
+      "message": "Požadavek může zrušit jen ten, kdo o něj požádal."
+    },
+    "settings_admin_only": {
+      "message": "Nastavení může měnit jen správce."
+    },
+    "history_unavailable": {
+      "message": "Home Assistant tu neuchovává historii, takže rychlost nejde přepočítat."
+    },
+    "person_not_found": {
+      "message": "Tato osoba v Home Assistant neexistuje."
+    },
+    "switched_off_by": {
+      "message": "Ohřev vypnul(a): {name}."
+    },
+    "switched_off": {
+      "message": "Ohřev byl vypnut."
+    },
+    "switch_off_not_allowed": {
+      "message": "Ohřev pro všechny může vypnout jen správce nebo ten, koho správce vybral."
+    },
+    "fault_top_probe": {
+      "message": "{heater}: hlavní čidlo je možná uvolněné. Zkontrolujte ho; ohřev pokračuje."
+    },
+    "fault_label_top_probe": {
+      "message": "hlavní čidlo je možná uvolněné"
+    },
+    "fault_middle_probe": {
+      "message": "{heater}: druhé čidlo je možná uvolněné. Zkontrolujte ho; ohřev pokračuje."
+    },
+    "fault_label_middle_probe": {
+      "message": "druhé čidlo je možná uvolněné"
+    },
+    "fault_probes_disagree": {
+      "message": "{heater}: obě čidla si odporují. Zkontrolujte je; ohřev pokračuje."
+    },
+    "fault_label_probes_disagree": {
+      "message": "obě čidla si odporují"
+    }
+  },
+  "issues": {
+    "sensor_unavailable": {
+      "title": "{heater}: senzor teploty vody mlčí",
+      "description": "Senzor teploty vody už nějakou dobu nedává hodnoty, takže ohřev je zastavený. Znovu se spustí sám minutu poté, co se hodnoty vrátí."
+    },
+    "not_rising": {
+      "title": "{heater}: voda se neohřívá",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Je to opravené?",
+            "description": "Ohřívač byl dlouho zapnutý a teplota vody skoro nestoupla, takže ohřev je zastavený. Zkontrolujte ohřívač a jeho jistič a pak tady potvrďte, že je opravený. Ohřev se znovu spustí."
+          }
+        }
+      }
+    },
+    "no_consumption": {
+      "title": "{heater}: ohřívač neodebírá žádný proud",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Je to opravené?",
+            "description": "Relé bylo sepnuté, ale ohřívač skoro neodebíral proud, takže ohřev je zastavený. Zkontrolujte topné těleso a jeho jistič a pak tady potvrďte, že je opravené. Ohřev se znovu spustí."
+          }
+        }
+      }
+    },
+    "relay_stuck": {
+      "title": "{heater}: ohřívač odebírá proud, i když je vypnutý",
+      "description": "Ohřívač odebírá proud, přestože je relé vypnuté. Relé se možná zaseklo v sepnuté poloze; zkontrolujte ho. Hlášení zmizí samo minutu poté, co odběr skončí."
+    },
+    "top_probe": {
+      "title": "{heater}: hlavní čidlo je možná uvolněné",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Je to opravené?",
+            "description": "Při dvou ohřevech po sobě stoupala teplota na hlavním čidle pomaleji než obvykle. Čidlo možná vyklouzává z jímky nebo je vystavené chladu. Zkontrolujte ho a pak tady potvrďte; hlášení zmizí samo i po normálním ohřevu."
+          }
+        }
+      }
+    },
+    "middle_probe": {
+      "title": "{heater}: druhé čidlo je možná uvolněné",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Je to opravené?",
+            "description": "Při dvou ohřevech po sobě stoupala teplota na druhém čidle pomaleji než obvykle nebo zaostávala za hlavním. Dokud nebude znovu měřit správně, začátek se počítá jen z hlavního čidla. Zkontrolujte ho a pak tady potvrďte."
+          }
+        }
+      }
+    },
+    "probes_disagree": {
+      "title": "{heater}: obě čidla si odporují",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Je to opravené?",
+            "description": "Půl hodiny ukazovalo hlavní čidlo o více než 3 °C méně než druhé. Teplá voda stoupá vzhůru, takže jedno z nich neměří vodu. Zkontrolujte obě a pak tady potvrďte."
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "heat_now": {
+      "name": "Ohřát hned",
+      "description": "Ohřeje vodu hned. Zadaný člen dostane zprávu, až bude připravená; bez něj ten, kdo o ohřev požádal, pokud někdo.",
+      "fields": {
+        "heater": {
+          "name": "Ohřívač",
+          "description": "Ohřívač, který má ohřívat."
+        },
+        "member": {
+          "name": "Člen",
+          "description": "Komu dát vědět, až bude voda připravená."
+        },
+        "keep_minutes": {
+          "name": "Udržovat teplou po dobu",
+          "description": "Počet minut, po které se voda po zprávě udržuje teplá. Prázdné: nastavení ohřívače."
+        }
+      }
+    },
+    "add_ready_time": {
+      "name": "Přidat čas připravenosti",
+      "description": "Přidá čas, kdy člen chce teplou vodu.",
+      "fields": {
+        "member": {
+          "name": "Člen",
+          "description": "Čí je to čas připravenosti."
+        },
+        "time": {
+          "name": "Čas",
+          "description": "Kdy má být voda připravená."
+        },
+        "weekdays": {
+          "name": "Dny",
+          "description": "Dny, kdy se opakuje. Vynecháno: každý den."
+        },
+        "enabled": {
+          "name": "Zapnuto",
+          "description": "Vypnutý čas zůstane uložený, ale nic nespouští."
+        }
+      }
+    },
+    "remove_ready_time": {
+      "name": "Odebrat čas připravenosti",
+      "description": "Odebere časy připravenosti člena v danou denní dobu, bez ohledu na dny.",
+      "fields": {
+        "member": {
+          "name": "Člen",
+          "description": "Čí je to čas připravenosti."
+        },
+        "time": {
+          "name": "Čas",
+          "description": "Čas, který se má odebrat."
+        }
+      }
+    },
+    "set_away": {
+      "name": "Nastavit nepřítomnost",
+      "description": "Pozastaví nebo obnoví časy připravenosti člena.",
+      "fields": {
+        "member": {
+          "name": "Člen",
+          "description": "Kdo je pryč."
+        },
+        "away": {
+          "name": "Nepřítomnost",
+          "description": "Zapnuto pozastaví časy připravenosti, vypnuto je obnoví."
+        },
+        "until": {
+          "name": "Do",
+          "description": "Poslední den nepřítomnosti; potom nepřítomnost skončí sama."
+        }
+      }
+    },
+    "switch_off": {
+      "name": "Vypnout",
+      "description": "Vypne ohřívač hned pro všechny: požadavek „Ohřát hned“ skončí a časy připravenosti, pro které ohříval, se přeskočí. Všichni, kterých se to týká, dostanou zprávu.",
+      "fields": {
+        "heater": {
+          "name": "Ohřívač",
+          "description": "Ohřívač, který se má vypnout."
+        }
+      }
+    }
+  }
+}
