@@ -7,6 +7,8 @@ own dashboard card.
 
 Requires Home Assistant 2026.10 or later. On-screen text is in English and European Portuguese.
 
+<p align="center"><img src="docs/images/card.png" width="360" alt="The card: the water at 31.2 °C in a ring with the target, Ready at 06:45, starts heating around 05:50, the Heat now button, and Ana's ready times like alarms."></p>
+
 ## What you need
 
 - Something that heats the water, either:
@@ -17,12 +19,15 @@ Requires Home Assistant 2026.10 or later. On-screen text is in English and Europ
 - A **temperature sensor** in the water. Both setups need one.
 - Optional: a **power sensor** on the heater, so a heater that draws nothing, or a relay stuck
   on, is noticed.
+- Optional: a **second temperature probe** lower in the tank, so the start allows for cold water
+  below the top and a probe coming loose is noticed (see *Two probes*).
 
 ## Install
 
-Through HACS: add this repository as a custom repository of type *Integration*, install
-*Hot Water Ready*, and restart Home Assistant. Then add the integration from
-*Settings → Devices & services → Add integration*.
+Through Home Assistant's Marketplace: add this repository, `coin/hot-water-ready`, as a custom
+repository of type *Integration*, install *Hot Water Ready*, and restart Home Assistant. Then add
+the integration from *Settings → Devices & services → Add integration*. New versions are installed
+from the Marketplace too.
 
 By hand: copy `custom_components/hot_water_ready` into your configuration's `custom_components`
 folder and restart.
@@ -55,6 +60,15 @@ Everything else is in the heater's options (*Configure*):
 | Who is told about faults | Empty: every administrator. |
 | Fault thresholds | Advanced, collapsed: how long a silent sensor, or a heater that does not warm the water, is tolerated before it counts as a fault. |
 
+### Two probes
+
+A second probe lower down tells the integration how much of the tank is hot, not only the top.
+With both heights set, each probe counts for the heated water nearest it; in a lying tank the
+slices near the top hold less water than those near the middle, so the top probe's 20% of the
+height is 69% of the heated water here:
+
+<p align="center"><img src="docs/images/probes.svg" width="640" alt="A lying tank seen from its end, with the element at the middle, the main probe at 80% and the second probe at 45%. The heated water splits halfway between the probes at 62.5%: the main probe stands for 69% of it, the second for 31%."></p>
+
 The target temperature and the margin are on the card and as number entities. Heating stops at
 target plus margin and starts again at target minus margin; the water is *ready* at the target.
 
@@ -82,6 +96,11 @@ being removed. Ready times close together share one heating window (see the gap 
 start of a window is worked out from the water temperature and the heating rate, plus a margin;
 once the heater has started for a window it carries on until the water is ready.
 
+A ready time is set on a clock face, like a phone's alarm: hours (0 to 11 outside, 12 to 23
+inside), then minutes. The keyboard button types it instead.
+
+<p align="center"><img src="docs/images/clock.png" width="300" alt="The time popup: 07:00 picked on a clock face, with a keyboard button, Cancel and OK."></p>
+
 **Away** pauses a member's ready times, optionally until a last day, after which it ends by itself.
 
 ## The card
@@ -99,6 +118,20 @@ once the heater has started for a window it carries on until the water is ready.
 
 Red banners show faults; an orange one warns when showers close together need more than the
 highest temperature allows.
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/images/week.png" width="260" alt="The week: 17 showers, 12 heating windows, each person's ready times by day, and a heating bar per day."><br>Week</td>
+    <td align="center"><img src="docs/images/settings.png" width="260" alt="Heater settings: target 42 °C, margin ±1, automatic control, who may switch off, heating speed 5.5 min per °C learned from 5 clean heats, the physics range and the solar comparison."><br>Settings</td>
+    <td align="center"><img src="docs/images/member.png" width="260" alt="A member's view: Hello, Rui, the house today, and Rui's own ready times."><br>A member</td>
+  </tr>
+</table>
+
+**Heating speed** (in the settings): the minutes per degree in use and where they come from
+(learned, the starting value, or fixed by hand), the clean heats behind it, how the start works
+out from the water now, and the range physics allows for the tank. *Fixed* steps it by hand,
+with the learned value as a suggestion; *Recalculate from history* relearns it from the last
+week of Home Assistant's history and uses the result at once.
 
 ## Heat now
 
@@ -131,6 +164,12 @@ are told when:
 - the temperature sensor goes silent;
 - the water does not get hotter while the heater is on;
 - with a power sensor: the heater draws nothing while on, or draws power while switched off.
+
+With a second probe, a **warning** (heating goes on) is raised too when, on two long heats in a
+row from a mixed tank, a probe rises much slower than it normally does or than physics allows,
+or falls well behind the other one: it may be coming loose or exposed to the cold while still
+rising. The top reading colder than the middle for half an hour is reported as the probes
+disagreeing. A suspect second probe is left out of the start until it reads properly again.
 
 The first three stop heating, and heat now is refused while they last. Power drawn while switched
 off points at a stuck relay, which the integration cannot switch off itself: check the relay.
@@ -212,3 +251,5 @@ integration's *Download diagnostics*, with names and people left out.
 - `cd card && npm run check` runs the card's lint, types, tests and bundle check.
 - `dev/testha.sh` starts a throwaway Home Assistant in Docker with a simulated cylinder;
   `python dev/trial.py` runs the trial scenarios against it and writes a report.
+- `cd card && node ../dev/screenshots.mjs` renders the README's card images into `docs/images/`
+  from the built card and a sample household (run `npm run build` first).
