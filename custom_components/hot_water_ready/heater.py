@@ -37,6 +37,7 @@ from .const import (
     CONF_KEEP_HEATING_GAP,
     CONF_KEEP_HOT,
     CONF_MAX_TEMPERATURE,
+    CONF_MIDDLE_SENSOR,
     CONF_NOTIFY_TARGETS,
     CONF_PERSON,
     CONF_POWER_SENSOR,
@@ -72,6 +73,7 @@ from .core.controller import (
 )
 from .core.faults import BLOCKING, RESOLVABLE, Fault, FaultGuard, FaultSettings
 from .core.household import Away, MemberPlan, household_occurrences
+from .core.probes import Probe, ProbeWatch
 from .core.rate import (
     MIN_RUNS,
     WINDOW,
@@ -85,7 +87,7 @@ from .core.rate import (
 from .core.ready_times import ReadyTime
 from .core.solar import SolarTrend
 from .core.status import Status, heater_status
-from .history import async_samples
+from .history import async_samples, lead_water
 from .messages import (
     async_message,
     async_nobody_to_tell,
@@ -124,6 +126,13 @@ class HeatNowRefusedError(RuntimeError):
         """Keep the faults, which are the reason given; none means automatic control is off."""
         super().__init__(", ".join(sorted(faults)) or "manual")
         self.faults = faults
+
+
+PROBE_FAULTS = {
+    Probe.TOP: Fault.TOP_PROBE,
+    Probe.MIDDLE: Fault.MIDDLE_PROBE,
+    Probe.BOTH: Fault.PROBES_DISAGREE,
+}
 
 
 def issue_id(entry_id: str, fault: Fault) -> str:
@@ -196,6 +205,7 @@ class Heater:
         self._recorder = Recorder(data.comparison)
         self._controller = Controller(self._settings(), data.controller)
         self._guard = FaultGuard(self._fault_settings(), data.faults)
+        self._probes = ProbeWatch(data.probes)
 
     # ------------------------------------------------------------------ what it is
 
@@ -312,7 +322,7 @@ class Heater:
 
         None without a reading or a ready time. Both are worked out whichever rule is applied.
         """
-        temperature, coming = self.temperature, self.next_ready()
+        temperature, coming = self.lead_temperature, self.next_ready()
         if temperature is None or coming is None:
             return None
         settings = self._controller.settings
@@ -375,8 +385,10 @@ class Heater:
 
     @property
     def faults(self) -> frozenset[Fault]:
-        """The faults active now."""
-        return self._guard.state.active
+        """The faults active now: the guard's, and the probe check's."""
+        return self._guard.state.active | frozenset(
+            PROBE_FAULTS[probe] for probe in self._probes.state.suspect
+        )
 
     @property
     def automatic(self) -> bool:
@@ -390,7 +402,8 @@ class Heater:
 
     async def async_resolve_fault(self, fault: Fault) -> None:
         """Someone confirmed in Repairs that the fault is fixed ("Resolvido")."""
-        if self._guard.resolve(fault):
+        probe = next((p for p, f in PROBE_FAULTS.items() if f == fault), None)
+        if (self._probes.resolve(probe) if probe else False) or self._guard.resolve(fault):
             ir.async_delete_issue(self.hass, DOMAIN, self._issue_id(fault))
             await self._async_saved_and_stepped()
 
@@ -423,6 +436,28 @@ class Heater:
     def temperature(self) -> float | None:
         """The water temperature now, or None when the sensor has no number."""
         return self._number(self._sensor)
+
+    @property
+    def _middle_sensor(self) -> str | None:
+        middle = self.entry.options.get(CONF_MIDDLE_SENSOR)
+        return str(middle) if middle else None
+
+    @property
+    def middle_temperature(self) -> float | None:
+        """The second probe, lower down, when there is one and it has a number."""
+        return self._number(self._middle_sensor)
+
+    @property
+    def lead_temperature(self) -> float | None:
+        """What the lead is worked out from: the top, or the probes' mean when it is colder.
+
+        Cold water below the top makes the top rise slowly, so the start comes forward. A middle
+        probe the probe check suspects is left out until it reads properly again.
+        """
+        middle = self.middle_temperature
+        if self._probes.state.suspect & {Probe.MIDDLE, Probe.BOTH}:
+            middle = None
+        return lead_water(self.temperature, middle)
 
     @property
     def heating(self) -> bool:
@@ -469,7 +504,7 @@ class Heater:
         Ready times in a window that was switched off are left out: they get no hot water.
         """
         return planned_windows(
-            self._controller.settings, self.planned_occurrences(start, end), self.temperature
+            self._controller.settings, self.planned_occurrences(start, end), self.lead_temperature
         )
 
     def planned_occurrences(self, start: datetime, end: datetime) -> list[Occurrence]:
@@ -602,6 +637,7 @@ class Heater:
         self._data.controller = self._controller.state
         self._data.faults = self._guard.state
         self._data.rate = self._learner.state
+        self._data.probes = self._probes.state
         self._data.comparison = self._recorder.state
 
     async def _async_save(self) -> None:
@@ -858,6 +894,8 @@ class Heater:
     def async_start(self) -> None:
         """Follow the sensor and the relay, step every tick, until the entry unloads."""
         watched = [self._sensor, self.actuator.entity_id]
+        if self._middle_sensor:
+            watched.append(self._middle_sensor)
         if self._power_sensor:
             watched.append(self._power_sensor)
         self.entry.async_on_unload(
@@ -903,6 +941,7 @@ class Heater:
                 # From a day back, so the open window's own ready times are always in the list.
                 occurrences=self.occurrences(now - timedelta(days=1), now + HORIZON),
                 solar_rise=self._rise,
+                lead_temperature=self.lead_temperature if self._middle_sensor else None,
             )
         else:
             decision = Decision(relay_on=False)  # run by hand: no plans, nothing to tell
@@ -944,14 +983,31 @@ class Heater:
         runs, records = len(self._learner.state.runs), len(self._recorder.state.records)
         # A thermostat with no heating indication: what the component asks of it stands in.
         heating = self.heating if element is None else element
-        fault = bool(self.faults)
-        self._learner.step(
+        fault = bool(self._guard.state.active)  # a suspect probe does not spoil a run
+        kept = self._learner.step(
             now=now,
-            temperature=temperature,
+            temperature=self.lead_temperature,
             heating=heating,
             sun_up=is_up(self.hass, dt_util.as_utc(now)),
             fault=fault,
         )
+        probes = self._probes.step(
+            now=now,
+            top=temperature,
+            middle=self.middle_temperature,
+            heating=heating,
+            run_kept=kept,
+            physics_slow=self._physics_slow(),
+        )
+        for probe in probes.raised:
+            self._raise_issue(PROBE_FAULTS[probe])
+        for probe in probes.cleared:
+            ir.async_delete_issue(self.hass, DOMAIN, self._issue_id(PROBE_FAULTS[probe]))
+        if probes.raised:
+            self.entry.async_create_task(
+                self.hass,
+                self._async_tell_fault(tuple(PROBE_FAULTS[p] for p in probes.raised)),
+            )
         if self.automatic:
             self._recorder.step(
                 now=now,
@@ -966,7 +1022,21 @@ class Heater:
             )
         else:
             self._recorder.abandon()
-        return len(self._learner.state.runs) != runs or len(self._recorder.state.records) != records
+        return (
+            len(self._learner.state.runs) != runs
+            or len(self._recorder.state.records) != records
+            or bool(probes.raised or probes.cleared)
+        )
+
+    def _physics_slow(self) -> float | None:
+        """The whole tank's minutes per degree, when the tank is known: the probe check's limit."""
+        litres, watts = (
+            self.entry.options.get(CONF_TANK_LITRES),
+            self.entry.options.get(CONF_ELEMENT_WATTS),
+        )
+        if not litres or not watts:
+            return None
+        return physics_rate(litres=float(litres), element_watts=float(watts))
 
     @callback
     def _apply(self, on: bool) -> None:
@@ -1103,7 +1173,9 @@ class Heater:
         recorder.
         """
         end = dt_util.utcnow()
-        samples = await async_samples(self.hass, self._sensor, self.actuator, end - WINDOW, end)
+        samples = await async_samples(
+            self.hass, self._sensor, self.actuator, end - WINDOW, end, middle=self._middle_sensor
+        )
         found = replay(samples, sun_up=lambda at: is_up(self.hass, dt_util.as_utc(at)))
         self._learner.state.runs = found.runs
         learned = self.learned_rate

@@ -355,6 +355,7 @@ class Controller:
         """Start from saved state, or from nothing."""
         self.settings = settings
         self.state = state or ControllerState()
+        self._lead_water: float | None = None  # this step's lead temperature, if any
 
     def request_heat_now(
         self, now: datetime, requester: str, keep_minutes: float | None = None
@@ -426,8 +427,14 @@ class Controller:
         temperature: float | None,
         occurrences: Iterable[Occurrence],
         solar_rise: float | None = None,
+        lead_temperature: float | None = None,
     ) -> Decision:
         """Look at the house now and decide.
+
+        `temperature` is the top probe: ready, the band and the messages follow it.
+        `lead_temperature`, with a second probe lower down, is the tank's water as a whole (the
+        two probes' mean): the lead is worked out from it when it is colder, since cold water
+        below the top makes the top rise slowly.
 
         `occurrences` must reach back to the open window's first ready time. `solar_rise` is the
         water's trend with the heater off, used only when the solar-aware rule is on. Everything
@@ -435,6 +442,7 @@ class Controller:
         is an hour out across a daylight-saving change.
         """
         now = now.astimezone(UTC)
+        self._lead_water = lead_temperature
         ready_times = sorted(
             (Occurrence(o.at.astimezone(UTC), o.members) for o in occurrences),
             key=lambda o: o.at,
@@ -497,6 +505,8 @@ class Controller:
         target: float,
     ) -> float:
         """The lead the rule in use gives to `target`: version 1's, or the solar-aware one."""
+        if self._lead_water is not None:
+            temperature = min(temperature, self._lead_water)
         settings = self.settings.with_target(target)
         if not settings.solar_aware:
             return lead_minutes(settings, temperature)

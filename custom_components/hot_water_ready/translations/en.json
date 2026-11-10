@@ -238,7 +238,8 @@
           "fault_recipients": "Who is told about faults",
           "advanced": "Fault thresholds",
           "tank_orientation": "Tank position",
-          "element_height": "Where the element sits"
+          "element_height": "Where the element sits",
+          "middle_temperature_sensor": "Second probe, lower down (optional)"
         },
         "data_description": {
           "keep_heating_gap_minutes": "Ready times this close share one window and the heater keeps heating through, instead of letting the water cool in between.",
@@ -253,7 +254,8 @@
           "element_watts": "Also gives the solar comparison its kWh without a power sensor.",
           "max_temperature": "50 °C is the scald limit without a mixing valve; up to 60 °C only with one.",
           "tank_orientation": "Lying down (horizontal) or standing (vertical).",
-          "element_height": "Heat rises, so the water below the element barely warms. With the volume and power, this gives the range the heating speed should fall in."
+          "element_height": "Heat rises, so the water below the element barely warms. With the volume and power, this gives the range the heating speed should fall in.",
+          "middle_temperature_sensor": "A probe in the middle of the tank. The start comes forward when the water below the top is colder, and both probes are checked against how they normally behave. Ready still follows the main probe."
         },
         "sections": {
           "advanced": {
@@ -361,6 +363,24 @@
     },
     "switch_off_not_allowed": {
       "message": "Only an administrator, or someone an administrator chose, may switch off the heating for everyone."
+    },
+    "fault_top_probe": {
+      "message": "{heater}: the main probe may be loose. Check it; heating goes on."
+    },
+    "fault_label_top_probe": {
+      "message": "the main probe may be loose"
+    },
+    "fault_middle_probe": {
+      "message": "{heater}: the second probe may be loose. Check it; heating goes on."
+    },
+    "fault_label_middle_probe": {
+      "message": "the second probe may be loose"
+    },
+    "fault_probes_disagree": {
+      "message": "{heater}: the two probes disagree. Check it; heating goes on."
+    },
+    "fault_label_probes_disagree": {
+      "message": "the two probes disagree"
     }
   },
   "issues": {
@@ -393,6 +413,39 @@
     "relay_stuck": {
       "title": "{heater}: the heater draws power while switched off",
       "description": "The heater is drawing power although the relay is off. The relay may be stuck on; check it. This clears by itself a minute after the power stops."
+    },
+    "top_probe": {
+      "title": "{heater}: the main probe may be loose",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Is it fixed?",
+            "description": "The main water probe rose more slowly than it normally does on two heats running. It may be coming out of its pocket or exposed to the cold. Check it, then confirm here; it also clears by itself after a normal heat."
+          }
+        }
+      }
+    },
+    "middle_probe": {
+      "title": "{heater}: the second probe may be loose",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Is it fixed?",
+            "description": "The second probe rose more slowly than it normally does, or fell behind the main one, on two heats running. Until it reads properly again the start is worked out from the main probe alone. Check it, then confirm here."
+          }
+        }
+      }
+    },
+    "probes_disagree": {
+      "title": "{heater}: the two probes disagree",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Is it fixed?",
+            "description": "For half an hour the main probe read more than 3 °C colder than the second one. Hot water rises, so one of them is not reading the water. Check both, then confirm here."
+          }
+        }
+      }
     }
   },
   "services": {

@@ -19,6 +19,7 @@ from .core.comparison import ComparisonState
 from .core.controller import ControllerState
 from .core.faults import FaultState
 from .core.household import Away
+from .core.probes import ProbeState
 from .core.rate import RateState
 from .core.ready_times import ReadyTime
 
@@ -41,6 +42,7 @@ class HeaterData:
     automatic: bool = True  # off: the heater is run by hand and left alone (spec 4.7)
     rate: RateState | None = None  # the clean heating runs of the last week (spec 4.2)
     comparison: ComparisonState | None = None  # a year of window records (spec 7)
+    probes: ProbeState | None = None  # each probe's normal heats and who is suspect
 
 
 def ready_time_to_dict(ready: ReadyTime) -> dict[str, Any]:
@@ -148,6 +150,7 @@ class HeaterStore:
             automatic=_flag(raw.get("automatic"), default=True),
             rate=_state(raw.get("rate"), RateState.from_dict, "heating runs"),
             comparison=_state(raw.get("comparison"), ComparisonState.from_dict, "solar record"),
+            probes=_state(raw.get("probes"), ProbeState.from_dict, "probe check"),
         )
         for member_id, member in _mapping(raw.get("members"), "members").items():
             stored = _mapping(member, "member")
@@ -186,6 +189,7 @@ class HeaterStore:
             "automatic": data.automatic,
             "rate": None if data.rate is None else data.rate.to_dict(),
             "comparison": None if data.comparison is None else data.comparison.to_dict(),
+            "probes": None if data.probes is None else data.probes.to_dict(),
         }
 
     async def async_save(self, data: HeaterData) -> None:

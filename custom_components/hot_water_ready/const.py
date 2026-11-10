@@ -30,6 +30,7 @@ CONF_KEEP_HOT: Final = "keep_hot_minutes"  # heat now: how long to keep it hot a
 CONF_SWITCH_OFF_PEOPLE: Final = "cancel_people"
 CONF_RICH_NOTIFICATIONS: Final = "rich_notifications"
 CONF_POWER_SENSOR: Final = "power_sensor"
+CONF_MIDDLE_SENSOR: Final = "middle_temperature_sensor"  # a second probe, lower down
 CONF_FAULT_RECIPIENTS: Final = "fault_recipients"
 CONF_ADVANCED: Final = "advanced"  # a collapsed section holding the fault thresholds
 CONF_SOLAR_AWARE: Final = "solar_aware"

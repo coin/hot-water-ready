@@ -12,6 +12,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from custom_components.hot_water_ready.core.controller import (
+    Controller,
     ControllerState,
     Occurrence,
     Settings,
@@ -298,3 +299,34 @@ def test_state_from_corrupt_data_is_refused() -> None:
     ):
         with pytest.raises(ValueError, match="controller state"):
             ControllerState.from_dict(bad)
+
+
+@pytest.mark.parametrize(("lead_water", "heats"), [(None, False), (36.35, True)])
+def test_a_colder_middle_brings_the_start_forward(lead_water: float | None, heats: bool) -> None:
+    """4 Nov top-up: top 39.4, middle 33.3. From the top alone the lead is 33 min, so at 06:20
+    nothing heats; from the two probes' mean (36.35) it is 55 min, and heating has begun."""
+    controller = Controller(Settings())
+
+    decision = controller.step(
+        now=SEVEN - timedelta(minutes=40),
+        temperature=39.4,
+        lead_temperature=lead_water,
+        occurrences=[Occurrence(at=SEVEN, members=TIAGO)],
+    )
+
+    assert decision.relay_on is heats
+
+
+def test_ready_and_the_band_still_follow_the_top_probe() -> None:
+    """The middle only moves the start: the top at the target is ready, whatever the middle."""
+    controller = Controller(Settings())
+
+    decision = controller.step(
+        now=SEVEN - timedelta(minutes=10),
+        temperature=42.0,
+        lead_temperature=30.0,
+        occurrences=[Occurrence(at=SEVEN, members=TIAGO)],
+    )
+
+    assert decision.relay_on is False
+    assert [event.kind for event in decision.events] == ["ready"]

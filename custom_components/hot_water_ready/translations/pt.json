@@ -238,7 +238,8 @@
           "fault_recipients": "Quem é avisado das avarias",
           "advanced": "Limites das avarias",
           "tank_orientation": "Posição do tanque",
-          "element_height": "Onde está a resistência"
+          "element_height": "Onde está a resistência",
+          "middle_temperature_sensor": "Segunda sonda, mais abaixo (opcional)"
         },
         "data_description": {
           "keep_heating_gap_minutes": "Horários assim próximos partilham uma janela e o aquecedor continua a aquecer, em vez de deixar a água arrefecer entre eles.",
@@ -253,7 +254,8 @@
           "element_watts": "Também dá os kWh à comparação solar sem sensor de potência.",
           "max_temperature": "50 °C é o limite para evitar queimaduras sem válvula misturadora; até 60 °C só com ela.",
           "tank_orientation": "Deitado (horizontal) ou de pé (vertical).",
-          "element_height": "O calor sobe, por isso a água abaixo da resistência quase não aquece. Com o volume e a potência, dá o intervalo em que a velocidade de aquecimento deve ficar."
+          "element_height": "O calor sobe, por isso a água abaixo da resistência quase não aquece. Com o volume e a potência, dá o intervalo em que a velocidade de aquecimento deve ficar.",
+          "middle_temperature_sensor": "Uma sonda a meio do tanque. O início vem mais cedo quando a água abaixo do topo está mais fria, e as duas sondas são comparadas com o que costumam fazer. Pronta continua a depender da sonda principal."
         },
         "sections": {
           "advanced": {
@@ -361,6 +363,24 @@
     },
     "switch_off_not_allowed": {
       "message": "Só um administrador, ou uma pessoa escolhida por um administrador, pode desligar o aquecimento para todos."
+    },
+    "fault_top_probe": {
+      "message": "{heater}: a sonda principal pode estar solta. Verifique-a; o aquecimento continua."
+    },
+    "fault_label_top_probe": {
+      "message": "a sonda principal pode estar solta"
+    },
+    "fault_middle_probe": {
+      "message": "{heater}: a segunda sonda pode estar solta. Verifique-a; o aquecimento continua."
+    },
+    "fault_label_middle_probe": {
+      "message": "a segunda sonda pode estar solta"
+    },
+    "fault_probes_disagree": {
+      "message": "{heater}: as duas sondas não batem certo. Verifique-a; o aquecimento continua."
+    },
+    "fault_label_probes_disagree": {
+      "message": "as duas sondas não batem certo"
     }
   },
   "issues": {
@@ -393,6 +413,39 @@
     "relay_stuck": {
       "title": "{heater}: o aquecedor consome energia com o relé desligado",
       "description": "O aquecedor está a consumir energia com o relé desligado. O relé pode ter ficado ligado; verifique-o. Isto desaparece sozinho um minuto depois de o consumo parar."
+    },
+    "top_probe": {
+      "title": "{heater}: a sonda principal pode estar solta",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Está resolvido?",
+            "description": "A sonda principal subiu mais devagar do que costuma, em duas aquecidas seguidas. Pode estar a sair do encaixe ou exposta ao frio. Verifique-a e confirme aqui; também desaparece sozinho depois de uma aquecida normal."
+          }
+        }
+      }
+    },
+    "middle_probe": {
+      "title": "{heater}: a segunda sonda pode estar solta",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Está resolvido?",
+            "description": "A segunda sonda subiu mais devagar do que costuma, ou ficou para trás da principal, em duas aquecidas seguidas. Até voltar a ler bem, o início é calculado só com a sonda principal. Verifique-a e confirme aqui."
+          }
+        }
+      }
+    },
+    "probes_disagree": {
+      "title": "{heater}: as duas sondas não batem certo",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Está resolvido?",
+            "description": "Durante meia hora a sonda principal leu mais de 3 °C abaixo da segunda. A água quente sobe, por isso uma delas não está a ler a água. Verifique as duas e confirme aqui."
+          }
+        }
+      }
     }
   },
   "services": {

@@ -37,10 +37,22 @@ class Fault(StrEnum):
     NOT_RISING = "not_rising"
     NO_CONSUMPTION = "no_consumption"
     RELAY_STUCK = "relay_stuck"
+    # The probe check (core/probes.py): warnings, heating goes on.
+    TOP_PROBE = "top_probe"
+    MIDDLE_PROBE = "middle_probe"
+    PROBES_DISAGREE = "probes_disagree"
 
 
 BLOCKING = frozenset({Fault.SENSOR_UNAVAILABLE, Fault.NOT_RISING, Fault.NO_CONSUMPTION})
-RESOLVABLE = frozenset({Fault.NOT_RISING, Fault.NO_CONSUMPTION})
+RESOLVABLE = frozenset(
+    {
+        Fault.NOT_RISING,
+        Fault.NO_CONSUMPTION,
+        Fault.TOP_PROBE,
+        Fault.MIDDLE_PROBE,
+        Fault.PROBES_DISAGREE,
+    }
+)
 
 
 @dataclass(frozen=True)

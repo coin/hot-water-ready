@@ -85,8 +85,8 @@ class RateLearner:
         heating: bool | None,
         sun_up: bool | None,
         fault: bool,
-    ) -> None:
-        """One look at the element and the water."""
+    ) -> bool | None:
+        """One look at the element and the water; at the end of a run, whether it was kept."""
         now = now.astimezone(UTC)
         run = self.state.current
         if heating and temperature is not None:
@@ -98,25 +98,27 @@ class RateLearner:
                     last_temperature=temperature,
                     clean=sun_up is False and not fault,  # an unknown sun is not a sun known down
                 )
-                return
+                return None
             run.lowest = min(run.lowest, temperature)
             run.last_temperature = temperature
             run.clean = run.clean and not fault
-            return
+            return None
         if run is None:
-            return
+            return None
         self.state.current = None
         end_temperature = run.last_temperature if temperature is None else temperature
         minutes = (now - run.started).total_seconds() / 60
         rise = end_temperature - run.start_temperature
-        if (
+        kept = (
             run.clean
             and minutes > MIN_MINUTES
             and rise > MIN_RISE
             and run.lowest >= run.start_temperature - MAX_DIP
-        ):
+        )
+        if kept:
             self.state.runs.append((now, minutes / rise))
         self.state.runs = [(at, rate) for at, rate in self.state.runs if at > now - WINDOW]
+        return kept
 
     def learned(self, now: datetime) -> float | None:
         """Minutes per degree: the median of the last week's runs, once there are three."""

@@ -32,6 +32,7 @@ from .const import (
     CONF_KEEP_HEATING_GAP,
     CONF_KEEP_HOT,
     CONF_MAX_TEMPERATURE,
+    CONF_MIDDLE_SENSOR,
     CONF_NOTIFY_TARGETS,
     CONF_PERSON,
     CONF_POWER_SENSOR,
@@ -341,6 +342,7 @@ class HeaterOptionsFlow(OptionsFlow):
                 CONF_SWITCH_OFF_PEOPLE: [],
                 CONF_FAULT_RECIPIENTS: [],
                 CONF_POWER_SENSOR: None,
+                CONF_MIDDLE_SENSOR: None,
                 CONF_HEATING_RATE: None,
                 CONF_TANK_LITRES: None,
                 CONF_ELEMENT_WATTS: None,
@@ -415,6 +417,12 @@ class HeaterOptionsFlow(OptionsFlow):
                     description={"suggested_value": options.get(CONF_POWER_SENSOR)},
                 ): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain="sensor", device_class="power")
+                ),
+                probatio.Optional(
+                    CONF_MIDDLE_SENSOR,
+                    description={"suggested_value": options.get(CONF_MIDDLE_SENSOR)},
+                ): selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain="sensor", device_class="temperature")
                 ),
                 probatio.Optional(
                     CONF_FAULT_RECIPIENTS,
