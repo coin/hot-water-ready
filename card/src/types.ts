@@ -37,6 +37,8 @@ export interface RateInfo {
   default: number;
   /** The whole tank heated by the element, nothing lost; null without the tank's size. */
   physics: number | null;
+  /** Only the water above the element heated: the fast end; equal to `physics` with it at the bottom. */
+  physics_fast: number | null;
   tank_litres: number | null;
   /** The clean runs of the learning window: when each ended, and its minutes per degree. */
   runs: { at: string; rate: number }[];

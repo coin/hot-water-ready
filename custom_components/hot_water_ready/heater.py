@@ -29,6 +29,7 @@ from .const import (
     CONF_ADVANCED,
     CONF_CLIMATE,
     CONF_COLOUR,
+    CONF_ELEMENT_HEIGHT,
     CONF_ELEMENT_WATTS,
     CONF_FAULT_RECIPIENTS,
     CONF_HEATER_TYPE,
@@ -45,6 +46,7 @@ from .const import (
     CONF_SWITCH,
     CONF_SWITCH_OFF_PEOPLE,
     CONF_TANK_LITRES,
+    CONF_TANK_ORIENTATION,
     CONF_TEMPERATURE_SENSOR,
     DEFAULT_MAX_TEMPERATURE,
     DOMAIN,
@@ -74,6 +76,7 @@ from .core.rate import (
     MIN_RUNS,
     WINDOW,
     RateLearner,
+    heated_fraction,
     physics_rate,
     rate_in_use,
     rate_source,
@@ -1057,9 +1060,21 @@ class Heater:
             "manual": manual,
             "learned": learned,
             "default": Settings().rate_minutes_per_degree,
+            # The whole tank heated, and only the water above the element: the range physics
+            # allows (one value with the element at the bottom).
             "physics": None
             if not litres or not watts
             else physics_rate(litres=float(litres), element_watts=float(watts)),
+            "physics_fast": None
+            if not litres or not watts
+            else physics_rate(
+                litres=float(litres)
+                * heated_fraction(
+                    self.entry.options.get(CONF_TANK_ORIENTATION, "vertical"),
+                    self.entry.options.get(CONF_ELEMENT_HEIGHT, "bottom"),
+                ),
+                element_watts=float(watts),
+            ),
             "tank_litres": None if not litres else float(litres),
             "runs": [
                 {"at": dt_util.as_local(at).isoformat(), "rate": rate}

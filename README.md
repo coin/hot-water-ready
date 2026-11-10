@@ -45,6 +45,7 @@ Everything else is in the heater's options (*Configure*):
 | Use the solar-aware rule | Off by default. Off, the start is worked out from the heater alone and the solar-aware result is only recorded, for the comparison on the card. |
 | Heating rate set by hand | Minutes to raise the water one degree. Empty: learned from the heater's own clean runs (started with the sun down, over 15 min, a rise of more than 3 °C, no water drawn), the median of the last week once there are three. |
 | Tank volume, element power | Both together let the heater heat higher for showers close together that the tank at the normal target cannot carry. The element power also gives the solar comparison its kWh without a power sensor. |
+| Tank position, where the element sits | Heat rises, so the water below the element barely warms. With the volume and power, these give the range the heating speed should fall in, from only the water above the element to the whole tank; the card's settings sheet warns when the learned speed is far outside it. |
 | Highest temperature for showers close together | The cap for that raise: 50 °C by default, the scald limit without a mixing valve; up to 60 °C only with one. |
 | People who may switch off the heating for everyone | Besides the administrators, who may always. Whoever asked for heat now may always cancel their own request. |
 | Replace earlier messages on phones | On phones with the Home Assistant app, "ready" replaces "heating" instead of arriving as a second message. |

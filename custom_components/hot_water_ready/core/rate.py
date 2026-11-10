@@ -9,6 +9,7 @@ degree. The learned rate is the median of the runs of the last 7 days, once ther
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+import math
 from statistics import median
 from typing import Any, Literal
 
@@ -24,6 +25,9 @@ MIN_MANUAL_RATE = 0.5  # minutes per degree a fixed rate may be set to, as in th
 MAX_MANUAL_RATE = 60.0
 
 type RateSource = Literal["manual", "learned", "default"]
+type TankOrientation = Literal["vertical", "horizontal"]
+type ElementHeight = Literal["bottom", "lower_third", "middle"]
+ELEMENT_HEIGHTS: dict[ElementHeight, float] = {"bottom": 0.0, "lower_third": 1 / 3, "middle": 0.5}
 
 
 @dataclass
@@ -165,3 +169,17 @@ def replay(
         learner.state.runs = [(at, r) for at, r in learner.state.runs if at > last - WINDOW]
     learner.state.current = None
     return learner.state
+
+
+def heated_fraction(orientation: TankOrientation, element: ElementHeight) -> float:
+    """The share of the tank above the element: what heats when only that water mixes.
+
+    Heat rises, so the water below the element barely warms. A vertical tank's share is a
+    straight cut; a horizontal one's is the part of a circle above a chord.
+    """
+    height = ELEMENT_HEIGHTS[element]
+    if orientation == "vertical":
+        return 1 - height
+    depth = 2 * height - 1  # the chord's distance below the centre, radius 1, as a negative
+    below = math.acos(-depth) - (-depth) * math.sqrt(1 - depth * depth)
+    return 1 - below / math.pi

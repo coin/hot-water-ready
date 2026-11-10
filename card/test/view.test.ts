@@ -66,6 +66,7 @@ const learnedRate: RateInfo = {
   learned: 5.3,
   default: 7,
   physics: 7.61,
+  physics_fast: 7.61,
   tank_litres: 300,
   runs: [
     { at: "2026-11-01T21:16:00+00:00", rate: 5.86 },
@@ -1063,7 +1064,18 @@ describe("rateView", () => {
       warn: true,
     });
     expect(at({ used: 10, learned: 10 })?.check?.line).toContain("31% acima da física");
-    expect(at({ physics: null, tank_litres: null })?.check).toBeNull();
+    expect(at({ physics: null, physics_fast: null, tank_litres: null })?.check).toBeNull();
+  });
+
+  it("with the element up the tank, physics is a range and only outside it warns", () => {
+    const middle = { physics_fast: 3.8 };
+    expect(at(middle)?.physics).toBe(
+      "Pela física: entre 3,8 min/°C (só a água acima da resistência) e 7,6 min/°C (o tanque inteiro)",
+    );
+    expect(at(middle)?.check).toEqual({ line: "Equivale a aquecer 209 L dos 300 L do tanque", warn: false });
+    expect(at({ ...middle, used: 2.5, learned: 2.5 })?.check).toMatchObject({ warn: true });
+    expect(at({ ...middle, used: 2.5, learned: 2.5 })?.check?.line).toContain("34% abaixo da física");
+    expect(at({ ...middle, used: 9.6, learned: 9.6 })?.check?.line).toContain("26% acima da física");
   });
 
   it("shows the physics rate as a check", () => {

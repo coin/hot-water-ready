@@ -36,6 +36,8 @@ CONF_SOLAR_AWARE: Final = "solar_aware"
 CONF_HEATING_RATE: Final = "heating_rate"  # minutes per degree, set by hand
 CONF_TANK_LITRES: Final = "tank_litres"
 CONF_ELEMENT_WATTS: Final = "element_watts"
+CONF_TANK_ORIENTATION: Final = "tank_orientation"  # vertical or horizontal
+CONF_ELEMENT_HEIGHT: Final = "element_height"  # bottom, lower_third or middle
 CONF_MAX_TEMPERATURE: Final = "max_temperature"
 DEFAULT_MAX_TEMPERATURE: Final = MAX_TEMPERATURE
 

@@ -732,20 +732,35 @@ function rateExample(heater: HeaterSnapshot, rate: RateInfo, language: string): 
   );
 }
 
+/**
+ * The rate as the volume it amounts to heating, warning when it is outside what physics allows:
+ * from only the water above the element to the whole tank, with the tolerance either side.
+ */
 function physicsCheck(rate: RateInfo, language: string): RateView["check"] {
   if (rate.physics === null || rate.tank_litres === null) return null;
-  const ratio = rate.used / rate.physics;
+  const fast = rate.physics_fast ?? rate.physics;
   let line = localize(language, "rate.volume", {
-    litres: Math.round(rate.tank_litres * ratio),
+    litres: Math.round((rate.tank_litres * rate.used) / rate.physics),
     tank: formatNumber(rate.tank_litres, language, 0),
   });
-  const warn = Math.abs(ratio - 1) > PHYSICS_TOLERANCE;
-  if (warn) {
-    line += localize(language, ratio < 1 ? "rate.far_below" : "rate.far_above", {
+  const below = rate.used < fast * (1 - PHYSICS_TOLERANCE);
+  const above = rate.used > rate.physics * (1 + PHYSICS_TOLERANCE);
+  if (below || above) {
+    const ratio = rate.used / (below ? fast : rate.physics);
+    line += localize(language, below ? "rate.far_below" : "rate.far_above", {
       percent: Math.round(Math.abs(ratio - 1) * 100),
     });
   }
-  return { line, warn };
+  return { line, warn: below || above };
+}
+
+function physicsLine(rate: RateInfo, language: string): string | null {
+  if (rate.physics === null) return null;
+  const slow = formatNumber(rate.physics, language, 1);
+  const fast = formatNumber(rate.physics_fast ?? rate.physics, language, 1);
+  return fast === slow
+    ? localize(language, "rate.physics", { rate: slow })
+    : localize(language, "rate.physics_range", { fast, slow });
 }
 
 function rateSuggestion(rate: RateInfo, language: string): RateView["suggestion"] {
@@ -787,8 +802,7 @@ export function rateView(heater: HeaterSnapshot, context: ViewContext): RateView
       .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
       .map((run) => ({ when: runWhen(run.at, context), rate: formatNumber(run.rate, language, 1) })),
     example: rateExample(heater, rate, language),
-    physics:
-      rate.physics === null ? null : localize(language, "rate.physics", { rate: formatNumber(rate.physics, language, 1) }),
+    physics: physicsLine(rate, language),
     check: physicsCheck(rate, language),
     stepper: rateStepper(rate.used, language),
     suggestion: rateSuggestion(rate, language),

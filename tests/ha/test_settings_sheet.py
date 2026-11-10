@@ -52,6 +52,7 @@ async def test_an_admin_sees_the_settings_and_the_solar_comparison(
             "learned": None,
             "default": 7.0,
             "physics": None,
+            "physics_fast": None,
             "tank_litres": None,
             "runs": [],
             "window_days": 7,
@@ -190,6 +191,27 @@ async def test_the_physics_rate_shows_once_the_tank_is_known(
 
     rate = (await _snapshot(hass, hass_ws_client, heater))["settings"]["rate"]
     assert round(rate["physics"], 1) == 7.6
+    assert rate["physics_fast"] == rate["physics"]  # the element at the bottom: one value
+
+
+async def test_a_horizontal_tank_heated_from_the_middle_gives_a_range(
+    hass: HomeAssistant, heater: MockConfigEntry, hass_ws_client: WebSocketGenerator
+) -> None:
+    """Only the half above the element heats quickly: the fast end is half the tank's time."""
+    hass.config_entries.async_update_entry(
+        heater,
+        options={
+            **heater.options,
+            "tank_litres": 300,
+            "element_watts": 2750,
+            "tank_orientation": "horizontal",
+            "element_height": "middle",
+        },
+    )
+    await hass.async_block_till_done()
+
+    rate = (await _snapshot(hass, hass_ws_client, heater))["settings"]["rate"]
+    assert (round(rate["physics_fast"], 1), round(rate["physics"], 1)) == (3.8, 7.6)
 
 
 async def test_recalculating_without_history_says_so(

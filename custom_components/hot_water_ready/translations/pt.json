@@ -138,6 +138,19 @@
         "sat": "Sábado",
         "sun": "Domingo"
       }
+    },
+    "tank_orientation": {
+      "options": {
+        "vertical": "De pé (vertical)",
+        "horizontal": "Deitado (horizontal)"
+      }
+    },
+    "element_height": {
+      "options": {
+        "bottom": "No fundo",
+        "lower_third": "A cerca de um terço da altura",
+        "middle": "A meio"
+      }
     }
   },
   "entity": {
@@ -223,7 +236,9 @@
           "rich_notifications": "Substituir mensagens anteriores nos telemóveis",
           "power_sensor": "Sensor de potência do aquecedor (opcional)",
           "fault_recipients": "Quem é avisado das avarias",
-          "advanced": "Limites das avarias"
+          "advanced": "Limites das avarias",
+          "tank_orientation": "Posição do tanque",
+          "element_height": "Onde está a resistência"
         },
         "data_description": {
           "keep_heating_gap_minutes": "Horários assim próximos partilham uma janela e o aquecedor continua a aquecer, em vez de deixar a água arrefecer entre eles.",
@@ -236,7 +251,9 @@
           "heating_rate": "Minutos para subir a água um grau. Vazio: aprendido com os aquecimentos do próprio aquecedor.",
           "tank_litres": "Com a potência da resistência, o aquecedor aquece mais quando o depósito à temperatura normal não chega para vários duches seguidos.",
           "element_watts": "Também dá os kWh à comparação solar sem sensor de potência.",
-          "max_temperature": "50 °C é o limite para evitar queimaduras sem válvula misturadora; até 60 °C só com ela."
+          "max_temperature": "50 °C é o limite para evitar queimaduras sem válvula misturadora; até 60 °C só com ela.",
+          "tank_orientation": "Deitado (horizontal) ou de pé (vertical).",
+          "element_height": "O calor sobe, por isso a água abaixo da resistência quase não aquece. Com o volume e a potência, dá o intervalo em que a velocidade de aquecimento deve ficar."
         },
         "sections": {
           "advanced": {

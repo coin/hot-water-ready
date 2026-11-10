@@ -8,6 +8,7 @@ import pytest
 from custom_components.hot_water_ready.core.rate import (
     RateLearner,
     RateState,
+    heated_fraction,
     physics_rate,
     rate_in_use,
     rate_source,
@@ -152,3 +153,21 @@ def test_the_rate_in_use_says_where_it_came_from() -> None:
     assert rate_source(manual=6.0, learned=5.3) == "manual"
     assert rate_source(manual=None, learned=5.3) == "learned"
     assert rate_source(manual=None, learned=None) == "default"
+
+
+@pytest.mark.parametrize(
+    ("orientation", "element", "fraction"),
+    [
+        ("vertical", "bottom", 1.0),
+        ("vertical", "lower_third", 0.667),
+        ("vertical", "middle", 0.5),
+        ("horizontal", "bottom", 1.0),
+        ("horizontal", "lower_third", 0.709),  # a circle's segment, not a third of it
+        ("horizontal", "middle", 0.5),
+    ],
+)
+def test_the_water_above_the_element_is_what_heats(
+    orientation: str, element: str, fraction: float
+) -> None:
+    """Heat rises: the water below the element barely warms, so the fast end of the range."""
+    assert heated_fraction(orientation, element) == pytest.approx(fraction, abs=0.002)

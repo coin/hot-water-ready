@@ -24,6 +24,7 @@ from .const import (
     CONF_ADVANCED,
     CONF_CLIMATE,
     CONF_COLOUR,
+    CONF_ELEMENT_HEIGHT,
     CONF_ELEMENT_WATTS,
     CONF_FAULT_RECIPIENTS,
     CONF_HEATER_TYPE,
@@ -40,6 +41,7 @@ from .const import (
     CONF_SWITCH,
     CONF_SWITCH_OFF_PEOPLE,
     CONF_TANK_LITRES,
+    CONF_TANK_ORIENTATION,
     CONF_TEMPERATURE_SENSOR,
     DEFAULT_MAX_TEMPERATURE,
     DOMAIN,
@@ -49,7 +51,7 @@ from .const import (
 )
 from .core.controller import MAX_KEEP_HOT_MINUTES, Settings
 from .core.faults import FaultSettings
-from .core.rate import MAX_MANUAL_RATE, MIN_MANUAL_RATE
+from .core.rate import ELEMENT_HEIGHTS, MAX_MANUAL_RATE, MIN_MANUAL_RATE
 
 
 def _heater_schema(element: dict[Any, Any]) -> probatio.Schema:
@@ -385,6 +387,21 @@ class HeaterOptionsFlow(OptionsFlow):
                     CONF_ELEMENT_WATTS,
                     description={"suggested_value": options.get(CONF_ELEMENT_WATTS)},
                 ): _box(100, 10000, 50, "W"),
+                probatio.Required(
+                    CONF_TANK_ORIENTATION,
+                    default=options.get(CONF_TANK_ORIENTATION, "vertical"),
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=["vertical", "horizontal"], translation_key=CONF_TANK_ORIENTATION
+                    )
+                ),
+                probatio.Required(
+                    CONF_ELEMENT_HEIGHT, default=options.get(CONF_ELEMENT_HEIGHT, "bottom")
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=list(ELEMENT_HEIGHTS), translation_key=CONF_ELEMENT_HEIGHT
+                    )
+                ),
                 probatio.Required(
                     CONF_MAX_TEMPERATURE,
                     default=options.get(CONF_MAX_TEMPERATURE, DEFAULT_MAX_TEMPERATURE),

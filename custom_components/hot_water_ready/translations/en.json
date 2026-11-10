@@ -138,6 +138,19 @@
         "sat": "Saturday",
         "sun": "Sunday"
       }
+    },
+    "tank_orientation": {
+      "options": {
+        "vertical": "Standing (vertical)",
+        "horizontal": "Lying down (horizontal)"
+      }
+    },
+    "element_height": {
+      "options": {
+        "bottom": "At the bottom",
+        "lower_third": "About a third of the way up",
+        "middle": "In the middle"
+      }
     }
   },
   "entity": {
@@ -223,7 +236,9 @@
           "rich_notifications": "Replace earlier messages on phones",
           "power_sensor": "Heater power sensor (optional)",
           "fault_recipients": "Who is told about faults",
-          "advanced": "Fault thresholds"
+          "advanced": "Fault thresholds",
+          "tank_orientation": "Tank position",
+          "element_height": "Where the element sits"
         },
         "data_description": {
           "keep_heating_gap_minutes": "Ready times this close share one window and the heater keeps heating through, instead of letting the water cool in between.",
@@ -236,7 +251,9 @@
           "heating_rate": "Minutes to raise the water one degree. Empty: learned from the heater's own runs.",
           "tank_litres": "With the element power, lets the heater heat higher for showers close together that the tank at the normal target cannot carry.",
           "element_watts": "Also gives the solar comparison its kWh without a power sensor.",
-          "max_temperature": "50 °C is the scald limit without a mixing valve; up to 60 °C only with one."
+          "max_temperature": "50 °C is the scald limit without a mixing valve; up to 60 °C only with one.",
+          "tank_orientation": "Lying down (horizontal) or standing (vertical).",
+          "element_height": "Heat rises, so the water below the element barely warms. With the volume and power, this gives the range the heating speed should fall in."
         },
         "sections": {
           "advanced": {
