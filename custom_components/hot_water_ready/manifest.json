@@ -1,15 +1,27 @@
 {
   "domain": "hot_water_ready",
   "name": "Hot Water Ready",
-  "after_dependencies": ["mobile_app"],
-  "categories": ["climate.water_heaters"],
-  "codeowners": ["@coin"],
+  "after_dependencies": [
+    "mobile_app",
+    "recorder"
+  ],
+  "categories": [
+    "climate.water_heaters"
+  ],
+  "codeowners": [
+    "@coin"
+  ],
   "config_flow": true,
-  "dependencies": ["frontend", "http", "lovelace", "websocket_api"],
+  "dependencies": [
+    "frontend",
+    "http",
+    "lovelace",
+    "websocket_api"
+  ],
   "documentation": "https://github.com/coin/hot-water-ready",
   "integration_type": "device",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/coin/hot-water-ready/issues",
   "requirements": [],
-  "version": "0.1.7"
+  "version": "0.1.8"
 }

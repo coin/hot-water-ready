@@ -330,6 +330,9 @@
     "settings_admin_only": {
       "message": "Só um administrador pode alterar as definições."
     },
+    "history_unavailable": {
+      "message": "O Home Assistant não guarda histórico aqui, por isso não é possível recalcular a velocidade."
+    },
     "person_not_found": {
       "message": "Essa pessoa não existe no Home Assistant."
     },

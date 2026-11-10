@@ -26,6 +26,9 @@ class Actuator(Protocol):
     def heating(self, hass: HomeAssistant) -> bool | None:
         """Whether the element is heating now, as far as Home Assistant can tell; None: unknown."""
 
+    def heating_in(self, state: State | None) -> bool | None:
+        """Whether a state of the entity, now or from history, says it is heating; None: unknown."""
+
     def told_off(self, hass: HomeAssistant) -> bool | None:
         """Whether it was told to stay off (relay off, thermostat in mode off); None: unknown."""
 
@@ -45,7 +48,10 @@ class SwitchActuator:
 
     def heating(self, hass: HomeAssistant) -> bool | None:
         """On is heating."""
-        state = hass.states.get(self.entity_id)
+        return self.heating_in(hass.states.get(self.entity_id))
+
+    def heating_in(self, state: State | None) -> bool | None:
+        """On is heating."""
         if state is None or state.state not in (STATE_ON, STATE_OFF):
             return None
         return state.state == STATE_ON
@@ -80,8 +86,13 @@ class ClimateActuator:
 
     def heating(self, hass: HomeAssistant) -> bool | None:
         """The thermostat's own heating indication (`hvac_action`), when it reports one."""
-        state = self._state(hass)
-        if state is None or "hvac_action" not in state.attributes:
+        return self.heating_in(self._state(hass))
+
+    def heating_in(self, state: State | None) -> bool | None:
+        """The thermostat's own heating indication (`hvac_action`), when it reports one."""
+        if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            return None
+        if "hvac_action" not in state.attributes:
             return None
         return state.attributes["hvac_action"] in HEATING_ACTIONS
 

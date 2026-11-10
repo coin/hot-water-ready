@@ -26,12 +26,34 @@ export interface MemberSnapshot {
   ready_times: ReadyTimeSnapshot[];
 }
 
+/** The heating rate in use and how it was found (spec 4.2), for the settings sheet. */
+export interface RateInfo {
+  /** Minutes per degree the lead is worked out with. */
+  used: number;
+  /** Fixed by hand, learned from clean runs, or the starting value while too few runs. */
+  source: "manual" | "learned" | "default";
+  manual: number | null;
+  learned: number | null;
+  default: number;
+  /** The whole tank heated by the element, nothing lost; null without the tank's size. */
+  physics: number | null;
+  tank_litres: number | null;
+  /** The clean runs of the learning window: when each ended, and its minutes per degree. */
+  runs: { at: string; rate: number }[];
+  window_days: number;
+  /** How many runs the window needs before the rate is learned. */
+  min_runs: number;
+  lead_margin_minutes: number;
+  lead_cap_minutes: number;
+}
+
 /** The settings sheet, sent to administrators only. */
 export interface AdminSettings {
   /** The person entities who, besides admins, may switch the heater off for everyone. */
   switch_off_people: string[];
   /** Whether the solar-aware rule is applied; off, it is only recorded (spec 4.3). */
   solar_aware: boolean;
+  rate: RateInfo;
   /**
    * The last 30 days (spec 7). `kwh` is null without a measure of energy; `solar_windows` are
    * the windows the rule was applied to, and `solar_on_time` how many of them were on time.

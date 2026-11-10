@@ -330,6 +330,9 @@
     "settings_admin_only": {
       "message": "Only an administrator may change the settings."
     },
+    "history_unavailable": {
+      "message": "Home Assistant keeps no history here, so the rate cannot be recalculated."
+    },
     "person_not_found": {
       "message": "That person does not exist in Home Assistant."
     },

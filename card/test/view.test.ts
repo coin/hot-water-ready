@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { translations } from "../src/i18n";
-import type { AdminSettings, HeaterSnapshot, MemberSnapshot } from "../src/types";
+import type { AdminSettings, HeaterSnapshot, MemberSnapshot, RateInfo } from "../src/types";
 import {
   avatarViews,
   faultBanner,
@@ -23,6 +23,7 @@ import {
   selectedMember,
   sheetIsComplete,
   showsAvatarRow,
+  rateView,
   settingsView,
   shownMember,
   solarLine,
@@ -58,9 +59,29 @@ const tiago: MemberSnapshot = {
 };
 const maria: MemberSnapshot = { ...tiago, id: "m2", name: "Maria", colour: "green", can_edit: false };
 
+const learnedRate: RateInfo = {
+  used: 5.3,
+  source: "learned",
+  manual: null,
+  learned: 5.3,
+  default: 7,
+  physics: 7.61,
+  tank_litres: 300,
+  runs: [
+    { at: "2026-11-01T21:16:00+00:00", rate: 5.86 },
+    { at: "2026-11-02T04:10:00+00:00", rate: 5.1 },
+    { at: "2026-10-31T20:42:00+00:00", rate: 5.5 },
+  ],
+  window_days: 7,
+  min_runs: 3,
+  lead_margin_minutes: 15,
+  lead_cap_minutes: 240,
+};
+
 const settingsOff: AdminSettings = {
   switch_off_people: [],
   solar_aware: false,
+  rate: learnedRate,
   solar: { windows: 0, on_time: 0, minutes_saved: 0, kwh: null, solar_windows: 0, solar_on_time: 0 },
 };
 
@@ -685,7 +706,7 @@ describe("settingsView", () => {
 });
 
 describe("solarLine", () => {
-  const off = { switch_off_people: [], solar_aware: false };
+  const off = { switch_off_people: [], solar_aware: false, rate: learnedRate };
 
   it("says when nothing has been recorded yet", () => {
     expect(solarLine({ ...off, solar: { windows: 0, on_time: 0, minutes_saved: 0, kwh: null, solar_windows: 0, solar_on_time: 0 } }, "pt")).toBe(
@@ -969,5 +990,84 @@ describe("the time popup", () => {
     const keys = switchClockMode(openClock("07:00", false));
     expect(switchClockMode({ ...keys, hourText: "18", minuteText: "20" })).toMatchObject({ mode: "dial", part: "hour", hour: 18, minute: 20 });
     expect(switchClockMode({ ...keys, hourText: "99" })).toMatchObject({ mode: "dial", hour: 7, minute: 0, hourText: "07" });
+  });
+});
+
+describe("rateView", () => {
+  const at = (rate: Partial<RateInfo>, temperature: number | null = 27) =>
+    rateView({ ...cold, temperature, settings: { ...settingsOff, rate: { ...learnedRate, ...rate } } }, pt);
+
+  it("is for administrators only", () => {
+    expect(rateView({ ...cold, is_admin: false, settings: null }, pt)).toBeUndefined();
+  });
+
+  it("shows the learned rate and the runs behind it, newest first", () => {
+    const view = at({});
+    expect(view?.shown).toBe("5,3");
+    expect(view?.fixed).toBe(false);
+    expect(view?.source).toBe("Aprendido: mediana das 3 aquecidas limpas dos últimos 7 dias");
+    expect(view?.runs.map((run) => run.rate)).toEqual(["5,1", "5,9", "5,5"]);
+    expect(view?.runs[0]?.when).toBe("2 Nov, 04:10");
+  });
+
+  it("works out when heating starts from the water now", () => {
+    expect(at({})?.example).toBe(
+      "Agora 27 °C → 42 °C: 15 °C × 5,3 = 80 min, mais 15 min de margem: começa 95 min antes",
+    );
+    expect(at({}, null)?.example).toBeNull();
+    expect(at({}, 45)?.example).toBe("Agora 45 °C: já está no alvo, não precisa de começar antes");
+  });
+
+  it("says when the lead hits its cap", () => {
+    expect(at({ used: 20, learned: 20 })?.example).toBe(
+      "Agora 27 °C → 42 °C: 15 °C × 20 = 300 min, mais 15 min de margem: começa 240 min antes (o máximo)",
+    );
+  });
+
+  it("before three clean runs, says how many are still missing", () => {
+    const view = at({ used: 7, source: "default", learned: null, runs: learnedRate.runs.slice(0, 1) });
+    expect(view?.source).toBe("Valor inicial: faltam 2 aquecidas limpas nos últimos 7 dias para aprender");
+  });
+
+  it("a fixed rate says so and suggests the learned one", () => {
+    const view = at({ used: 6, source: "manual", manual: 6 });
+    expect(view?.fixed).toBe(true);
+    expect(view?.source).toBe("Fixo à mão: a aprendizagem continua, mas não é usada");
+    expect(view?.suggestion).toEqual({ value: 5.3, line: "Sugerido: 5,3 (aprendido)" });
+    expect(view?.stepper).toMatchObject({ shown: "6", down: 5.9, up: 6.1 });
+  });
+
+  it("without a learned rate, suggests the physics one, then the default", () => {
+    expect(at({ source: "manual", manual: 6, learned: null })?.suggestion).toEqual({
+      value: 7.6,
+      line: "Sugerido: 7,6 (pela física do tanque)",
+    });
+    expect(at({ source: "manual", manual: 6, learned: null, physics: null })?.suggestion).toEqual({
+      value: 7,
+      line: "Sugerido: 7 (valor inicial)",
+    });
+  });
+
+  it("no suggestion when the fixed value already is it", () => {
+    expect(at({ used: 5.3, source: "manual", manual: 5.3 })?.suggestion).toBeNull();
+  });
+
+  it("checks the rate against physics as the volume it amounts to heating", () => {
+    expect(at({ used: 7.3, learned: 7.3 })?.check).toEqual({
+      line: "Equivale a aquecer 288 L dos 300 L do tanque",
+      warn: false,
+    });
+    expect(at({})?.check).toEqual({
+      line:
+        "Equivale a aquecer 209 L dos 300 L do tanque: 30% abaixo da física. Confirme o volume do tanque, a potência da resistência e onde está a sonda.",
+      warn: true,
+    });
+    expect(at({ used: 10, learned: 10 })?.check?.line).toContain("31% acima da física");
+    expect(at({ physics: null, tank_litres: null })?.check).toBeNull();
+  });
+
+  it("shows the physics rate as a check", () => {
+    expect(at({})?.physics).toBe("Pela física, o tanque inteiro aquecido pela resistência: 7,6 min/°C");
+    expect(at({ physics: null })?.physics).toBeNull();
   });
 });

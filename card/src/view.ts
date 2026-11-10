@@ -1,7 +1,7 @@
 // What the card shows, worked out from a heater snapshot without touching the DOM.
 
 import { localeOf, localize, pickLanguage, weekdayLetters, type TextKey } from "./i18n";
-import type { AdminSettings, HeaterSnapshot, MemberSnapshot, Status, TimeSpan } from "./types";
+import type { AdminSettings, HeaterSnapshot, MemberSnapshot, RateInfo, Status, TimeSpan } from "./types";
 
 export interface ViewContext {
   language: string;
@@ -655,6 +655,143 @@ export function settingsView(heater: HeaterSnapshot, context: ViewContext): Sett
       .sort((a, b) => a.name.localeCompare(b.name)),
     solar: solarLine(settings, language),
     notes: heater.not_rising_checked ? [] : [localize(language, "note.not_rising_skipped")],
+  };
+}
+
+export const RATE_LIMITS = { min: 0.5, max: 60, step: 0.1 };
+export const RECALCULATE_COMMAND = "hot_water_ready/rate/recalculate";
+/** How long after the last tap a fixed rate is sent: each change reloads the heater. */
+export const RATE_SEND_DELAY_MS = 1000;
+/** How far the rate in use may be from physics before the card says something is wrong. */
+export const PHYSICS_TOLERANCE = 0.25;
+
+export interface RateView {
+  /** The rate in use, "5,3". */
+  shown: string;
+  /** The rate in use to a tenth, what "Fixo" fixes it at. */
+  used: number;
+  fixed: boolean;
+  /** Where the rate comes from, in a sentence. */
+  source: string;
+  /** The clean runs of the learning window, newest first. */
+  runs: { when: string; rate: string }[];
+  /** How the lead works out from the water now; null without a reading. */
+  example: string | null;
+  physics: string | null;
+  /** The rate as the volume it amounts to heating, and whether it is too far from physics. */
+  check: { line: string; warn: boolean } | null;
+  /** One step either side of the fixed value; null limits as in `Stepper`. */
+  stepper: Stepper;
+  /** A value to fix instead, while fixed and different: learned, else physics, else default. */
+  suggestion: { value: number; line: string } | null;
+}
+
+const tenth = (value: number): number => Math.round(value * 10) / 10;
+
+/** "2 Nov, 04:10": when a heating run ended, in the house's time zone. */
+function runWhen(iso: string, context: ViewContext): string {
+  const moment = new Date(iso);
+  const { language, timeZone } = context;
+  // Separately: together, Portuguese gives "2/11".
+  const day = new Intl.DateTimeFormat(localeOf(language), { timeZone, day: "numeric" }).format(moment);
+  const month = new Intl.DateTimeFormat(localeOf(language), { timeZone, month: "short" }).format(moment).replace(".", "");
+  return `${day} ${month.slice(0, 1).toLocaleUpperCase()}${month.slice(1)}, ${clock(iso, context)}`;
+}
+
+function rateSource(rate: RateInfo, language: string): string {
+  if (rate.source === "manual") return localize(language, "rate.manual");
+  if (rate.source === "learned") {
+    return localize(language, "rate.learned", { count: rate.runs.length, days: rate.window_days });
+  }
+  const missing = Math.max(1, rate.min_runs - rate.runs.length);
+  return localize(language, missing === 1 ? "rate.default_one" : "rate.default_many", {
+    count: missing,
+    days: rate.window_days,
+  });
+}
+
+function rateExample(heater: HeaterSnapshot, rate: RateInfo, language: string): string | null {
+  const water = heater.temperature;
+  if (water === null) return null;
+  const from = formatNumber(water, language, 1);
+  const degrees = heater.target - water;
+  if (degrees <= 0) return localize(language, "rate.example_warm", { from });
+  const minutes = degrees * rate.used;
+  const raw = minutes + rate.lead_margin_minutes;
+  const lead = Math.min(rate.lead_cap_minutes, raw);
+  return (
+    localize(language, "rate.example", {
+      from,
+      to: formatNumber(heater.target, language, 1),
+      degrees: formatNumber(degrees, language, 1),
+      rate: formatNumber(rate.used, language, 1),
+      minutes: Math.round(minutes),
+      margin: rate.lead_margin_minutes,
+      lead: Math.round(lead),
+    }) + (raw > rate.lead_cap_minutes ? localize(language, "rate.example_cap") : "")
+  );
+}
+
+function physicsCheck(rate: RateInfo, language: string): RateView["check"] {
+  if (rate.physics === null || rate.tank_litres === null) return null;
+  const ratio = rate.used / rate.physics;
+  let line = localize(language, "rate.volume", {
+    litres: Math.round(rate.tank_litres * ratio),
+    tank: formatNumber(rate.tank_litres, language, 0),
+  });
+  const warn = Math.abs(ratio - 1) > PHYSICS_TOLERANCE;
+  if (warn) {
+    line += localize(language, ratio < 1 ? "rate.far_below" : "rate.far_above", {
+      percent: Math.round(Math.abs(ratio - 1) * 100),
+    });
+  }
+  return { line, warn };
+}
+
+function rateSuggestion(rate: RateInfo, language: string): RateView["suggestion"] {
+  if (rate.source !== "manual") return null;
+  const [value, key] =
+    rate.learned !== null
+      ? [rate.learned, "rate.suggested_learned" as const]
+      : rate.physics !== null
+        ? [rate.physics, "rate.suggested_physics" as const]
+        : [rate.default, "rate.suggested_default" as const];
+  const suggested = tenth(value);
+  if (rate.manual !== null && tenth(rate.manual) === suggested) return null;
+  return { value: suggested, line: localize(language, key, { rate: formatNumber(suggested, language, 1) }) };
+}
+
+/** One step either side of a fixed rate, within the settings page's limits. */
+export function rateStepper(value: number, language: string): Stepper {
+  const rounded = tenth(value);
+  const down = tenth(rounded - RATE_LIMITS.step);
+  const up = tenth(rounded + RATE_LIMITS.step);
+  return {
+    shown: formatNumber(rounded, language, 1),
+    down: down >= RATE_LIMITS.min ? down : null,
+    up: up <= RATE_LIMITS.max ? up : null,
+  };
+}
+
+/** The heating speed section of the settings sheet: the rate, why, and what it means now. */
+export function rateView(heater: HeaterSnapshot, context: ViewContext): RateView | undefined {
+  const { language } = context;
+  const rate = heater.settings?.rate;
+  if (!heater.is_admin || !rate) return undefined;
+  return {
+    shown: formatNumber(rate.used, language, 1),
+    used: tenth(rate.used),
+    fixed: rate.source === "manual",
+    source: rateSource(rate, language),
+    runs: [...rate.runs]
+      .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
+      .map((run) => ({ when: runWhen(run.at, context), rate: formatNumber(run.rate, language, 1) })),
+    example: rateExample(heater, rate, language),
+    physics:
+      rate.physics === null ? null : localize(language, "rate.physics", { rate: formatNumber(rate.physics, language, 1) }),
+    check: physicsCheck(rate, language),
+    stepper: rateStepper(rate.used, language),
+    suggestion: rateSuggestion(rate, language),
   };
 }
 

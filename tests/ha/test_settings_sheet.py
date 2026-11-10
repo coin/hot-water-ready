@@ -22,9 +22,13 @@ async def _snapshot(
 
 
 async def _set(
-    hass: HomeAssistant, ws: WebSocketGenerator, entry: MockConfigEntry, **changes: Any
+    hass: HomeAssistant,
+    ws: WebSocketGenerator,
+    entry: MockConfigEntry,
+    access_token: str | None = None,
+    **changes: Any,
 ) -> dict[str, Any]:
-    client = await ws(hass)
+    client = await (ws(hass) if access_token is None else ws(hass, access_token=access_token))
     await client.send_json_auto_id(
         {"type": "hot_water_ready/settings/set", "entry_id": entry.entry_id, **changes}
     )
@@ -41,6 +45,20 @@ async def test_an_admin_sees_the_settings_and_the_solar_comparison(
     assert snapshot["settings"] == {
         "switch_off_people": [],
         "solar_aware": False,
+        "rate": {
+            "used": 7.0,
+            "source": "default",
+            "manual": None,
+            "learned": None,
+            "default": 7.0,
+            "physics": None,
+            "tank_litres": None,
+            "runs": [],
+            "window_days": 7,
+            "min_runs": 3,
+            "lead_margin_minutes": 15.0,
+            "lead_cap_minutes": 240.0,
+        },
         "solar": {
             "windows": 0,
             "on_time": 0,
@@ -122,3 +140,64 @@ async def test_a_member_may_not_change_the_settings(
     reply = await client.receive_json()
     assert reply["error"]["code"] == "unauthorized"
     assert heater.runtime_data.target == 42.0
+
+
+async def test_an_admin_fixes_the_rate_and_goes_back_to_the_learned_one(
+    hass: HomeAssistant, heater: MockConfigEntry, hass_ws_client: WebSocketGenerator
+) -> None:
+    assert (await _set(hass, hass_ws_client, heater, rate=6.2))["success"]
+
+    rate = (await _snapshot(hass, hass_ws_client, heater))["settings"]["rate"]
+    assert (rate["used"], rate["source"], rate["manual"]) == (6.2, "manual", 6.2)
+
+    assert (await _set(hass, hass_ws_client, heater, rate=None))["success"]
+
+    rate = (await _snapshot(hass, hass_ws_client, heater))["settings"]["rate"]
+    assert (rate["used"], rate["source"], rate["manual"]) == (7.0, "default", None)
+
+
+async def test_a_fixed_rate_must_be_within_the_settings_page_limits(
+    hass: HomeAssistant, heater: MockConfigEntry, hass_ws_client: WebSocketGenerator
+) -> None:
+    assert not (await _set(hass, hass_ws_client, heater, rate=0.1))["success"]
+    assert not (await _set(hass, hass_ws_client, heater, rate=61))["success"]
+
+
+async def test_a_member_may_not_fix_the_rate_or_recalculate(
+    hass: HomeAssistant,
+    heater: MockConfigEntry,
+    hass_ws_client: WebSocketGenerator,
+    maria_user: MockUser,
+) -> None:
+    token = await access_token(hass, maria_user)
+
+    assert not (await _set(hass, hass_ws_client, heater, rate=6.0, access_token=token))["success"]
+    client = await hass_ws_client(hass, access_token=token)
+    await client.send_json_auto_id(
+        {"type": "hot_water_ready/rate/recalculate", "entry_id": heater.entry_id}
+    )
+    reply = await client.receive_json()
+    assert reply["error"]["code"] == "unauthorized"
+
+
+async def test_the_physics_rate_shows_once_the_tank_is_known(
+    hass: HomeAssistant, heater: MockConfigEntry, hass_ws_client: WebSocketGenerator
+) -> None:
+    hass.config_entries.async_update_entry(
+        heater, options={**heater.options, "tank_litres": 300, "element_watts": 2750}
+    )
+    await hass.async_block_till_done()
+
+    rate = (await _snapshot(hass, hass_ws_client, heater))["settings"]["rate"]
+    assert round(rate["physics"], 1) == 7.6
+
+
+async def test_recalculating_without_history_says_so(
+    hass: HomeAssistant, heater: MockConfigEntry, hass_ws_client: WebSocketGenerator
+) -> None:
+    client = await hass_ws_client(hass)
+    await client.send_json_auto_id(
+        {"type": "hot_water_ready/rate/recalculate", "entry_id": heater.entry_id}
+    )
+    reply = await client.receive_json()
+    assert reply["error"]["code"] == "not_supported"

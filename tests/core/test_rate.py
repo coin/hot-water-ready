@@ -5,7 +5,14 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from custom_components.hot_water_ready.core.rate import RateLearner, RateState, rate_in_use
+from custom_components.hot_water_ready.core.rate import (
+    RateLearner,
+    RateState,
+    physics_rate,
+    rate_in_use,
+    rate_source,
+    replay,
+)
 
 LISBON = ZoneInfo("Europe/Lisbon")
 NIGHT = datetime(2026, 11, 2, 4, 0, tzinfo=LISBON)
@@ -100,3 +107,48 @@ def test_the_rate_set_by_hand_beats_the_learned_one_which_beats_the_default() ->
     assert rate_in_use(manual=8.0, learned=5.0, default=7.0) == 8.0
     assert rate_in_use(manual=None, learned=5.0, default=7.0) == 5.0
     assert rate_in_use(manual=None, learned=None, default=7.0) == 7.0
+
+
+def test_replaying_history_finds_the_clean_runs_again() -> None:
+    """The recalculation: readings and heater changes from history, in time order."""
+    samples = []
+    now, temperature = NIGHT, 30.0
+    samples.append((now, temperature, True))
+    for _ in range(40):  # 0.2 C a minute: 5 min per degree
+        now += timedelta(minutes=1)
+        temperature += 0.2
+        samples.append((now, temperature, True))
+    samples.append((now + timedelta(minutes=1), temperature + 0.2, False))
+
+    state = replay(samples, sun_up=lambda _at: False)
+
+    assert [round(rate, 2) for _, rate in state.runs] == [5.0]
+
+
+def test_replaying_keeps_the_learners_rules() -> None:
+    """A run that started in daylight is not clean, as when it is learned live."""
+    samples = [(NIGHT, 30.0, True), (NIGHT + timedelta(minutes=40), 38.0, True)]
+    samples.append((NIGHT + timedelta(minutes=41), 38.0, False))
+
+    assert replay(samples, sun_up=lambda _at: True).runs == []
+    assert len(replay(samples, sun_up=lambda _at: False).runs) == 1
+
+
+def test_replaying_drops_runs_older_than_the_learning_window() -> None:
+    old = NIGHT - timedelta(days=8)
+    samples = [(old, 30.0, True), (old + timedelta(minutes=40), 38.0, True)]
+    samples.append((old + timedelta(minutes=41), 38.0, False))
+    samples.append((NIGHT, 38.0, False))
+
+    assert replay(samples, sun_up=lambda _at: False).runs == []
+
+
+def test_the_physics_rate_is_the_whole_tank_heated_by_the_element() -> None:
+    """300 L and 2750 W: 300 x 4186 J / 2750 W = 457 s, about 7.6 min per degree."""
+    assert physics_rate(litres=300, element_watts=2750) == pytest.approx(7.61, abs=0.01)
+
+
+def test_the_rate_in_use_says_where_it_came_from() -> None:
+    assert rate_source(manual=6.0, learned=5.3) == "manual"
+    assert rate_source(manual=None, learned=5.3) == "learned"
+    assert rate_source(manual=None, learned=None) == "default"

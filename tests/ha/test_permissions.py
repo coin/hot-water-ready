@@ -29,6 +29,7 @@ MESSAGES: dict[str, dict[str, Any]] = {
     f"{DOMAIN}/heat_now/cancel": {},
     f"{DOMAIN}/switch_off": {},
     f"{DOMAIN}/settings/set": {"target": 45},
+    f"{DOMAIN}/rate/recalculate": {},
 }
 
 

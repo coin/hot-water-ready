@@ -70,10 +70,19 @@ from .core.controller import (
 )
 from .core.faults import BLOCKING, RESOLVABLE, Fault, FaultGuard, FaultSettings
 from .core.household import Away, MemberPlan, household_occurrences
-from .core.rate import RateLearner, rate_in_use
+from .core.rate import (
+    MIN_RUNS,
+    WINDOW,
+    RateLearner,
+    physics_rate,
+    rate_in_use,
+    rate_source,
+    replay,
+)
 from .core.ready_times import ReadyTime
 from .core.solar import SolarTrend
 from .core.status import Status, heater_status
+from .history import async_samples
 from .messages import (
     async_message,
     async_nobody_to_tell,
@@ -1020,6 +1029,7 @@ class Heater:
         return {
             "switch_off_people": list(self.entry.options.get(CONF_SWITCH_OFF_PEOPLE, [])),
             "solar_aware": self.solar_aware,
+            "rate": self._rate_snapshot(),
             "solar": {
                 "windows": solar.windows,
                 "on_time": solar.on_time,
@@ -1029,6 +1039,65 @@ class Heater:
                 "solar_on_time": solar.solar_on_time,
             },
         }
+
+    def _rate_snapshot(self) -> dict[str, Any]:
+        """The rate in use and how it was found, for the settings sheet (spec 4.2)."""
+        manual = self.entry.options.get(CONF_HEATING_RATE)
+        manual = None if manual is None else float(manual)
+        learned = self.learned_rate
+        litres, watts = (
+            self.entry.options.get(CONF_TANK_LITRES),
+            self.entry.options.get(CONF_ELEMENT_WATTS),
+        )
+        settings = self._controller.settings
+        cutoff = dt_util.utcnow() - WINDOW
+        return {
+            "used": self.rate,
+            "source": rate_source(manual=manual, learned=learned),
+            "manual": manual,
+            "learned": learned,
+            "default": Settings().rate_minutes_per_degree,
+            "physics": None
+            if not litres or not watts
+            else physics_rate(litres=float(litres), element_watts=float(watts)),
+            "tank_litres": None if not litres else float(litres),
+            "runs": [
+                {"at": dt_util.as_local(at).isoformat(), "rate": rate}
+                for at, rate in self._learner.state.runs
+                if at > cutoff
+            ],
+            "window_days": WINDOW.days,
+            "min_runs": MIN_RUNS,
+            "lead_margin_minutes": settings.lead_margin_minutes,
+            "lead_cap_minutes": settings.lead_cap_minutes,
+        }
+
+    async def async_set_manual_rate(self, rate: float | None) -> None:
+        """Fix the rate by hand, or None to go back to the learned one.
+
+        An option, as in the integration's settings page, so the entry reloads (spec 3.1).
+        """
+        options = {**self.entry.options, CONF_HEATING_RATE: rate}
+        self.hass.config_entries.async_update_entry(self.entry, options=options)
+
+    async def async_recalculate_rate(self) -> dict[str, Any]:
+        """Find the last week's clean runs again in history and use what they say (spec 4.2).
+
+        The runs found replace the ones kept, the run in progress aside, and a rate fixed by hand
+        is dropped so the learned one is used at once. Raises HistoryUnavailableError without a
+        recorder.
+        """
+        end = dt_util.utcnow()
+        samples = await async_samples(self.hass, self._sensor, self.actuator, end - WINDOW, end)
+        found = replay(samples, sun_up=lambda at: is_up(self.hass, dt_util.as_utc(at)))
+        self._learner.state.runs = found.runs
+        learned = self.learned_rate
+        self._controller.settings = self._settings()
+        await self._async_save()
+        self._notify()
+        if self.entry.options.get(CONF_HEATING_RATE) is not None:
+            await self.async_set_manual_rate(None)  # an option: the entry reloads
+        return {"runs": len(found.runs), "learned": learned}
 
     async def async_set_switch_off_people(self, people: list[str]) -> None:
         """The people who may switch off for everyone, besides admins.

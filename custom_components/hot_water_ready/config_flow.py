@@ -49,6 +49,7 @@ from .const import (
 )
 from .core.controller import MAX_KEEP_HOT_MINUTES, Settings
 from .core.faults import FaultSettings
+from .core.rate import MAX_MANUAL_RATE, MIN_MANUAL_RATE
 
 
 def _heater_schema(element: dict[Any, Any]) -> probatio.Schema:
@@ -375,7 +376,7 @@ class HeaterOptionsFlow(OptionsFlow):
                 probatio.Optional(
                     CONF_HEATING_RATE,
                     description={"suggested_value": options.get(CONF_HEATING_RATE)},
-                ): _box(0.5, 60, 0.1, "min/°C"),
+                ): _box(MIN_MANUAL_RATE, MAX_MANUAL_RATE, 0.1, "min/°C"),
                 probatio.Optional(
                     CONF_TANK_LITRES,
                     description={"suggested_value": options.get(CONF_TANK_LITRES)},

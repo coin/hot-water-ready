@@ -24,6 +24,7 @@ from .const import (
     signal_heater_updated,
 )
 from .core.controller import MAX_KEEP_HOT_MINUTES
+from .core.rate import MAX_MANUAL_RATE, MIN_MANUAL_RATE
 from .heater import (
     AwayDateInThePastError,
     Heater,
@@ -31,6 +32,7 @@ from .heater import (
     MemberNotFoundError,
     ReadyTimeNotFoundError,
 )
+from .history import HistoryUnavailableError
 from .messages import async_message
 from .storage import ready_time_to_dict
 
@@ -61,6 +63,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_cancel_heat_now)
     websocket_api.async_register_command(hass, ws_switch_off)
     websocket_api.async_register_command(hass, ws_set_settings)
+    websocket_api.async_register_command(hass, ws_recalculate_rate)
 
 
 def _loaded_heaters(hass: HomeAssistant) -> list[Heater]:
@@ -370,6 +373,13 @@ async def ws_switch_off(
         ),
         probatio.Optional("automatic"): bool,
         probatio.Optional("switch_off_people"): [str],
+        # A fixed rate in minutes per degree, or None to use the learned one.
+        probatio.Optional("rate"): probatio.Any(
+            None,
+            probatio.All(
+                probatio.Coerce(float), probatio.Range(min=MIN_MANUAL_RATE, max=MAX_MANUAL_RATE)
+            ),
+        ),
     }
 )
 @websocket_api.async_response
@@ -398,4 +408,36 @@ async def ws_set_settings(
         await heater.async_set_automatic(msg["automatic"])
     if people is not None:
         await heater.async_set_switch_off_people(people)
+    if "rate" in msg:
+        await heater.async_set_manual_rate(msg["rate"])
     connection.send_result(msg["id"])
+
+
+@websocket_api.websocket_command(
+    {
+        probatio.Required("type"): f"{DOMAIN}/rate/recalculate",
+        probatio.Required("entry_id"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_recalculate_rate(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Relearn the heating rate from the last week of history (spec 4.2); admins only."""
+    heater = _loaded_heater(hass, msg["entry_id"])
+    if heater is None:
+        await _async_error(hass, connection, msg, websocket_api.ERR_NOT_FOUND, "heater_not_found")
+        return
+    if not heater.can_change_settings(connection.user):
+        await _async_error(
+            hass, connection, msg, websocket_api.ERR_UNAUTHORIZED, "settings_admin_only"
+        )
+        return
+    try:
+        result = await heater.async_recalculate_rate()
+    except HistoryUnavailableError:
+        await _async_error(
+            hass, connection, msg, websocket_api.ERR_NOT_SUPPORTED, "history_unavailable"
+        )
+        return
+    connection.send_result(msg["id"], result)

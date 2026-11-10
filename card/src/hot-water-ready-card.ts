@@ -2,10 +2,12 @@
 
 import { LitElement, css, html, nothing, svg, type PropertyValues } from "lit";
 import { live } from "lit/directives/live.js";
-import { localize, weekdayLetters } from "./i18n";
+import { localeOf, localize, weekdayLetters } from "./i18n";
 import { HeaterSubscription, fetchHeaters } from "./subscription";
 import type { CardConfig, Hass, HeaterSnapshot, MemberSnapshot } from "./types";
 import {
+  RATE_SEND_DELAY_MS,
+  RECALCULATE_COMMAND,
   SETTINGS_COMMAND,
   SWITCH_OFF_COMMAND,
   avatarViews,
@@ -39,7 +41,10 @@ import {
   type Clock,
   uses24Hours,
   weekHint,
+  rateStepper,
+  rateView,
   settingsView,
+  type RateView,
   sheetIsComplete,
   switchOffSheet,
   switchOffShown,
@@ -83,6 +88,8 @@ export class HotWaterReadyCard extends LitElement {
     _tab: { state: true },
     _focus: { state: true },
     _error: { state: true },
+    _rateDraft: { state: true },
+    _recalc: { state: true },
   };
 
   hass?: Hass;
@@ -107,10 +114,17 @@ export class HotWaterReadyCard extends LitElement {
   /** The person highlighted on the week, if any. */
   private _focus: string | undefined;
   private _error = "";
+  /** The fixed rate being stepped, sent once the taps stop (each change reloads the entry). */
+  private _rateDraft: number | undefined;
+  private _rateTimer: number | undefined;
+  /** The recalculation from history: running, or what it found. */
+  private _recalc: { busy: boolean; line: string } = { busy: false, line: "" };
   private readonly _subscription = new HeaterSubscription(
     (snapshot) => {
       this._heater = snapshot;
       this._missing = false;
+      // The fixed rate stepped to has arrived: show the heater's value again.
+      if (snapshot.settings?.rate.manual === this._rateDraft) this._rateDraft = undefined;
     },
     () => {
       this._missing = true;
@@ -662,6 +676,7 @@ export class HotWaterReadyCard extends LitElement {
             <span class="hint">${localize(language, "settings.own_cancel")}</span>
           </div>
         </div>
+        ${this._renderRate(heater)}
         ${this._renderSolar(view)}
         <button
           class="link"
@@ -695,6 +710,133 @@ export class HotWaterReadyCard extends LitElement {
       ${button(stepper.down, names[0], "−")}
       <span class="value">${shown}</span>
       ${button(stepper.up, names[1], "+")}
+    </div>`;
+  }
+
+  /** Fix the rate, or null for the learned one. A stepped value stays shown until it arrives. */
+  private _setRate(rate: number | null): void {
+    window.clearTimeout(this._rateTimer);
+    void this._call({ type: SETTINGS_COMMAND, rate }).then((sent) => {
+      if (!sent) this._rateDraft = undefined;
+    });
+  }
+
+  /** One tap of the fixed rate's stepper: shown at once, sent when the taps stop. */
+  private _stepRate(rate: number): void {
+    this._rateDraft = rate;
+    window.clearTimeout(this._rateTimer);
+    this._rateTimer = window.setTimeout(() => {
+      this._setRate(rate);
+    }, RATE_SEND_DELAY_MS);
+  }
+
+  private async _recalculate(): Promise<void> {
+    const heater = this._heater;
+    if (!this.hass || !heater || this._recalc.busy) return;
+    const language = this._language;
+    this._recalc = { busy: true, line: "" };
+    try {
+      const found = await this.hass.callWS<{ runs: number; learned: number | null }>({
+        type: RECALCULATE_COMMAND,
+        entry_id: heater.entry_id,
+      });
+      const line =
+        found.learned === null
+          ? localize(language, "rate.found_too_few", { count: found.runs, needed: heater.settings?.rate.min_runs ?? 3 })
+          : localize(language, "rate.found", {
+              count: found.runs,
+              rate: new Intl.NumberFormat(localeOf(language), { maximumFractionDigits: 1 }).format(found.learned),
+            });
+      this._recalc = { busy: false, line };
+    } catch (err) {
+      const text = err instanceof Error ? err.message : (err as { message?: string }).message;
+      this._recalc = { busy: false, line: localize(language, "card.error", { message: text ?? String(err) }) };
+    }
+  }
+
+  private _renderRate(heater: HeaterSnapshot): unknown {
+    const language = this._language;
+    const view: RateView | undefined = rateView(heater, this._context);
+    if (!view) return nothing;
+    const draft = this._rateDraft;
+    const stepper = draft === undefined ? view.stepper : rateStepper(draft, language);
+    const mode = (fixed: boolean, key: "rate.automatic" | "rate.fixed") => html`<button
+      class=${fixed === view.fixed ? "mode on" : "mode"}
+      aria-pressed=${fixed === view.fixed}
+      @click=${() => {
+        if (fixed !== view.fixed) this._setRate(fixed ? view.used : null);
+      }}
+    >
+      ${localize(language, key)}
+    </button>`;
+    const step = (to: number | null, key: "rate.down" | "rate.up", sign: string) => html`<button
+      class="step"
+      aria-label=${localize(language, key)}
+      ?disabled=${to === null}
+      @click=${() => {
+        if (to !== null) this._stepRate(to);
+      }}
+    >
+      ${sign}
+    </button>`;
+    const suggestion = draft === undefined ? view.suggestion : null;
+    return html`<div class="setting column rate">
+      <div class="rate-head">
+        <span>${localize(language, "rate.title")}</span>
+        <div class="modes" role="group" aria-label=${localize(language, "rate.title")}>
+          ${mode(false, "rate.automatic")}${mode(true, "rate.fixed")}
+        </div>
+      </div>
+      ${view.fixed
+        ? html`<div class="rate-value">
+            ${step(stepper.down, "rate.down", "−")}
+            <span class="value">${stepper.shown}</span>
+            ${step(stepper.up, "rate.up", "+")}
+            <span class="hint">${localize(language, "rate.unit")}</span>
+          </div>`
+        : html`<div class="rate-value">
+            <span class="rate-big">${view.shown}</span>
+            <span class="hint">${localize(language, "rate.unit")}</span>
+          </div>`}
+      <span class="hint">${view.source}</span>
+      ${suggestion
+        ? html`<div class="rate-suggestion">
+            <span class="hint">${suggestion.line}</span>
+            <button
+              class="link"
+              @click=${() => {
+                this._setRate(suggestion.value);
+              }}
+            >
+              ${localize(language, "rate.use")}
+            </button>
+          </div>`
+        : nothing}
+      ${view.runs.length
+        ? html`<div class="rate-runs" role="list" aria-label=${localize(language, "rate.runs")}>
+            ${view.runs.map(
+              (run) =>
+                html`<span class="rate-run" role="listitem"><span class="hint">${run.when}</span><b>${run.rate}</b></span>`,
+            )}
+          </div>`
+        : nothing}
+      ${view.example ? html`<span class="hint">${view.example}</span>` : nothing}
+      ${view.physics ? html`<span class="hint">${view.physics}</span>` : nothing}
+      ${view.check
+        ? html`<span class=${view.check.warn ? "hint rate-warn" : "hint"} role=${view.check.warn ? "alert" : nothing}
+            >${view.check.line}</span
+          >`
+        : nothing}
+      <button
+        class="recalc secondary"
+        ?disabled=${this._recalc.busy}
+        @click=${() => {
+          void this._recalculate();
+        }}
+      >
+        ${localize(language, this._recalc.busy ? "rate.recalculating" : "rate.recalculate")}
+      </button>
+      ${this._recalc.line ? html`<span class="hint" role="status">${this._recalc.line}</span>` : nothing}
     </div>`;
   }
 
@@ -1479,6 +1621,70 @@ export class HotWaterReadyCard extends LitElement {
       text-align: center;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
+    }
+    .rate-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px 10px;
+    }
+    .modes {
+      display: inline-flex;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.3));
+    }
+    .mode {
+      min-height: 32px;
+      padding: 0 12px;
+      border: 0;
+      background: none;
+      color: var(--secondary-text-color);
+      font-weight: 700;
+    }
+    .mode.on {
+      background: var(--primary-color);
+      color: var(--text-primary-color, #fff);
+    }
+    .rate-value,
+    .rate-suggestion {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .rate-warn {
+      color: var(--warning-color, #ffa600);
+    }
+    .rate-big {
+      font-size: 28px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .rate-runs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .rate-run {
+      display: inline-flex;
+      gap: 6px;
+      align-items: baseline;
+      padding: 4px 8px;
+      border-radius: 8px;
+      background: var(--secondary-background-color, rgba(127, 127, 127, 0.15));
+      font-variant-numeric: tabular-nums;
+    }
+    .recalc {
+      align-self: flex-start;
+      min-height: 36px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 10px;
+      font-weight: 700;
+    }
+    .recalc[disabled] {
+      opacity: 0.6;
     }
     .link {
       align-self: flex-start;

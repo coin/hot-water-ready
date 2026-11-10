@@ -1,69 +1,69 @@
-var Z=globalThis,G=Z.ShadowRoot&&(Z.ShadyCSS===void 0||Z.ShadyCSS.nativeShadow)&&"adoptedStyleSheets"in Document.prototype&&"replace"in CSSStyleSheet.prototype,ce=Symbol(),Re=new WeakMap,N=class{constructor(t,e,n){if(this._$cssResult$=!0,n!==ce)throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");this.cssText=t,this.t=e}get styleSheet(){let t=this.o,e=this.t;if(G&&t===void 0){let n=e!==void 0&&e.length===1;n&&(t=Re.get(e)),t===void 0&&((this.o=t=new CSSStyleSheet).replaceSync(this.cssText),n&&Re.set(e,t))}return t}toString(){return this.cssText}},De=i=>new N(typeof i=="string"?i:i+"",void 0,ce),pe=(i,...t)=>{let e=i.length===1?i[0]:t.reduce((n,a,r)=>n+(o=>{if(o._$cssResult$===!0)return o.cssText;if(typeof o=="number")return o;throw Error("Value passed to 'css' function must be a 'css' function result: "+o+". Use 'unsafeCSS' to pass non-literal values, but take care to ensure page security.")})(a)+i[r+1],i[0]);return new N(e,i,ce)},Ne=(i,t)=>{if(G)i.adoptedStyleSheets=t.map(e=>e instanceof CSSStyleSheet?e:e.styleSheet);else for(let e of t){let n=document.createElement("style"),a=Z.litNonce;a!==void 0&&n.setAttribute("nonce",a),n.textContent=e.cssText,i.appendChild(n)}},he=G?i=>i:i=>i instanceof CSSStyleSheet?(t=>{let e="";for(let n of t.cssRules)e+=n.cssText;return De(e)})(i):i;var{is:jt,defineProperty:Kt,getOwnPropertyDescriptor:Ft,getOwnPropertyNames:Zt,getOwnPropertySymbols:Gt,getPrototypeOf:Yt}=Object,Y=globalThis,Ie=Y.trustedTypes,Qt=Ie?Ie.emptyScript:"",Xt=Y.reactiveElementPolyfillSupport,I=(i,t)=>i,ue={toAttribute(i,t){switch(t){case Boolean:i=i?Qt:null;break;case Object:case Array:i=i==null?i:JSON.stringify(i)}return i},fromAttribute(i,t){let e=i;switch(t){case Boolean:e=i!==null;break;case Number:e=i===null?null:Number(i);break;case Object:case Array:try{e=JSON.parse(i)}catch{e=null}}return e}},Le=(i,t)=>!jt(i,t),ze={attribute:!0,type:String,converter:ue,reflect:!1,useDefault:!1,hasChanged:Le};Symbol.metadata??=Symbol("metadata"),Y.litPropertyMetadata??=new WeakMap;var x=class extends HTMLElement{static addInitializer(t){this._$Ei(),(this.l??=[]).push(t)}static get observedAttributes(){return this.finalize(),this._$Eh&&[...this._$Eh.keys()]}static createProperty(t,e=ze){if(e.state&&(e.attribute=!1),this._$Ei(),this.prototype.hasOwnProperty(t)&&((e=Object.create(e)).wrapped=!0),this.elementProperties.set(t,e),!e.noAccessor){let n=Symbol(),a=this.getPropertyDescriptor(t,n,e);a!==void 0&&Kt(this.prototype,t,a)}}static getPropertyDescriptor(t,e,n){let{get:a,set:r}=Ft(this.prototype,t)??{get(){return this[e]},set(o){this[e]=o}};return{get:a,set(o){let c=a?.call(this);r?.call(this,o),this.requestUpdate(t,c,n)},configurable:!0,enumerable:!0}}static getPropertyOptions(t){return this.elementProperties.get(t)??ze}static _$Ei(){if(this.hasOwnProperty(I("elementProperties")))return;let t=Yt(this);t.finalize(),t.l!==void 0&&(this.l=[...t.l]),this.elementProperties=new Map(t.elementProperties)}static finalize(){if(this.hasOwnProperty(I("finalized")))return;if(this.finalized=!0,this._$Ei(),this.hasOwnProperty(I("properties"))){let e=this.properties,n=[...Zt(e),...Gt(e)];for(let a of n)this.createProperty(a,e[a])}let t=this[Symbol.metadata];if(t!==null){let e=litPropertyMetadata.get(t);if(e!==void 0)for(let[n,a]of e)this.elementProperties.set(n,a)}this._$Eh=new Map;for(let[e,n]of this.elementProperties){let a=this._$Eu(e,n);a!==void 0&&this._$Eh.set(a,e)}this.elementStyles=this.finalizeStyles(this.styles)}static finalizeStyles(t){let e=[];if(Array.isArray(t)){let n=new Set(t.flat(1/0).reverse());for(let a of n)e.unshift(he(a))}else t!==void 0&&e.push(he(t));return e}static _$Eu(t,e){let n=e.attribute;return n===!1?void 0:typeof n=="string"?n:typeof t=="string"?t.toLowerCase():void 0}constructor(){super(),this._$Ep=void 0,this.isUpdatePending=!1,this.hasUpdated=!1,this._$Em=null,this._$Ev()}_$Ev(){this._$ES=new Promise(t=>this.enableUpdating=t),this._$AL=new Map,this._$E_(),this.requestUpdate(),this.constructor.l?.forEach(t=>t(this))}addController(t){(this._$EO??=new Set).add(t),this.renderRoot!==void 0&&this.isConnected&&t.hostConnected?.()}removeController(t){this._$EO?.delete(t)}_$E_(){let t=new Map,e=this.constructor.elementProperties;for(let n of e.keys())this.hasOwnProperty(n)&&(t.set(n,this[n]),delete this[n]);t.size>0&&(this._$Ep=t)}createRenderRoot(){let t=this.shadowRoot??this.attachShadow(this.constructor.shadowRootOptions);return Ne(t,this.constructor.elementStyles),t}connectedCallback(){this.renderRoot??=this.createRenderRoot(),this.enableUpdating(!0),this._$EO?.forEach(t=>t.hostConnected?.())}enableUpdating(t){}disconnectedCallback(){this._$EO?.forEach(t=>t.hostDisconnected?.())}attributeChangedCallback(t,e,n){this._$AK(t,n)}_$ET(t,e){let n=this.constructor.elementProperties.get(t),a=this.constructor._$Eu(t,n);if(a!==void 0&&n.reflect===!0){let r=(n.converter?.toAttribute!==void 0?n.converter:ue).toAttribute(e,n.type);this._$Em=t,r==null?this.removeAttribute(a):this.setAttribute(a,r),this._$Em=null}}_$AK(t,e){let n=this.constructor,a=n._$Eh.get(t);if(a!==void 0&&this._$Em!==a){let r=n.getPropertyOptions(a),o=typeof r.converter=="function"?{fromAttribute:r.converter}:r.converter?.fromAttribute!==void 0?r.converter:ue;this._$Em=a;let c=o.fromAttribute(e,r.type);this[a]=c??this._$Ej?.get(a)??c,this._$Em=null}}requestUpdate(t,e,n,a=!1,r){if(t!==void 0){let o=this.constructor;if(a===!1&&(r=this[t]),n??=o.getPropertyOptions(t),!((n.hasChanged??Le)(r,e)||n.useDefault&&n.reflect&&r===this._$Ej?.get(t)&&!this.hasAttribute(o._$Eu(t,n))))return;this.C(t,e,n)}this.isUpdatePending===!1&&(this._$ES=this._$EP())}C(t,e,{useDefault:n,reflect:a,wrapped:r},o){n&&!(this._$Ej??=new Map).has(t)&&(this._$Ej.set(t,o??e??this[t]),r!==!0||o!==void 0)||(this._$AL.has(t)||(this.hasUpdated||n||(e=void 0),this._$AL.set(t,e)),a===!0&&this._$Em!==t&&(this._$Eq??=new Set).add(t))}async _$EP(){this.isUpdatePending=!0;try{await this._$ES}catch(e){Promise.reject(e)}let t=this.scheduleUpdate();return t!=null&&await t,!this.isUpdatePending}scheduleUpdate(){return this.performUpdate()}performUpdate(){if(!this.isUpdatePending)return;if(!this.hasUpdated){if(this.renderRoot??=this.createRenderRoot(),this._$Ep){for(let[a,r]of this._$Ep)this[a]=r;this._$Ep=void 0}let n=this.constructor.elementProperties;if(n.size>0)for(let[a,r]of n){let{wrapped:o}=r,c=this[a];o!==!0||this._$AL.has(a)||c===void 0||this.C(a,void 0,r,c)}}let t=!1,e=this._$AL;try{t=this.shouldUpdate(e),t?(this.willUpdate(e),this._$EO?.forEach(n=>n.hostUpdate?.()),this.update(e)):this._$EM()}catch(n){throw t=!1,this._$EM(),n}t&&this._$AE(e)}willUpdate(t){}_$AE(t){this._$EO?.forEach(e=>e.hostUpdated?.()),this.hasUpdated||(this.hasUpdated=!0,this.firstUpdated(t)),this.updated(t)}_$EM(){this._$AL=new Map,this.isUpdatePending=!1}get updateComplete(){return this.getUpdateComplete()}getUpdateComplete(){return this._$ES}shouldUpdate(t){return!0}update(t){this._$Eq&&=this._$Eq.forEach(e=>this._$ET(e,this[e])),this._$EM()}updated(t){}firstUpdated(t){}};x.elementStyles=[],x.shadowRootOptions={mode:"open"},x[I("elementProperties")]=new Map,x[I("finalized")]=new Map,Xt?.({ReactiveElement:x}),(Y.reactiveElementVersions??=[]).push("2.1.2");var me=globalThis,Ue=i=>i,Q=me.trustedTypes,Ve=Q?Q.createPolicy("lit-html",{createHTML:i=>i}):void 0,fe="$lit$",$=`lit$${Math.random().toFixed(9).slice(2)}$`,we="?"+$,Jt=`<${we}>`,C=document,L=()=>C.createComment(""),U=i=>i===null||typeof i!="object"&&typeof i!="function",_e=Array.isArray,Fe=i=>_e(i)||typeof i?.[Symbol.iterator]=="function",ge=`[ 	
-\f\r]`,z=/<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g,qe=/-->/g,We=/>/g,S=RegExp(`>|${ge}(?:([^\\s"'>=/]+)(${ge}*=${ge}*(?:[^ 	
-\f\r"'\`<>=]|("|')|))|$)`,"g"),Be=/'/g,je=/"/g,Ze=/^(?:script|style|textarea|title)$/i,be=i=>(t,...e)=>({_$litType$:i,strings:t,values:e}),d=be(1),q=be(2),Tn=be(3),w=Symbol.for("lit-noChange"),h=Symbol.for("lit-nothing"),Ke=new WeakMap,A=C.createTreeWalker(C,129);function Ge(i,t){if(!_e(i)||!i.hasOwnProperty("raw"))throw Error("invalid template strings array");return Ve!==void 0?Ve.createHTML(t):t}var Ye=(i,t)=>{let e=i.length-1,n=[],a,r=t===2?"<svg>":t===3?"<math>":"",o=z;for(let c=0;c<e;c++){let l=i[c],p,m,u=-1,f=0;for(;f<l.length&&(o.lastIndex=f,m=o.exec(l),m!==null);)f=o.lastIndex,o===z?m[1]==="!--"?o=qe:m[1]!==void 0?o=We:m[2]!==void 0?(Ze.test(m[2])&&(a=RegExp("</"+m[2],"g")),o=S):m[3]!==void 0&&(o=S):o===S?m[0]===">"?(o=a??z,u=-1):m[1]===void 0?u=-2:(u=o.lastIndex-m[2].length,p=m[1],o=m[3]===void 0?S:m[3]==='"'?je:Be):o===je||o===Be?o=S:o===qe||o===We?o=z:(o=S,a=void 0);let g=o===S&&i[c+1].startsWith("/>")?" ":"";r+=o===z?l+Jt:u>=0?(n.push(p),l.slice(0,u)+fe+l.slice(u)+$+g):l+$+(u===-2?c:g)}return[Ge(i,r+(i[e]||"<?>")+(t===2?"</svg>":t===3?"</math>":"")),n]},V=class i{constructor({strings:t,_$litType$:e},n){let a;this.parts=[];let r=0,o=0,c=t.length-1,l=this.parts,[p,m]=Ye(t,e);if(this.el=i.createElement(p,n),A.currentNode=this.el.content,e===2||e===3){let u=this.el.content.firstChild;u.replaceWith(...u.childNodes)}for(;(a=A.nextNode())!==null&&l.length<c;){if(a.nodeType===1){if(a.hasAttributes())for(let u of a.getAttributeNames())if(u.endsWith(fe)){let f=m[o++],g=a.getAttribute(u).split($),v=/([.?@])?(.*)/.exec(f);l.push({type:1,index:r,name:v[2],strings:g,ctor:v[1]==="."?J:v[1]==="?"?ee:v[1]==="@"?te:E}),a.removeAttribute(u)}else u.startsWith($)&&(l.push({type:6,index:r}),a.removeAttribute(u));if(Ze.test(a.tagName)){let u=a.textContent.split($),f=u.length-1;if(f>0){a.textContent=Q?Q.emptyScript:"";for(let g=0;g<f;g++)a.append(u[g],L()),A.nextNode(),l.push({type:2,index:++r});a.append(u[f],L())}}}else if(a.nodeType===8)if(a.data===we)l.push({type:2,index:r});else{let u=-1;for(;(u=a.data.indexOf($,u+1))!==-1;)l.push({type:7,index:r}),u+=$.length-1}r++}}static createElement(t,e){let n=C.createElement("template");return n.innerHTML=t,n}};function T(i,t,e=i,n){if(t===w)return t;let a=n!==void 0?e._$Co?.[n]:e._$Cl,r=U(t)?void 0:t._$litDirective$;return a?.constructor!==r&&(a?._$AO?.(!1),r===void 0?a=void 0:(a=new r(i),a._$AT(i,e,n)),n!==void 0?(e._$Co??=[])[n]=a:e._$Cl=a),a!==void 0&&(t=T(i,a._$AS(i,t.values),a,n)),t}var X=class{constructor(t,e){this._$AV=[],this._$AN=void 0,this._$AD=t,this._$AM=e}get parentNode(){return this._$AM.parentNode}get _$AU(){return this._$AM._$AU}u(t){let{el:{content:e},parts:n}=this._$AD,a=(t?.creationScope??C).importNode(e,!0);A.currentNode=a;let r=A.nextNode(),o=0,c=0,l=n[0];for(;l!==void 0;){if(o===l.index){let p;l.type===2?p=new R(r,r.nextSibling,this,t):l.type===1?p=new l.ctor(r,l.name,l.strings,this,t):l.type===6&&(p=new ne(r,this,t)),this._$AV.push(p),l=n[++c]}o!==l?.index&&(r=A.nextNode(),o++)}return A.currentNode=C,a}p(t){let e=0;for(let n of this._$AV)n!==void 0&&(n.strings!==void 0?(n._$AI(t,n,e),e+=n.strings.length-2):n._$AI(t[e])),e++}},R=class i{get _$AU(){return this._$AM?._$AU??this._$Cv}constructor(t,e,n,a){this.type=2,this._$AH=h,this._$AN=void 0,this._$AA=t,this._$AB=e,this._$AM=n,this.options=a,this._$Cv=a?.isConnected??!0}get parentNode(){let t=this._$AA.parentNode,e=this._$AM;return e!==void 0&&t?.nodeType===11&&(t=e.parentNode),t}get startNode(){return this._$AA}get endNode(){return this._$AB}_$AI(t,e=this){t=T(this,t,e),U(t)?t===h||t==null||t===""?(this._$AH!==h&&this._$AR(),this._$AH=h):t!==this._$AH&&t!==w&&this._(t):t._$litType$!==void 0?this.$(t):t.nodeType!==void 0?this.T(t):Fe(t)?this.k(t):this._(t)}O(t){return this._$AA.parentNode.insertBefore(t,this._$AB)}T(t){this._$AH!==t&&(this._$AR(),this._$AH=this.O(t))}_(t){this._$AH!==h&&U(this._$AH)?this._$AA.nextSibling.data=t:this.T(C.createTextNode(t)),this._$AH=t}$(t){let{values:e,_$litType$:n}=t,a=typeof n=="number"?this._$AC(t):(n.el===void 0&&(n.el=V.createElement(Ge(n.h,n.h[0]),this.options)),n);if(this._$AH?._$AD===a)this._$AH.p(e);else{let r=new X(a,this),o=r.u(this.options);r.p(e),this.T(o),this._$AH=r}}_$AC(t){let e=Ke.get(t.strings);return e===void 0&&Ke.set(t.strings,e=new V(t)),e}k(t){_e(this._$AH)||(this._$AH=[],this._$AR());let e=this._$AH,n,a=0;for(let r of t)a===e.length?e.push(n=new i(this.O(L()),this.O(L()),this,this.options)):n=e[a],n._$AI(r),a++;a<e.length&&(this._$AR(n&&n._$AB.nextSibling,a),e.length=a)}_$AR(t=this._$AA.nextSibling,e){for(this._$AP?.(!1,!0,e);t!==this._$AB;){let n=Ue(t).nextSibling;Ue(t).remove(),t=n}}setConnected(t){this._$AM===void 0&&(this._$Cv=t,this._$AP?.(t))}},E=class{get tagName(){return this.element.tagName}get _$AU(){return this._$AM._$AU}constructor(t,e,n,a,r){this.type=1,this._$AH=h,this._$AN=void 0,this.element=t,this.name=e,this._$AM=a,this.options=r,n.length>2||n[0]!==""||n[1]!==""?(this._$AH=Array(n.length-1).fill(new String),this.strings=n):this._$AH=h}_$AI(t,e=this,n,a){let r=this.strings,o=!1;if(r===void 0)t=T(this,t,e,0),o=!U(t)||t!==this._$AH&&t!==w,o&&(this._$AH=t);else{let c=t,l,p;for(t=r[0],l=0;l<r.length-1;l++)p=T(this,c[n+l],e,l),p===w&&(p=this._$AH[l]),o||=!U(p)||p!==this._$AH[l],p===h?t=h:t!==h&&(t+=(p??"")+r[l+1]),this._$AH[l]=p}o&&!a&&this.j(t)}j(t){t===h?this.element.removeAttribute(this.name):this.element.setAttribute(this.name,t??"")}},J=class extends E{constructor(){super(...arguments),this.type=3}j(t){this.element[this.name]=t===h?void 0:t}},ee=class extends E{constructor(){super(...arguments),this.type=4}j(t){this.element.toggleAttribute(this.name,!!t&&t!==h)}},te=class extends E{constructor(t,e,n,a,r){super(t,e,n,a,r),this.type=5}_$AI(t,e=this){if((t=T(this,t,e,0)??h)===w)return;let n=this._$AH,a=t===h&&n!==h||t.capture!==n.capture||t.once!==n.once||t.passive!==n.passive,r=t!==h&&(n===h||a);a&&this.element.removeEventListener(this.name,this,n),r&&this.element.addEventListener(this.name,this,t),this._$AH=t}handleEvent(t){typeof this._$AH=="function"?this._$AH.call(this.options?.host??this.element,t):this._$AH.handleEvent(t)}},ne=class{constructor(t,e,n){this.element=t,this.type=6,this._$AN=void 0,this._$AM=e,this.options=n}get _$AU(){return this._$AM._$AU}_$AI(t){T(this,t)}},Qe={M:fe,P:$,A:we,C:1,L:Ye,R:X,D:Fe,V:T,I:R,H:E,N:ee,U:te,B:J,F:ne},en=me.litHtmlPolyfillSupport;en?.(V,R),(me.litHtmlVersions??=[]).push("3.3.3");var Xe=(i,t,e)=>{let n=e?.renderBefore??t,a=n._$litPart$;if(a===void 0){let r=e?.renderBefore??null;n._$litPart$=a=new R(t.insertBefore(L(),r),r,void 0,e??{})}return a._$AI(i),a};var ye=globalThis,k=class extends x{constructor(){super(...arguments),this.renderOptions={host:this},this._$Do=void 0}createRenderRoot(){let t=super.createRenderRoot();return this.renderOptions.renderBefore??=t.firstChild,t}update(t){let e=this.render();this.hasUpdated||(this.renderOptions.isConnected=this.isConnected),super.update(t),this._$Do=Xe(e,this.renderRoot,this.renderOptions)}connectedCallback(){super.connectedCallback(),this._$Do?.setConnected(!0)}disconnectedCallback(){super.disconnectedCallback(),this._$Do?.setConnected(!1)}render(){return w}};k._$litElement$=!0,k.finalized=!0,ye.litElementHydrateSupport?.({LitElement:k});var tn=ye.litElementPolyfillSupport;tn?.({LitElement:k});(ye.litElementVersions??=[]).push("4.2.2");var H={ATTRIBUTE:1,CHILD:2,PROPERTY:3,BOOLEAN_ATTRIBUTE:4,EVENT:5,ELEMENT:6},Je=i=>(...t)=>({_$litDirective$:i,values:t}),ie=class{constructor(t){}get _$AU(){return this._$AM._$AU}_$AT(t,e,n){this._$Ct=t,this._$AM=e,this._$Ci=n}_$AS(t,e){return this.update(t,e)}update(t,e){return this.render(...e)}};var{I:Wn}=Qe;var et=i=>i.strings===void 0;var nn={},tt=(i,t=nn)=>i._$AH=t;var M=Je(class extends ie{constructor(i){if(super(i),i.type!==H.PROPERTY&&i.type!==H.ATTRIBUTE&&i.type!==H.BOOLEAN_ATTRIBUTE)throw Error("The `live` directive is not allowed on child or event bindings");if(!et(i))throw Error("`live` bindings can only contain a single expression")}render(i){return i}update(i,[t]){if(t===w||t===h)return t;let e=i.element,n=i.name;if(i.type===H.PROPERTY){if(t===e[n])return w}else if(i.type===H.BOOLEAN_ATTRIBUTE){if(!!t===e.hasAttribute(n))return w}else if(i.type===H.ATTRIBUTE&&e.getAttribute(n)===t+"")return w;return tt(i),t}});var an={"status.waiting":"Idle","status.heating":"Heating","status.ready":"Ready","status.fault":"Fault","status.manual":"Manual","headline.heating_for":"Heating: ready in about {minutes} min","headline.ready_at":"Ready at {when}","subline.next_at":"Next at {when}","when.today":"{time}","when.tomorrow":"{time} tomorrow","when.weekday":"{time} on {weekday}","ring.target":"target {target}\xB0","weekday.letters":"M,T,W,T,F,S,S","members.none":"No members yet. An administrator adds them in the integration's settings.","list.empty":"No ready times yet.","list.add":"Add a ready time","sheet.delete":"Delete","list.switch":"On or off","sheet.title":"New ready time","sheet.edit_title":"Change ready time","list.edit":"Change this ready time","sheet.time":"Time","sheet.hour":"Hour","sheet.minute":"Minute","sheet.days":"Days","sheet.save":"Save","sheet.cancel":"Cancel","clock.title":"Select time","clock.title_keys":"Enter time","clock.ok":"OK","clock.to_keys":"Type the time","clock.to_dial":"Use the clock","clock.am":"AM","clock.pm":"PM","clock.invalid":"Enter a valid time","clock.change":"Change the time","fault.sensor_unavailable":"Fault: the water temperature sensor gives no readings. Heating has stopped.","fault.not_rising":"Fault: the water is not getting hotter. Heating has stopped; see Repairs.","fault.no_consumption":"Fault: the heater draws no power. Heating has stopped; see Repairs.","fault.relay_stuck":"Fault: the heater draws power while switched off. Check the relay.","element.on":"Heater on","element.off":"Heater off","element.drawing":"{state} \xB7 drawing {watts} W","keep_hot.until":"Keeping hot until {time}","keep_hot.title":"Keep hot after it's ready","keep_hot.hint":'After the "ready" message the heater keeps the water hot this long, then switches off.',"keep_hot.more":"Choose how long to keep it hot","keep_hot.cancel":"Cancel","keep_hot.minutes":"{n} min","keep_hot.hours":"{n} h",manual:"Automatic control is off: the heater is run by hand.","note.not_rising_skipped":'The thermostat does not say when it is heating, so the "water not getting hotter" and "heater draws no power" checks are not made.',"heat_now.start":"Heat now","heat_now.cancel":"Cancel","heat_now.join":"Tell me when it's hot","heat_now.leave":"Don't tell me","subline.for":"For {list}.","item.at":"{name} at {time}","switch_off.link":"Switch off the heating\u2026","switch_off.title":"Switch off the heating?","switch_off.confirm":"Switch off","switch_off.keep":"Cancel","switch_off.asked_one":"{names} will no longer be told.","switch_off.asked_many":"{names} will no longer be told.","switch_off.skipped_one":"Without hot water: {list}.","switch_off.skipped_many":"Without hot water: {list}.","switch_off.back":"It switches back on by itself for the next ready time.","switch_off.nobody":"Heating stops now.","settings.switch_off":"Who may switch off the heating for everyone","settings.switch_off_hint":"The administrators and:","settings.own_cancel":"Whoever asked may always cancel their own request.",greeting:"Hello, {name}","today.label":"House today","today.nobody":"Nobody today","away.until_label":"Until (optional)","away.line":"Away","away.line_until":"Away until {date}","members.add":"Member","card.no_heater":"No Hot Water Ready heater is set up yet.","card.loading":"Loading\u2026","card.error":"That did not work: {message}","cluster.warning":"The showers from {when} need the water at {needed} \xB0C, but the heater goes only to {cap} \xB0C: the last ones may run cooler.","tabs.people":"People","tabs.week":"Week","week.days":"Mon,Tue,Wed,Thu,Fri,Sat,Sun","week.showers":"showers","week.windows":"heating windows","week.busiest":"busiest day","week.heating":"Heating","week.away":"away","week.virtual":"virtual \xB7 {count}","week.per_week":"{count} a week","week.hint":"Tap a person to highlight their times. The bars show when the heater may heat each day ({start} to {end}).","settings.open":"Heater settings","settings.close":"Close","settings.target":"Target temperature","settings.target_hint":"Ready when the water gets here","settings.target_down":"Lower the target","settings.target_up":"Raise the target","settings.margin":"Margin","settings.band":"Stops at {stop} \xB0C, restarts at {restart} \xB0C","settings.margin_down":"Lower the margin","settings.margin_up":"Raise the margin","settings.automatic":"Automatic control","settings.automatic_hint":"Off: the heater is run by hand","settings.more":"More settings","solar.title":"Solar comparison","solar.none":"No windows recorded in the last 30 days yet.","solar.would":"With the solar-aware rule on, the water would have been ready on time in {on_time} of {windows} windows","solar.did":"With the solar-aware rule, the water was ready on time in {on_time} of {windows} windows","solar.would_less":", and the heater would have run {minutes} minutes less","solar.would_more":", and the heater would have run {minutes} minutes more","solar.did_less":", and the heater ran {minutes} minutes less","solar.did_more":", and the heater ran {minutes} minutes more","solar.kwh":", about {kwh} kWh","solar.applied":" The rule was applied in {applied} of them: on time in {on_time}.","subline.starts_at":"Starts heating around {when}.","subline.starts_at_solar":"Starts heating around {when}, if the sun has not done it by then.","subline.asked_by_one":"Asked for by {name}. They are told when it is ready.","subline.asked_by_many":"Asked for by {names}. Each is told when it is ready.","names.and":" and ","today.you":"You","list.mine":"My ready times","list.count_one":"1 ready time","list.count":"{count} ready times","list.virtual":"Virtual member \xB7 shared household times","away.paused":"Paused. The times are kept.","settings.no_people":"There are no people in Home Assistant to choose from yet."},rn={"status.waiting":"Em espera","status.heating":"A aquecer","status.ready":"Pronta","status.fault":"Avaria","status.manual":"Manual","headline.heating_for":"A aquecer: pronta em cerca de {minutes} min","headline.ready_at":"Pronta \xE0s {when}","subline.next_at":"Pr\xF3xima \xE0s {when}","when.today":"{time}","when.tomorrow":"{time} de amanh\xE3","when.weekday":"{time} de {weekday}","ring.target":"alvo {target}\xB0","weekday.letters":"S,T,Q,Q,S,S,D","members.none":"Ainda n\xE3o h\xE1 membros. Um administrador acrescenta-os nas defini\xE7\xF5es da integra\xE7\xE3o.","list.empty":"Ainda n\xE3o h\xE1 hor\xE1rios.","list.add":"Acrescentar um hor\xE1rio","sheet.delete":"Apagar","list.switch":"Ligar ou desligar","sheet.title":"Novo hor\xE1rio","sheet.edit_title":"Alterar hor\xE1rio","list.edit":"Alterar este hor\xE1rio","sheet.time":"Hora","sheet.hour":"Horas","sheet.minute":"Minutos","sheet.days":"Dias","sheet.save":"Guardar","sheet.cancel":"Cancelar","clock.title":"Escolher a hora","clock.title_keys":"Escrever a hora","clock.ok":"OK","clock.to_keys":"Escrever a hora","clock.to_dial":"Usar o rel\xF3gio","clock.am":"AM","clock.pm":"PM","clock.invalid":"Escreva uma hora v\xE1lida","clock.change":"Alterar a hora","fault.sensor_unavailable":"Avaria: o sensor da temperatura da \xE1gua n\xE3o d\xE1 leituras. O aquecimento parou.","fault.not_rising":"Avaria: a \xE1gua n\xE3o aquece. O aquecimento parou; veja as Repara\xE7\xF5es.","fault.no_consumption":"Avaria: o aquecedor n\xE3o consome energia. O aquecimento parou; veja as Repara\xE7\xF5es.","fault.relay_stuck":"Avaria: o aquecedor consome energia com o rel\xE9 desligado. Verifique o rel\xE9.","element.on":"Resist\xEAncia ligada","element.off":"Resist\xEAncia desligada","element.drawing":"{state} \xB7 a consumir {watts} W","keep_hot.until":"A manter a \xE1gua quente at\xE9 \xE0s {time}","keep_hot.title":"Manter quente depois de pronta","keep_hot.hint":"Depois do aviso de pronta, o aquecedor mant\xE9m a \xE1gua quente durante este tempo e depois desliga.","keep_hot.more":"Escolher quanto tempo manter quente","keep_hot.cancel":"Cancelar","keep_hot.minutes":"{n} min","keep_hot.hours":"{n} h",manual:"O controlo autom\xE1tico est\xE1 desligado: o aquecedor est\xE1 a ser comandado manualmente.","note.not_rising_skipped":'O term\xF3stato n\xE3o indica quando est\xE1 a aquecer, por isso as verifica\xE7\xF5es "a \xE1gua n\xE3o aquece" e "o aquecedor n\xE3o consome energia" n\xE3o s\xE3o feitas.',"heat_now.start":"Aquecer agora","heat_now.cancel":"Cancelar","heat_now.join":"Avisar-me quando estiver quente","heat_now.leave":"N\xE3o me avisar","subline.for":"Para {list}.","item.at":"{name} \xE0s {time}","switch_off.link":"Desligar o aquecimento\u2026","switch_off.title":"Desligar o aquecimento?","switch_off.confirm":"Desligar","switch_off.keep":"Cancelar","switch_off.asked_one":"{names} j\xE1 n\xE3o recebe o aviso.","switch_off.asked_many":"{names} j\xE1 n\xE3o recebem o aviso.","switch_off.skipped_one":"Fica sem \xE1gua quente: {list}.","switch_off.skipped_many":"Ficam sem \xE1gua quente: {list}.","switch_off.back":"Volta a ligar-se por si para o pr\xF3ximo hor\xE1rio.","switch_off.nobody":"O aquecimento p\xE1ra agora.","settings.switch_off":"Quem pode desligar o aquecimento para todos","settings.switch_off_hint":"Os administradores e:","settings.own_cancel":"Quem pediu pode sempre cancelar o seu pr\xF3prio pedido.",greeting:"Ol\xE1, {name}","today.label":"Casa hoje","today.nobody":"Ningu\xE9m hoje","away.until_label":"At\xE9 (opcional)","away.line":"Ausente","away.line_until":"Ausente at\xE9 {date}","members.add":"Membro","card.no_heater":"Ainda n\xE3o h\xE1 nenhum aquecedor do Hot Water Ready configurado.","card.loading":"A carregar\u2026","card.error":"N\xE3o foi poss\xEDvel: {message}","cluster.warning":"Os duches a partir das {when} precisam da \xE1gua a {needed} \xB0C, mas o aquecedor s\xF3 aquece at\xE9 {cap} \xB0C: os \xFAltimos podem sair menos quentes.","tabs.people":"Pessoas","tabs.week":"Semana","week.days":"Seg,Ter,Qua,Qui,Sex,S\xE1b,Dom","week.showers":"duches","week.windows":"janelas de aquecimento","week.busiest":"dia mais cheio","week.heating":"Aquecimento","week.away":"ausente","week.virtual":"virtual \xB7 {count}","week.per_week":"{count} por semana","week.hint":"Toque numa pessoa para destacar os seus hor\xE1rios. As barras mostram quando o aquecedor pode aquecer em cada dia ({start} a {end}).","settings.open":"Defini\xE7\xF5es do aquecedor","settings.close":"Fechar","settings.target":"Temperatura alvo","settings.target_hint":"Avisa quando chega aqui","settings.target_down":"Baixar o alvo","settings.target_up":"Subir o alvo","settings.margin":"Margem","settings.band":"P\xE1ra a {stop} \xB0C, retoma a {restart} \xB0C","settings.margin_down":"Baixar a margem","settings.margin_up":"Subir a margem","settings.automatic":"Controlo autom\xE1tico","settings.automatic_hint":"Desligado: o aquecedor fica em modo manual","settings.more":"Mais defini\xE7\xF5es","solar.title":"Compara\xE7\xE3o solar","solar.none":"Ainda n\xE3o h\xE1 janelas registadas nos \xFAltimos 30 dias.","solar.would":"Com a regra solar ligada, a \xE1gua teria ficado pronta a tempo em {on_time} de {windows} janelas","solar.did":"Com a regra solar, a \xE1gua ficou pronta a tempo em {on_time} de {windows} janelas","solar.would_less":", e o aquecedor teria trabalhado menos {minutes} minutos","solar.would_more":", e o aquecedor teria trabalhado mais {minutes} minutos","solar.did_less":", e o aquecedor trabalhou menos {minutes} minutos","solar.did_more":", e o aquecedor trabalhou mais {minutes} minutos","solar.kwh":", cerca de {kwh} kWh","solar.applied":" A regra foi aplicada em {applied} delas: a tempo em {on_time}.","subline.starts_at":"Come\xE7a a aquecer por volta das {when}.","subline.starts_at_solar":"Come\xE7a a aquecer por volta das {when}, se o sol n\xE3o chegar.","subline.asked_by_one":"Pedido por {name}. Recebe um aviso quando estiver pronta.","subline.asked_by_many":"Pedido por {names}. Cada um \xE9 avisado quando estiver pronta.","names.and":" e ","today.you":"Voc\xEA","list.mine":"Os meus hor\xE1rios","list.count_one":"1 hor\xE1rio","list.count":"{count} hor\xE1rios","list.virtual":"Membro virtual \xB7 hor\xE1rios partilhados da casa","away.paused":"Em pausa. Os hor\xE1rios ficam guardados.","settings.no_people":"Ainda n\xE3o h\xE1 pessoas no Home Assistant para escolher."},on={en:an,pt:rn};function ae(i){return i?.toLowerCase().startsWith("pt")?"pt":"en"}function O(i){return ae(i)==="pt"?"pt-PT":"en-GB"}function re(i){return s(i,"weekday.letters").split(",")}function s(i,t,e={}){return on[ae(i)][t].replace(/\{(\w+)\}/g,(a,r)=>String(e[r]??a))}function ve(i){return i.callWS({type:"hot_water_ready/heaters"})}var oe=class{constructor(t,e){this.onSnapshot=t;this.onMissing=e;this.generation=0}async follow(t,e){let n=this.generation,a=e;if(a===void 0){if(this.defaultEntryId??=ve(t).then(o=>o[0]?.entry_id),a=await this.defaultEntryId,n!==this.generation)return;if(a===void 0){this.defaultEntryId=void 0,this.onMissing();return}}if(a===this.entryId)return;this.stop();let r=this.generation;this.entryId=a,this.stopSubscription=t.connection.subscribeMessage(o=>{r===this.generation&&this.onSnapshot(o)},{type:"hot_water_ready/subscribe",entry_id:a}),this.stopSubscription.catch(()=>{r===this.generation&&(this.entryId=void 0,this.onMissing())})}stop(){this.generation++;let t=this.stopSubscription;this.stopSubscription=void 0,this.entryId=void 0,t?.then(e=>e()).catch(()=>{})}};function it(i,t){if(i==="24")return!0;if(i==="12")return!1;let e=i==="system"?void 0:t;return!new Intl.DateTimeFormat(e,{hour:"numeric"}).format(new Date(2023,0,1,22)).includes("10")}function at(i,t,e,n){return n?`${String(i).padStart(2,"0")}:${String(t).padStart(2,"0")}`:new Intl.DateTimeFormat(O(e),{timeZone:"UTC",hour:"numeric",minute:"2-digit",hourCycle:"h12"}).format(Date.UTC(2e3,0,1,i,t))}function le(i,t,e=!0){let[n=0,a=0]=i.split(":").map(Number);return at(n,a,t,e)}function xe(i,t,e=!0){return e?`${String(i).padStart(2,"0")}h`:new Intl.DateTimeFormat(O(t),{timeZone:"UTC",hour:"numeric",hourCycle:"h12"}).format(Date.UTC(2e3,0,1,i%24))}function rt(i,t=!0){return s(i,"week.hint",{start:xe(D/60,i,t),end:xe(j/60,i,t)})}function b(i,t,e){return new Intl.NumberFormat(O(t),{maximumFractionDigits:e}).format(i)}function B(i,t){return new Intl.DateTimeFormat("en-CA",{timeZone:t,year:"numeric",month:"2-digit",day:"2-digit"}).format(i)}function ot(i){let t=new Date(`${i}T12:00:00Z`);return t.setUTCDate(t.getUTCDate()+1),t.toISOString().slice(0,10)}function se(i,t){let{language:e,timeZone:n,now:a}=t,r=new Date(i),o=de(i,t),c=B(a,n);if(B(r,n)===c)return s(e,"when.today",{time:o});if(B(r,n)===ot(c))return s(e,"when.tomorrow",{time:o});let l=new Intl.DateTimeFormat(O(e),{timeZone:n,weekday:"long"}).format(r);return s(e,"when.weekday",{time:o,weekday:l})}function sn(i,t){let{language:e}=t;return i.status==="heating"&&i.ready_in_minutes!==null?s(e,"headline.heating_for",{minutes:i.ready_in_minutes}):i.status==="waiting"&&i.next_ready?s(e,"headline.ready_at",{when:se(i.next_ready.at,t)}):s(e,`status.${i.status}`)}function st(i){return new Map(i.members.map(t=>[t.id,t]))}function Se(i,t,e){let n=st(i);return t.map(a=>n.get(a)?.name??e.people?.[a]??a)}function lt(i){let t={};for(let[e,n]of Object.entries(i??{}))e.startsWith("person.")&&(t[e]=n.attributes.friendly_name??e);return t}function Ae(i,t){return i.length<2?i.join(""):`${i.slice(0,-1).join(", ")}${s(t,"names.and")}${i.at(-1)??""}`}function dt(i,t,e){let n=t.map(a=>s(e.language,"item.at",{name:Se(i,[a.member],e)[0]??"",time:de(a.at,e)}));return Ae(n,e.language)}function ln(i,t){let{language:e}=t,n=i.heat_now?.requesters??[];if(i.status==="heating"&&n.length>0){let a=Se(i,n,t);return a.length===1?s(e,"subline.asked_by_one",{name:a[0]??""}):s(e,"subline.asked_by_many",{names:Ae(a,e)})}if(i.status==="heating"&&i.heating_for.length>0)return s(e,"subline.for",{list:dt(i,i.heating_for,t)});if(i.status==="waiting"&&i.next_heat_start){let a=i.solar_aware?"subline.starts_at_solar":"subline.starts_at";return s(e,a,{when:se(i.next_heat_start,t)})}return i.status==="ready"&&i.next_ready?s(e,"subline.next_at",{when:se(i.next_ready.at,t)}):""}function dn(i,t){if(i.element_on===null)return"";let e=s(t,i.element_on?"element.on":"element.off");return i.power_w===null?e:s(t,"element.drawing",{state:e,watts:b(i.power_w,t,0)})}function ct(i,t){let{language:e}=t,{temperature:n,target:a}=i;return{temperature:n===null?"\u2013":`${b(n,e,1)}\xB0`,target:s(e,"ring.target",{target:b(a,e,1)}),badge:s(e,`status.${i.status}`).toLocaleUpperCase(O(e)),headline:sn(i,t),subline:ln(i,t),element:dn(i,e),keepHot:gn(i,t),fill:n===null||a<=0?0:Math.min(1,Math.max(0,n/a)),tone:i.status}}function cn(i,t){let e=t??i.me;return i.members.find(n=>n.id===e)??i.members[0]}function pt(i){let t=K(i);return t==="admin"?!0:t==="viewer"&&i.members.length>1}function ht(i,t){return cn(i,K(i)==="member"?void 0:t)}function ut(i){return B(i.now,i.timeZone)}function gt(){return{time:"07:00",weekdays:[0,1,2,3,4]}}function mt(i,t){let e=i.ready_times.find(n=>n.id===t);return e&&{id:e.id,time:e.time,weekdays:[...e.weekdays].sort()}}function Ce(i){return i.time!==""&&i.weekdays.length>0}var y=256,P=104,Te=68;function _(i){return String(i).padStart(2,"0")}function Ee(i,t){return t?_(i):String(i%12||12)}function $e(i,t){return{hourText:Ee(i.hour,t),minuteText:_(i.minute)}}function He(i,t,e=!0){let[n=7,a=0]=i.split(":").map(Number);return{hour:n,minute:a,part:"hour",mode:"dial",...$e({hour:n,minute:a},e),fresh:t}}function W(i,t){let e=i*Math.PI/6;return{x:y/2+t*Math.sin(e),y:y/2-t*Math.cos(e)}}function ft(i,t=!0){let e=Array.from({length:12},(n,a)=>a);return i==="minute"?e.map(n=>({value:n*5,label:_(n*5),...W(n,P)})):t?[...e.map(n=>({value:n,label:String(n),...W(n,P)})),...e.map(n=>({value:n+12,label:String(n+12),...W(n,Te)}))]:e.map(n=>({value:n,label:String(n||12),...W(n,P)}))}function wt(i,t,e=!0){return i.part==="minute"?i.minute===t.value:(e?i.hour:i.hour%12)===t.value}function _t(i,t=!0){if(i.part==="minute"){let e=i.minute*Math.PI/30;return{x:y/2+P*Math.sin(e),y:y/2-P*Math.cos(e)}}return W(i.hour%12,t&&i.hour>=12?Te:P)}function bt(i,t,e,n=!0){let a=t-y/2,r=e-y/2,o=(Math.atan2(a,-r)/(2*Math.PI)+1)%1;if(i.part==="minute"){let m=Math.round(o*60)%60;return{...i,minute:m,minuteText:_(m)}}let c=Math.round(o*12)%12,l=n?Math.hypot(a,r)<(P+Te)/2:i.hour>=12,p=c+(l?12:0);return{...i,hour:p,hourText:Ee(p,n)}}function yt(i,t,e=!0){if(i.part==="minute"){let a=(i.minute+t+60)%60;return{...i,minute:a,minuteText:_(a)}}let n=(i.hour+t+24)%24;return{...i,hour:n,hourText:Ee(n,e)}}function vt(i,t){return{...i,hour:i.hour%12+(t?12:0)}}function xt(i,t=!0){if(!/^\d{1,2}$/.test(i.hourText)||!/^\d{1,2}$/.test(i.minuteText))return;let e=Number(i.hourText),n=Number(i.minuteText);if(!(n>59)){if(t)return e>23?void 0:`${_(e)}:${_(n)}`;if(!(e<1||e>12))return`${_(e%12+(i.hour>=12?12:0))}:${_(n)}`}}function Me(i,t=!0){return i.mode==="keys"?xt(i,t):`${_(i.hour)}:${_(i.minute)}`}function $t(i,t=!0){if(i.mode==="dial")return{...i,mode:"keys",...$e(i,t)};let[e=i.hour,n=i.minute]=xt(i,t)?.split(":").map(Number)??[];return{...i,mode:"dial",part:"hour",hour:e,minute:n,...$e({hour:e,minute:n},t)}}function kt(i,t,e=!0){let n=re(t);return[...i.ready_times].sort((a,r)=>a.time.localeCompare(r.time)||a.id.localeCompare(r.id)).map(a=>({id:a.id,time:le(a.time,t,e),enabled:a.enabled,days:n.map((r,o)=>({letter:r,on:a.weekdays.includes(o)}))}))}function K(i){return i.is_admin?"admin":i.me?"member":"viewer"}function St(i,t){return i.members.map(e=>({id:e.id,name:e.name,initial:e.name.slice(0,1).toLocaleUpperCase(),colour:e.colour,star:e.virtual,faded:e.away.on,selected:e.id===t}))}function At(i,t){let e=i.members.find(n=>n.id===i.me);return e?s(t,"greeting",{name:e.name}):""}function de(i,t){let{minutes:e}=ke(i,t.timeZone);return at(Math.floor(e/60),e%60,t.language,t.hour24??!0)}function Ct(i,t,e){let n=st(i);return i.today.map(a=>{let r=a.member===e,o=n.get(a.member);return{name:r?s(t.language,"today.you"):o?.name??"?",time:de(a.at,t),colour:o?.colour??"",mine:r}})}function Tt(i,t){let e=i.ready_times.length,n=s(t,"list.count",{count:e});return i.virtual?n=s(t,"list.virtual"):e===1&&(n=s(t,"list.count_one")),{name:i.name,note:n}}function pn(i,t){let e=new Date(`${i}T12:00:00Z`),n=O(t),a=new Intl.DateTimeFormat(n,{timeZone:"UTC",day:"numeric"}).format(e),r=new Intl.DateTimeFormat(n,{timeZone:"UTC",month:"long"}).format(e);return ae(t)==="pt"?`${a} de ${r.slice(0,1).toLocaleUpperCase("pt-PT")}${r.slice(1)}`:`${a} ${r}`}function Et(i,t){return i.away.on?i.away.until?s(t.language,"away.line_until",{date:pn(i.away.until,t.language)}):s(t.language,"away.line"):""}var Ht="hot_water_ready/heat_now/start",hn="hot_water_ready/heat_now/cancel";function Mt(i){let t=i.can_ask_heat_now&&!i.heat_now_blocked&&i.automatic,e=i.heat_now;if(e?.asked){let a=e.requesters.length===1&&!e.unnamed;return[{message:{type:hn},label:a?"heat_now.cancel":"heat_now.leave"}]}if(!t)return[];if(e===null&&i.heating_for.some(a=>a.member===i.me))return[];let n=i.status==="heating"||e!==null;return[{message:{type:Ht},label:n?"heat_now.join":"heat_now.start"}]}function Ot(i){return i.message.type===Ht}var Pt=500,un=[5,15,30,60,120];function Rt(i,t){let e=i.keep_hot_minutes;return[...new Set([...un,e])].sort((a,r)=>a-r).map(a=>({minutes:a,label:a>=60&&a%60===0?s(t,"keep_hot.hours",{n:b(a/60,t,0)}):s(t,"keep_hot.minutes",{n:b(a,t,0)}),isDefault:a===e}))}function gn(i,t){let e=i.heat_now?.keep_until;return e?s(t.language,"keep_hot.until",{time:de(e,t)}):""}var Dt="hot_water_ready/switch_off";function Nt(i){let t=(i.heat_now?.requesters.length??0)>0||!!i.heat_now?.unnamed;return i.can_switch_off&&(i.status==="heating"||t)}function It(i,t){let{language:e}=t,n=(i.heat_now?.requesters??[]).filter(o=>o!==i.viewer),a=i.heating_for.filter(o=>o.member!==i.viewer),r=[];if(n.length>0){let o=Ae(Se(i,n,t),e);r.push(s(e,n.length===1?"switch_off.asked_one":"switch_off.asked_many",{names:o}))}if(a.length>0){let o=dt(i,a,t);r.push(s(e,a.length===1?"switch_off.skipped_one":"switch_off.skipped_many",{list:o}))}return r.length===0&&r.push(s(e,"switch_off.nobody")),i.heating_for.length>0&&r.push(s(e,"switch_off.back")),{title:s(e,"switch_off.title"),lines:r}}function zt(i,t){return i.faults.map(e=>s(t,`fault.${e}`))}var Lt="hot_water_ready/settings/set",mn={min:30,max:75,step:.5},fn={min:0,max:5,step:.5};function nt(i,t,e){let n=Math.ceil(i/t.step-1e-9)*t.step-t.step,a=Math.floor(i/t.step+1e-9)*t.step+t.step;return{shown:b(i,e,1),down:n>=t.min-1e-9?n:null,up:a<=t.max+1e-9?a:null}}function Ut(i,t){let{language:e}=t,n=i.settings;if(!(!i.is_admin||!n))return{target:nt(i.target,mn,e),margin:nt(i.margin,fn,e),band:s(e,"settings.band",{stop:b(i.target+i.margin,e,1),restart:b(i.target-i.margin,e,1)}),automatic:i.automatic,people:Object.entries(t.people??{}).map(([a,r])=>({id:a,name:r,on:n.switch_off_people.includes(a)})).sort((a,r)=>a.name.localeCompare(r.name)),solar:wn(n,e),notes:i.not_rising_checked?[]:[s(e,"note.not_rising_skipped")]}}function Vt(i,t,e){return i.filter(n=>n.id===t?e:n.on).map(n=>n.id)}function wn(i,t){let{windows:e,on_time:n,minutes_saved:a,kwh:r}=i.solar;if(e===0)return s(t,"solar.none");let o=i.solar_aware?"did":"would",c=s(t,`solar.${o}`,{on_time:n,windows:e});a!==0&&(c+=s(t,`solar.${o}_${a>0?"less":"more"}`,{minutes:Math.abs(a)}),r!==null&&(c+=s(t,"solar.kwh",{kwh:b(Math.abs(r),t,1)}))),c+=".";let{solar_windows:l,solar_on_time:p}=i.solar;return l>0&&(c+=s(t,"solar.applied",{applied:l,on_time:p})),c}var D=300,j=1440;function ke(i,t){let e=new Date(i),n=new Intl.DateTimeFormat("en-GB",{timeZone:t,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(e).reduce((a,r)=>({...a,[r.type]:r.value}),{});return{day:B(e,t),minutes:Number(n.hour)*60+Number(n.minute)}}function qt(i,t){let e=i.week;if(!i.is_admin||!e)return;let n=s(t.language,"week.days").split(","),a=n.map((l,p)=>_n(e.monday,p)),r=i.members.map(l=>yn(l,a,t.language,t.hour24??!0)),o=a.map((l,p)=>r.reduce((m,u)=>{let f=u.cells[p];return f&&!f.away?m+f.times.length:m},0)),c=Math.max(0,...o);return{days:a.map((l,p)=>({key:l,label:n[p]??l,today:l===e.today,bars:vn(l,e.windows,t.timeZone)})),hours:[6,12,18,24].map(l=>({label:xe(l,t.language,t.hour24??!0),at:(l*60-D)/(j-D)})),rows:r,showers:o.reduce((l,p)=>l+p,0),windows:e.windows.length,busiest:c>0?n[o.indexOf(c)]??"":""}}function _n(i,t){let e=i;for(let n=0;n<t;n+=1)e=ot(e);return e}function bn(i,t){return i.away.on&&(i.away.until===null||t<=i.away.until)}function yn(i,t,e,n){let a=i.ready_times.filter(p=>p.enabled),r=t.map((p,m)=>({times:a.filter(u=>u.weekdays.includes(m)).map(u=>u.time).sort().map(u=>le(u,e,n)),away:bn(i,p)})),o=r.every(p=>p.away),c=r.reduce((p,m)=>p+m.times.length,0),l=s(e,"week.per_week",{count:c});return o?l=s(e,"week.away"):i.virtual&&(l=s(e,"week.virtual",{count:c})),{id:i.id,name:i.name,colour:i.colour,initial:i.virtual?"\u2605":i.name[0]??"?",away:o,note:l,cells:r}}function vn(i,t,e){let n=j-D,a=[];for(let r of t){let o=ke(r.start,e),c=ke(r.end,e);if(o.day>i||c.day<i)continue;let l=Math.max(D,o.day<i?0:o.minutes),p=Math.min(j,c.day>i?j:c.minutes);p>l&&a.push({from:(l-D)/n,length:(p-l)/n})}return a}function Wt(i,t){let e=i.cluster_warning;return e?s(t.language,"cluster.warning",{when:se(e.at,t),needed:b(e.needed,t.language,0),cap:b(e.cap,t.language,1)}):""}var xn=q`<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M20 5H4c-1.1 0-1.99.9-1.99 2L2 17c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg>`,$n=q`<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>`,F="hot-water-ready-card",Oe=38,Bt=2*Math.PI*Oe,Pe=class extends k{constructor(){super(...arguments);this._missing=!1;this._settingsOpen=!1;this._offOpen=!1;this._holding=!1;this._held=!1;this._tab="people";this._error="";this._subscription=new oe(e=>{this._heater=e,this._missing=!1},()=>{this._missing=!0});this._holdEnd=()=>{window.clearTimeout(this._holdTimer),this._holding=!1}}static{this.properties={hass:{attribute:!1},_config:{state:!0},_heater:{state:!0},_missing:{state:!0},_selected:{state:!0},_sheet:{state:!0},_clock:{state:!0},_settingsOpen:{state:!0},_offOpen:{state:!0},_keep:{state:!0},_holding:{state:!0},_tab:{state:!0},_focus:{state:!0},_error:{state:!0}}}static async getStubConfig(e){let n=(await ve(e))[0];return n?{type:`custom:${F}`,entry_id:n.entry_id}:{type:`custom:${F}`}}setConfig(e){this._config=e}getCardSize(){return 6}get _language(){return this.hass?.locale?.language??this.hass?.language??"en"}get _hour24(){return it(this.hass?.locale?.time_format,this._language)}get _context(){return{language:this._language,timeZone:this.hass?.config?.time_zone??Intl.DateTimeFormat().resolvedOptions().timeZone,now:new Date,people:lt(this.hass?.states),hour24:this._hour24}}connectedCallback(){super.connectedCallback(),this._follow()}disconnectedCallback(){super.disconnectedCallback(),this._subscription.stop()}updated(e){(e.has("hass")||e.has("_config"))&&this._follow(),e.has("_offOpen")&&this._offOpen&&this.renderRoot.querySelector(".off-keep")?.focus(),e.has("_keep")&&this._keep&&!e.get("_keep")&&this.renderRoot.querySelector(".keep-chip.on")?.focus()}_follow(){this.hass&&this._config&&this.isConnected&&this._subscription.follow(this.hass,this._config.entry_id)}async _call(e){if(!this.hass||!this._heater)return!1;this._error="";try{return await this.hass.callWS({entry_id:this._heater.entry_id,...e}),!0}catch(n){let a=(n instanceof Error,n.message);return this._error=s(this._language,"card.error",{message:a??String(n)}),!1}}async _save(e){let n=this._sheet;if(!n||!Ce(n))return;await this._call({...n.id?{type:"hot_water_ready/ready_time/update",ready_time_id:n.id}:{type:"hot_water_ready/ready_time/add"},member_id:e.id,time:n.time,weekdays:[...n.weekdays].sort()})&&(this._sheet=void 0)}async _remove(e,n){await this._call({type:"hot_water_ready/ready_time/remove",member_id:e.id,ready_time_id:n})&&(this._sheet=void 0)}render(){let e=this._language;if(this._missing)return d`<ha-card><div class="message">${s(e,"card.no_heater")}</div></ha-card>`;let n=this._heater;if(!n)return d`<ha-card><div class="message">${s(e,"card.loading")}</div></ha-card>`;let a=K(n),r=ht(n,this._selected),o=qt(n,this._context);return d`
+var Y=globalThis,Q=Y.ShadowRoot&&(Y.ShadyCSS===void 0||Y.ShadyCSS.nativeShadow)&&"adoptedStyleSheets"in Document.prototype&&"replace"in CSSStyleSheet.prototype,pe=Symbol(),Le=new WeakMap,N=class{constructor(t,e,n){if(this._$cssResult$=!0,n!==pe)throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");this.cssText=t,this.t=e}get styleSheet(){let t=this.o,e=this.t;if(Q&&t===void 0){let n=e!==void 0&&e.length===1;n&&(t=Le.get(e)),t===void 0&&((this.o=t=new CSSStyleSheet).replaceSync(this.cssText),n&&Le.set(e,t))}return t}toString(){return this.cssText}},qe=a=>new N(typeof a=="string"?a:a+"",void 0,pe),he=(a,...t)=>{let e=a.length===1?a[0]:t.reduce((n,i,r)=>n+(s=>{if(s._$cssResult$===!0)return s.cssText;if(typeof s=="number")return s;throw Error("Value passed to 'css' function must be a 'css' function result: "+s+". Use 'unsafeCSS' to pass non-literal values, but take care to ensure page security.")})(i)+a[r+1],a[0]);return new N(e,a,pe)},ze=(a,t)=>{if(Q)a.adoptedStyleSheets=t.map(e=>e instanceof CSSStyleSheet?e:e.styleSheet);else for(let e of t){let n=document.createElement("style"),i=Y.litNonce;i!==void 0&&n.setAttribute("nonce",i),n.textContent=e.cssText,a.appendChild(n)}},me=Q?a=>a:a=>a instanceof CSSStyleSheet?(t=>{let e="";for(let n of t.cssRules)e+=n.cssText;return qe(e)})(a):a;var{is:Qt,defineProperty:Xt,getOwnPropertyDescriptor:Jt,getOwnPropertyNames:en,getOwnPropertySymbols:tn,getPrototypeOf:nn}=Object,X=globalThis,Ve=X.trustedTypes,an=Ve?Ve.emptyScript:"",rn=X.reactiveElementPolyfillSupport,L=(a,t)=>a,ge={toAttribute(a,t){switch(t){case Boolean:a=a?an:null;break;case Object:case Array:a=a==null?a:JSON.stringify(a)}return a},fromAttribute(a,t){let e=a;switch(t){case Boolean:e=a!==null;break;case Number:e=a===null?null:Number(a);break;case Object:case Array:try{e=JSON.parse(a)}catch{e=null}}return e}},We=(a,t)=>!Qt(a,t),Ue={attribute:!0,type:String,converter:ge,reflect:!1,useDefault:!1,hasChanged:We};Symbol.metadata??=Symbol("metadata"),X.litPropertyMetadata??=new WeakMap;var $=class extends HTMLElement{static addInitializer(t){this._$Ei(),(this.l??=[]).push(t)}static get observedAttributes(){return this.finalize(),this._$Eh&&[...this._$Eh.keys()]}static createProperty(t,e=Ue){if(e.state&&(e.attribute=!1),this._$Ei(),this.prototype.hasOwnProperty(t)&&((e=Object.create(e)).wrapped=!0),this.elementProperties.set(t,e),!e.noAccessor){let n=Symbol(),i=this.getPropertyDescriptor(t,n,e);i!==void 0&&Xt(this.prototype,t,i)}}static getPropertyDescriptor(t,e,n){let{get:i,set:r}=Jt(this.prototype,t)??{get(){return this[e]},set(s){this[e]=s}};return{get:i,set(s){let c=i?.call(this);r?.call(this,s),this.requestUpdate(t,c,n)},configurable:!0,enumerable:!0}}static getPropertyOptions(t){return this.elementProperties.get(t)??Ue}static _$Ei(){if(this.hasOwnProperty(L("elementProperties")))return;let t=nn(this);t.finalize(),t.l!==void 0&&(this.l=[...t.l]),this.elementProperties=new Map(t.elementProperties)}static finalize(){if(this.hasOwnProperty(L("finalized")))return;if(this.finalized=!0,this._$Ei(),this.hasOwnProperty(L("properties"))){let e=this.properties,n=[...en(e),...tn(e)];for(let i of n)this.createProperty(i,e[i])}let t=this[Symbol.metadata];if(t!==null){let e=litPropertyMetadata.get(t);if(e!==void 0)for(let[n,i]of e)this.elementProperties.set(n,i)}this._$Eh=new Map;for(let[e,n]of this.elementProperties){let i=this._$Eu(e,n);i!==void 0&&this._$Eh.set(i,e)}this.elementStyles=this.finalizeStyles(this.styles)}static finalizeStyles(t){let e=[];if(Array.isArray(t)){let n=new Set(t.flat(1/0).reverse());for(let i of n)e.unshift(me(i))}else t!==void 0&&e.push(me(t));return e}static _$Eu(t,e){let n=e.attribute;return n===!1?void 0:typeof n=="string"?n:typeof t=="string"?t.toLowerCase():void 0}constructor(){super(),this._$Ep=void 0,this.isUpdatePending=!1,this.hasUpdated=!1,this._$Em=null,this._$Ev()}_$Ev(){this._$ES=new Promise(t=>this.enableUpdating=t),this._$AL=new Map,this._$E_(),this.requestUpdate(),this.constructor.l?.forEach(t=>t(this))}addController(t){(this._$EO??=new Set).add(t),this.renderRoot!==void 0&&this.isConnected&&t.hostConnected?.()}removeController(t){this._$EO?.delete(t)}_$E_(){let t=new Map,e=this.constructor.elementProperties;for(let n of e.keys())this.hasOwnProperty(n)&&(t.set(n,this[n]),delete this[n]);t.size>0&&(this._$Ep=t)}createRenderRoot(){let t=this.shadowRoot??this.attachShadow(this.constructor.shadowRootOptions);return ze(t,this.constructor.elementStyles),t}connectedCallback(){this.renderRoot??=this.createRenderRoot(),this.enableUpdating(!0),this._$EO?.forEach(t=>t.hostConnected?.())}enableUpdating(t){}disconnectedCallback(){this._$EO?.forEach(t=>t.hostDisconnected?.())}attributeChangedCallback(t,e,n){this._$AK(t,n)}_$ET(t,e){let n=this.constructor.elementProperties.get(t),i=this.constructor._$Eu(t,n);if(i!==void 0&&n.reflect===!0){let r=(n.converter?.toAttribute!==void 0?n.converter:ge).toAttribute(e,n.type);this._$Em=t,r==null?this.removeAttribute(i):this.setAttribute(i,r),this._$Em=null}}_$AK(t,e){let n=this.constructor,i=n._$Eh.get(t);if(i!==void 0&&this._$Em!==i){let r=n.getPropertyOptions(i),s=typeof r.converter=="function"?{fromAttribute:r.converter}:r.converter?.fromAttribute!==void 0?r.converter:ge;this._$Em=i;let c=s.fromAttribute(e,r.type);this[i]=c??this._$Ej?.get(i)??c,this._$Em=null}}requestUpdate(t,e,n,i=!1,r){if(t!==void 0){let s=this.constructor;if(i===!1&&(r=this[t]),n??=s.getPropertyOptions(t),!((n.hasChanged??We)(r,e)||n.useDefault&&n.reflect&&r===this._$Ej?.get(t)&&!this.hasAttribute(s._$Eu(t,n))))return;this.C(t,e,n)}this.isUpdatePending===!1&&(this._$ES=this._$EP())}C(t,e,{useDefault:n,reflect:i,wrapped:r},s){n&&!(this._$Ej??=new Map).has(t)&&(this._$Ej.set(t,s??e??this[t]),r!==!0||s!==void 0)||(this._$AL.has(t)||(this.hasUpdated||n||(e=void 0),this._$AL.set(t,e)),i===!0&&this._$Em!==t&&(this._$Eq??=new Set).add(t))}async _$EP(){this.isUpdatePending=!0;try{await this._$ES}catch(e){Promise.reject(e)}let t=this.scheduleUpdate();return t!=null&&await t,!this.isUpdatePending}scheduleUpdate(){return this.performUpdate()}performUpdate(){if(!this.isUpdatePending)return;if(!this.hasUpdated){if(this.renderRoot??=this.createRenderRoot(),this._$Ep){for(let[i,r]of this._$Ep)this[i]=r;this._$Ep=void 0}let n=this.constructor.elementProperties;if(n.size>0)for(let[i,r]of n){let{wrapped:s}=r,c=this[i];s!==!0||this._$AL.has(i)||c===void 0||this.C(i,void 0,r,c)}}let t=!1,e=this._$AL;try{t=this.shouldUpdate(e),t?(this.willUpdate(e),this._$EO?.forEach(n=>n.hostUpdate?.()),this.update(e)):this._$EM()}catch(n){throw t=!1,this._$EM(),n}t&&this._$AE(e)}willUpdate(t){}_$AE(t){this._$EO?.forEach(e=>e.hostUpdated?.()),this.hasUpdated||(this.hasUpdated=!0,this.firstUpdated(t)),this.updated(t)}_$EM(){this._$AL=new Map,this.isUpdatePending=!1}get updateComplete(){return this.getUpdateComplete()}getUpdateComplete(){return this._$ES}shouldUpdate(t){return!0}update(t){this._$Eq&&=this._$Eq.forEach(e=>this._$ET(e,this[e])),this._$EM()}updated(t){}firstUpdated(t){}};$.elementStyles=[],$.shadowRootOptions={mode:"open"},$[L("elementProperties")]=new Map,$[L("finalized")]=new Map,rn?.({ReactiveElement:$}),(X.reactiveElementVersions??=[]).push("2.1.2");var _e=globalThis,je=a=>a,J=_e.trustedTypes,Be=J?J.createPolicy("lit-html",{createHTML:a=>a}):void 0,we="$lit$",k=`lit$${Math.random().toFixed(9).slice(2)}$`,be="?"+k,sn=`<${be}>`,T=document,z=()=>T.createComment(""),V=a=>a===null||typeof a!="object"&&typeof a!="function",ye=Array.isArray,Qe=a=>ye(a)||typeof a?.[Symbol.iterator]=="function",fe=`[ 	
+\f\r]`,q=/<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g,Fe=/-->/g,Ke=/>/g,A=RegExp(`>|${fe}(?:([^\\s"'>=/]+)(${fe}*=${fe}*(?:[^ 	
+\f\r"'\`<>=]|("|')|))|$)`,"g"),Ze=/'/g,Ge=/"/g,Xe=/^(?:script|style|textarea|title)$/i,ve=a=>(t,...e)=>({_$litType$:a,strings:t,values:e}),d=ve(1),W=ve(2),zn=ve(3),w=Symbol.for("lit-noChange"),u=Symbol.for("lit-nothing"),Ye=new WeakMap,C=T.createTreeWalker(T,129);function Je(a,t){if(!ye(a)||!a.hasOwnProperty("raw"))throw Error("invalid template strings array");return Be!==void 0?Be.createHTML(t):t}var et=(a,t)=>{let e=a.length-1,n=[],i,r=t===2?"<svg>":t===3?"<math>":"",s=q;for(let c=0;c<e;c++){let l=a[c],p,h,m=-1,_=0;for(;_<l.length&&(s.lastIndex=_,h=s.exec(l),h!==null);)_=s.lastIndex,s===q?h[1]==="!--"?s=Fe:h[1]!==void 0?s=Ke:h[2]!==void 0?(Xe.test(h[2])&&(i=RegExp("</"+h[2],"g")),s=A):h[3]!==void 0&&(s=A):s===A?h[0]===">"?(s=i??q,m=-1):h[1]===void 0?m=-2:(m=s.lastIndex-h[2].length,p=h[1],s=h[3]===void 0?A:h[3]==='"'?Ge:Ze):s===Ge||s===Ze?s=A:s===Fe||s===Ke?s=q:(s=A,i=void 0);let g=s===A&&a[c+1].startsWith("/>")?" ":"";r+=s===q?l+sn:m>=0?(n.push(p),l.slice(0,m)+we+l.slice(m)+k+g):l+k+(m===-2?c:g)}return[Je(a,r+(a[e]||"<?>")+(t===2?"</svg>":t===3?"</math>":"")),n]},U=class a{constructor({strings:t,_$litType$:e},n){let i;this.parts=[];let r=0,s=0,c=t.length-1,l=this.parts,[p,h]=et(t,e);if(this.el=a.createElement(p,n),C.currentNode=this.el.content,e===2||e===3){let m=this.el.content.firstChild;m.replaceWith(...m.childNodes)}for(;(i=C.nextNode())!==null&&l.length<c;){if(i.nodeType===1){if(i.hasAttributes())for(let m of i.getAttributeNames())if(m.endsWith(we)){let _=h[s++],g=i.getAttribute(m).split(k),x=/([.?@])?(.*)/.exec(_);l.push({type:1,index:r,name:x[2],strings:g,ctor:x[1]==="."?te:x[1]==="?"?ne:x[1]==="@"?ae:H}),i.removeAttribute(m)}else m.startsWith(k)&&(l.push({type:6,index:r}),i.removeAttribute(m));if(Xe.test(i.tagName)){let m=i.textContent.split(k),_=m.length-1;if(_>0){i.textContent=J?J.emptyScript:"";for(let g=0;g<_;g++)i.append(m[g],z()),C.nextNode(),l.push({type:2,index:++r});i.append(m[_],z())}}}else if(i.nodeType===8)if(i.data===be)l.push({type:2,index:r});else{let m=-1;for(;(m=i.data.indexOf(k,m+1))!==-1;)l.push({type:7,index:r}),m+=k.length-1}r++}}static createElement(t,e){let n=T.createElement("template");return n.innerHTML=t,n}};function E(a,t,e=a,n){if(t===w)return t;let i=n!==void 0?e._$Co?.[n]:e._$Cl,r=V(t)?void 0:t._$litDirective$;return i?.constructor!==r&&(i?._$AO?.(!1),r===void 0?i=void 0:(i=new r(a),i._$AT(a,e,n)),n!==void 0?(e._$Co??=[])[n]=i:e._$Cl=i),i!==void 0&&(t=E(a,i._$AS(a,t.values),i,n)),t}var ee=class{constructor(t,e){this._$AV=[],this._$AN=void 0,this._$AD=t,this._$AM=e}get parentNode(){return this._$AM.parentNode}get _$AU(){return this._$AM._$AU}u(t){let{el:{content:e},parts:n}=this._$AD,i=(t?.creationScope??T).importNode(e,!0);C.currentNode=i;let r=C.nextNode(),s=0,c=0,l=n[0];for(;l!==void 0;){if(s===l.index){let p;l.type===2?p=new D(r,r.nextSibling,this,t):l.type===1?p=new l.ctor(r,l.name,l.strings,this,t):l.type===6&&(p=new ie(r,this,t)),this._$AV.push(p),l=n[++c]}s!==l?.index&&(r=C.nextNode(),s++)}return C.currentNode=T,i}p(t){let e=0;for(let n of this._$AV)n!==void 0&&(n.strings!==void 0?(n._$AI(t,n,e),e+=n.strings.length-2):n._$AI(t[e])),e++}},D=class a{get _$AU(){return this._$AM?._$AU??this._$Cv}constructor(t,e,n,i){this.type=2,this._$AH=u,this._$AN=void 0,this._$AA=t,this._$AB=e,this._$AM=n,this.options=i,this._$Cv=i?.isConnected??!0}get parentNode(){let t=this._$AA.parentNode,e=this._$AM;return e!==void 0&&t?.nodeType===11&&(t=e.parentNode),t}get startNode(){return this._$AA}get endNode(){return this._$AB}_$AI(t,e=this){t=E(this,t,e),V(t)?t===u||t==null||t===""?(this._$AH!==u&&this._$AR(),this._$AH=u):t!==this._$AH&&t!==w&&this._(t):t._$litType$!==void 0?this.$(t):t.nodeType!==void 0?this.T(t):Qe(t)?this.k(t):this._(t)}O(t){return this._$AA.parentNode.insertBefore(t,this._$AB)}T(t){this._$AH!==t&&(this._$AR(),this._$AH=this.O(t))}_(t){this._$AH!==u&&V(this._$AH)?this._$AA.nextSibling.data=t:this.T(T.createTextNode(t)),this._$AH=t}$(t){let{values:e,_$litType$:n}=t,i=typeof n=="number"?this._$AC(t):(n.el===void 0&&(n.el=U.createElement(Je(n.h,n.h[0]),this.options)),n);if(this._$AH?._$AD===i)this._$AH.p(e);else{let r=new ee(i,this),s=r.u(this.options);r.p(e),this.T(s),this._$AH=r}}_$AC(t){let e=Ye.get(t.strings);return e===void 0&&Ye.set(t.strings,e=new U(t)),e}k(t){ye(this._$AH)||(this._$AH=[],this._$AR());let e=this._$AH,n,i=0;for(let r of t)i===e.length?e.push(n=new a(this.O(z()),this.O(z()),this,this.options)):n=e[i],n._$AI(r),i++;i<e.length&&(this._$AR(n&&n._$AB.nextSibling,i),e.length=i)}_$AR(t=this._$AA.nextSibling,e){for(this._$AP?.(!1,!0,e);t!==this._$AB;){let n=je(t).nextSibling;je(t).remove(),t=n}}setConnected(t){this._$AM===void 0&&(this._$Cv=t,this._$AP?.(t))}},H=class{get tagName(){return this.element.tagName}get _$AU(){return this._$AM._$AU}constructor(t,e,n,i,r){this.type=1,this._$AH=u,this._$AN=void 0,this.element=t,this.name=e,this._$AM=i,this.options=r,n.length>2||n[0]!==""||n[1]!==""?(this._$AH=Array(n.length-1).fill(new String),this.strings=n):this._$AH=u}_$AI(t,e=this,n,i){let r=this.strings,s=!1;if(r===void 0)t=E(this,t,e,0),s=!V(t)||t!==this._$AH&&t!==w,s&&(this._$AH=t);else{let c=t,l,p;for(t=r[0],l=0;l<r.length-1;l++)p=E(this,c[n+l],e,l),p===w&&(p=this._$AH[l]),s||=!V(p)||p!==this._$AH[l],p===u?t=u:t!==u&&(t+=(p??"")+r[l+1]),this._$AH[l]=p}s&&!i&&this.j(t)}j(t){t===u?this.element.removeAttribute(this.name):this.element.setAttribute(this.name,t??"")}},te=class extends H{constructor(){super(...arguments),this.type=3}j(t){this.element[this.name]=t===u?void 0:t}},ne=class extends H{constructor(){super(...arguments),this.type=4}j(t){this.element.toggleAttribute(this.name,!!t&&t!==u)}},ae=class extends H{constructor(t,e,n,i,r){super(t,e,n,i,r),this.type=5}_$AI(t,e=this){if((t=E(this,t,e,0)??u)===w)return;let n=this._$AH,i=t===u&&n!==u||t.capture!==n.capture||t.once!==n.once||t.passive!==n.passive,r=t!==u&&(n===u||i);i&&this.element.removeEventListener(this.name,this,n),r&&this.element.addEventListener(this.name,this,t),this._$AH=t}handleEvent(t){typeof this._$AH=="function"?this._$AH.call(this.options?.host??this.element,t):this._$AH.handleEvent(t)}},ie=class{constructor(t,e,n){this.element=t,this.type=6,this._$AN=void 0,this._$AM=e,this.options=n}get _$AU(){return this._$AM._$AU}_$AI(t){E(this,t)}},tt={M:we,P:k,A:be,C:1,L:et,R:ee,D:Qe,V:E,I:D,H,N:ne,U:ae,B:te,F:ie},on=_e.litHtmlPolyfillSupport;on?.(U,D),(_e.litHtmlVersions??=[]).push("3.3.3");var nt=(a,t,e)=>{let n=e?.renderBefore??t,i=n._$litPart$;if(i===void 0){let r=e?.renderBefore??null;n._$litPart$=i=new D(t.insertBefore(z(),r),r,void 0,e??{})}return i._$AI(a),i};var xe=globalThis,S=class extends ${constructor(){super(...arguments),this.renderOptions={host:this},this._$Do=void 0}createRenderRoot(){let t=super.createRenderRoot();return this.renderOptions.renderBefore??=t.firstChild,t}update(t){let e=this.render();this.hasUpdated||(this.renderOptions.isConnected=this.isConnected),super.update(t),this._$Do=nt(e,this.renderRoot,this.renderOptions)}connectedCallback(){super.connectedCallback(),this._$Do?.setConnected(!0)}disconnectedCallback(){super.disconnectedCallback(),this._$Do?.setConnected(!1)}render(){return w}};S._$litElement$=!0,S.finalized=!0,xe.litElementHydrateSupport?.({LitElement:S});var ln=xe.litElementPolyfillSupport;ln?.({LitElement:S});(xe.litElementVersions??=[]).push("4.2.2");var M={ATTRIBUTE:1,CHILD:2,PROPERTY:3,BOOLEAN_ATTRIBUTE:4,EVENT:5,ELEMENT:6},at=a=>(...t)=>({_$litDirective$:a,values:t}),re=class{constructor(t){}get _$AU(){return this._$AM._$AU}_$AT(t,e,n){this._$Ct=t,this._$AM=e,this._$Ci=n}_$AS(t,e){return this.update(t,e)}update(t,e){return this.render(...e)}};var{I:ta}=tt;var it=a=>a.strings===void 0;var dn={},rt=(a,t=dn)=>a._$AH=t;var R=at(class extends re{constructor(a){if(super(a),a.type!==M.PROPERTY&&a.type!==M.ATTRIBUTE&&a.type!==M.BOOLEAN_ATTRIBUTE)throw Error("The `live` directive is not allowed on child or event bindings");if(!it(a))throw Error("`live` bindings can only contain a single expression")}render(a){return a}update(a,[t]){if(t===w||t===u)return t;let e=a.element,n=a.name;if(a.type===M.PROPERTY){if(t===e[n])return w}else if(a.type===M.BOOLEAN_ATTRIBUTE){if(!!t===e.hasAttribute(n))return w}else if(a.type===M.ATTRIBUTE&&e.getAttribute(n)===t+"")return w;return rt(a),t}});var cn={"status.waiting":"Idle","status.heating":"Heating","status.ready":"Ready","status.fault":"Fault","status.manual":"Manual","headline.heating_for":"Heating: ready in about {minutes} min","headline.ready_at":"Ready at {when}","subline.next_at":"Next at {when}","when.today":"{time}","when.tomorrow":"{time} tomorrow","when.weekday":"{time} on {weekday}","ring.target":"target {target}\xB0","weekday.letters":"M,T,W,T,F,S,S","members.none":"No members yet. An administrator adds them in the integration's settings.","list.empty":"No ready times yet.","list.add":"Add a ready time","sheet.delete":"Delete","list.switch":"On or off","sheet.title":"New ready time","sheet.edit_title":"Change ready time","list.edit":"Change this ready time","sheet.time":"Time","sheet.hour":"Hour","sheet.minute":"Minute","sheet.days":"Days","sheet.save":"Save","sheet.cancel":"Cancel","clock.title":"Select time","clock.title_keys":"Enter time","clock.ok":"OK","clock.to_keys":"Type the time","clock.to_dial":"Use the clock","clock.am":"AM","clock.pm":"PM","clock.invalid":"Enter a valid time","clock.change":"Change the time","fault.sensor_unavailable":"Fault: the water temperature sensor gives no readings. Heating has stopped.","fault.not_rising":"Fault: the water is not getting hotter. Heating has stopped; see Repairs.","fault.no_consumption":"Fault: the heater draws no power. Heating has stopped; see Repairs.","fault.relay_stuck":"Fault: the heater draws power while switched off. Check the relay.","element.on":"Heater on","element.off":"Heater off","element.drawing":"{state} \xB7 drawing {watts} W","keep_hot.until":"Keeping hot until {time}","keep_hot.title":"Keep hot after it's ready","keep_hot.hint":'After the "ready" message the heater keeps the water hot this long, then switches off.',"keep_hot.more":"Choose how long to keep it hot","keep_hot.cancel":"Cancel","keep_hot.minutes":"{n} min","keep_hot.hours":"{n} h",manual:"Automatic control is off: the heater is run by hand.","note.not_rising_skipped":'The thermostat does not say when it is heating, so the "water not getting hotter" and "heater draws no power" checks are not made.',"heat_now.start":"Heat now","heat_now.cancel":"Cancel","heat_now.join":"Tell me when it's hot","heat_now.leave":"Don't tell me","subline.for":"For {list}.","item.at":"{name} at {time}","switch_off.link":"Switch off the heating\u2026","switch_off.title":"Switch off the heating?","switch_off.confirm":"Switch off","switch_off.keep":"Cancel","switch_off.asked_one":"{names} will no longer be told.","switch_off.asked_many":"{names} will no longer be told.","switch_off.skipped_one":"Without hot water: {list}.","switch_off.skipped_many":"Without hot water: {list}.","switch_off.back":"It switches back on by itself for the next ready time.","switch_off.nobody":"Heating stops now.","settings.switch_off":"Who may switch off the heating for everyone","settings.switch_off_hint":"The administrators and:","settings.own_cancel":"Whoever asked may always cancel their own request.",greeting:"Hello, {name}","today.label":"House today","today.nobody":"Nobody today","away.until_label":"Until (optional)","away.line":"Away","away.line_until":"Away until {date}","members.add":"Member","card.no_heater":"No Hot Water Ready heater is set up yet.","card.loading":"Loading\u2026","card.error":"That did not work: {message}","cluster.warning":"The showers from {when} need the water at {needed} \xB0C, but the heater goes only to {cap} \xB0C: the last ones may run cooler.","tabs.people":"People","tabs.week":"Week","week.days":"Mon,Tue,Wed,Thu,Fri,Sat,Sun","week.showers":"showers","week.windows":"heating windows","week.busiest":"busiest day","week.heating":"Heating","week.away":"away","week.virtual":"virtual \xB7 {count}","week.per_week":"{count} a week","week.hint":"Tap a person to highlight their times. The bars show when the heater may heat each day ({start} to {end}).","settings.open":"Heater settings","settings.close":"Close","settings.target":"Target temperature","settings.target_hint":"Ready when the water gets here","settings.target_down":"Lower the target","settings.target_up":"Raise the target","settings.margin":"Margin","settings.band":"Stops at {stop} \xB0C, restarts at {restart} \xB0C","settings.margin_down":"Lower the margin","settings.margin_up":"Raise the margin","settings.automatic":"Automatic control","settings.automatic_hint":"Off: the heater is run by hand","settings.more":"More settings","rate.title":"Heating speed","rate.unit":"min per \xB0C","rate.automatic":"Automatic","rate.fixed":"Fixed","rate.learned":"Learned: median of the {count} clean heats of the last {days} days","rate.default_one":"Starting value: 1 more clean heat in the last {days} days and it is learned","rate.default_many":"Starting value: {count} more clean heats in the last {days} days and it is learned","rate.manual":"Fixed by hand: learning goes on, but is not used","rate.runs":"Clean heats behind it","rate.example":"Now {from} \xB0C \u2192 {to} \xB0C: {degrees} \xB0C \xD7 {rate} = {minutes} min, plus {margin} min margin: starts {lead} min before","rate.example_cap":" (the most)","rate.example_warm":"Now {from} \xB0C: already at the target, no need to start early","rate.physics":"By physics, the whole tank heated by the element: {rate} min/\xB0C","rate.volume":"Amounts to heating {litres} L of the tank's {tank} L","rate.far_below":": {percent}% below physics. Check the tank's volume, the element's power and where the probe is.","rate.far_above":": {percent}% above physics. Check the tank's volume, the element's power and where the probe is.","rate.suggested_learned":"Suggested: {rate} (learned)","rate.suggested_physics":"Suggested: {rate} (tank physics)","rate.suggested_default":"Suggested: {rate} (starting value)","rate.use":"Use","rate.down":"0.1 min per \xB0C less","rate.up":"0.1 min per \xB0C more","rate.recalculate":"Recalculate from history","rate.recalculating":"Looking through the last week\u2026","rate.found":"Found {count} clean heats in history; learned {rate} min/\xB0C.","rate.found_too_few":"Found {count} clean heats in history; {needed} are needed to learn.","solar.title":"Solar comparison","solar.none":"No windows recorded in the last 30 days yet.","solar.would":"With the solar-aware rule on, the water would have been ready on time in {on_time} of {windows} windows","solar.did":"With the solar-aware rule, the water was ready on time in {on_time} of {windows} windows","solar.would_less":", and the heater would have run {minutes} minutes less","solar.would_more":", and the heater would have run {minutes} minutes more","solar.did_less":", and the heater ran {minutes} minutes less","solar.did_more":", and the heater ran {minutes} minutes more","solar.kwh":", about {kwh} kWh","solar.applied":" The rule was applied in {applied} of them: on time in {on_time}.","subline.starts_at":"Starts heating around {when}.","subline.starts_at_solar":"Starts heating around {when}, if the sun has not done it by then.","subline.asked_by_one":"Asked for by {name}. They are told when it is ready.","subline.asked_by_many":"Asked for by {names}. Each is told when it is ready.","names.and":" and ","today.you":"You","list.mine":"My ready times","list.count_one":"1 ready time","list.count":"{count} ready times","list.virtual":"Virtual member \xB7 shared household times","away.paused":"Paused. The times are kept.","settings.no_people":"There are no people in Home Assistant to choose from yet."},un={"status.waiting":"Em espera","status.heating":"A aquecer","status.ready":"Pronta","status.fault":"Avaria","status.manual":"Manual","headline.heating_for":"A aquecer: pronta em cerca de {minutes} min","headline.ready_at":"Pronta \xE0s {when}","subline.next_at":"Pr\xF3xima \xE0s {when}","when.today":"{time}","when.tomorrow":"{time} de amanh\xE3","when.weekday":"{time} de {weekday}","ring.target":"alvo {target}\xB0","weekday.letters":"S,T,Q,Q,S,S,D","members.none":"Ainda n\xE3o h\xE1 membros. Um administrador acrescenta-os nas defini\xE7\xF5es da integra\xE7\xE3o.","list.empty":"Ainda n\xE3o h\xE1 hor\xE1rios.","list.add":"Acrescentar um hor\xE1rio","sheet.delete":"Apagar","list.switch":"Ligar ou desligar","sheet.title":"Novo hor\xE1rio","sheet.edit_title":"Alterar hor\xE1rio","list.edit":"Alterar este hor\xE1rio","sheet.time":"Hora","sheet.hour":"Horas","sheet.minute":"Minutos","sheet.days":"Dias","sheet.save":"Guardar","sheet.cancel":"Cancelar","clock.title":"Escolher a hora","clock.title_keys":"Escrever a hora","clock.ok":"OK","clock.to_keys":"Escrever a hora","clock.to_dial":"Usar o rel\xF3gio","clock.am":"AM","clock.pm":"PM","clock.invalid":"Escreva uma hora v\xE1lida","clock.change":"Alterar a hora","fault.sensor_unavailable":"Avaria: o sensor da temperatura da \xE1gua n\xE3o d\xE1 leituras. O aquecimento parou.","fault.not_rising":"Avaria: a \xE1gua n\xE3o aquece. O aquecimento parou; veja as Repara\xE7\xF5es.","fault.no_consumption":"Avaria: o aquecedor n\xE3o consome energia. O aquecimento parou; veja as Repara\xE7\xF5es.","fault.relay_stuck":"Avaria: o aquecedor consome energia com o rel\xE9 desligado. Verifique o rel\xE9.","element.on":"Resist\xEAncia ligada","element.off":"Resist\xEAncia desligada","element.drawing":"{state} \xB7 a consumir {watts} W","keep_hot.until":"A manter a \xE1gua quente at\xE9 \xE0s {time}","keep_hot.title":"Manter quente depois de pronta","keep_hot.hint":"Depois do aviso de pronta, o aquecedor mant\xE9m a \xE1gua quente durante este tempo e depois desliga.","keep_hot.more":"Escolher quanto tempo manter quente","keep_hot.cancel":"Cancelar","keep_hot.minutes":"{n} min","keep_hot.hours":"{n} h",manual:"O controlo autom\xE1tico est\xE1 desligado: o aquecedor est\xE1 a ser comandado manualmente.","note.not_rising_skipped":'O term\xF3stato n\xE3o indica quando est\xE1 a aquecer, por isso as verifica\xE7\xF5es "a \xE1gua n\xE3o aquece" e "o aquecedor n\xE3o consome energia" n\xE3o s\xE3o feitas.',"heat_now.start":"Aquecer agora","heat_now.cancel":"Cancelar","heat_now.join":"Avisar-me quando estiver quente","heat_now.leave":"N\xE3o me avisar","subline.for":"Para {list}.","item.at":"{name} \xE0s {time}","switch_off.link":"Desligar o aquecimento\u2026","switch_off.title":"Desligar o aquecimento?","switch_off.confirm":"Desligar","switch_off.keep":"Cancelar","switch_off.asked_one":"{names} j\xE1 n\xE3o recebe o aviso.","switch_off.asked_many":"{names} j\xE1 n\xE3o recebem o aviso.","switch_off.skipped_one":"Fica sem \xE1gua quente: {list}.","switch_off.skipped_many":"Ficam sem \xE1gua quente: {list}.","switch_off.back":"Volta a ligar-se por si para o pr\xF3ximo hor\xE1rio.","switch_off.nobody":"O aquecimento p\xE1ra agora.","settings.switch_off":"Quem pode desligar o aquecimento para todos","settings.switch_off_hint":"Os administradores e:","settings.own_cancel":"Quem pediu pode sempre cancelar o seu pr\xF3prio pedido.",greeting:"Ol\xE1, {name}","today.label":"Casa hoje","today.nobody":"Ningu\xE9m hoje","away.until_label":"At\xE9 (opcional)","away.line":"Ausente","away.line_until":"Ausente at\xE9 {date}","members.add":"Membro","card.no_heater":"Ainda n\xE3o h\xE1 nenhum aquecedor do Hot Water Ready configurado.","card.loading":"A carregar\u2026","card.error":"N\xE3o foi poss\xEDvel: {message}","cluster.warning":"Os duches a partir das {when} precisam da \xE1gua a {needed} \xB0C, mas o aquecedor s\xF3 aquece at\xE9 {cap} \xB0C: os \xFAltimos podem sair menos quentes.","tabs.people":"Pessoas","tabs.week":"Semana","week.days":"Seg,Ter,Qua,Qui,Sex,S\xE1b,Dom","week.showers":"duches","week.windows":"janelas de aquecimento","week.busiest":"dia mais cheio","week.heating":"Aquecimento","week.away":"ausente","week.virtual":"virtual \xB7 {count}","week.per_week":"{count} por semana","week.hint":"Toque numa pessoa para destacar os seus hor\xE1rios. As barras mostram quando o aquecedor pode aquecer em cada dia ({start} a {end}).","settings.open":"Defini\xE7\xF5es do aquecedor","settings.close":"Fechar","settings.target":"Temperatura alvo","settings.target_hint":"Avisa quando chega aqui","settings.target_down":"Baixar o alvo","settings.target_up":"Subir o alvo","settings.margin":"Margem","settings.band":"P\xE1ra a {stop} \xB0C, retoma a {restart} \xB0C","settings.margin_down":"Baixar a margem","settings.margin_up":"Subir a margem","settings.automatic":"Controlo autom\xE1tico","settings.automatic_hint":"Desligado: o aquecedor fica em modo manual","settings.more":"Mais defini\xE7\xF5es","rate.title":"Velocidade de aquecimento","rate.unit":"min por \xB0C","rate.automatic":"Autom\xE1tico","rate.fixed":"Fixo","rate.learned":"Aprendido: mediana das {count} aquecidas limpas dos \xFAltimos {days} dias","rate.default_one":"Valor inicial: falta 1 aquecida limpa nos \xFAltimos {days} dias para aprender","rate.default_many":"Valor inicial: faltam {count} aquecidas limpas nos \xFAltimos {days} dias para aprender","rate.manual":"Fixo \xE0 m\xE3o: a aprendizagem continua, mas n\xE3o \xE9 usada","rate.runs":"Aquecidas limpas usadas","rate.example":"Agora {from} \xB0C \u2192 {to} \xB0C: {degrees} \xB0C \xD7 {rate} = {minutes} min, mais {margin} min de margem: come\xE7a {lead} min antes","rate.example_cap":" (o m\xE1ximo)","rate.example_warm":"Agora {from} \xB0C: j\xE1 est\xE1 no alvo, n\xE3o precisa de come\xE7ar antes","rate.physics":"Pela f\xEDsica, o tanque inteiro aquecido pela resist\xEAncia: {rate} min/\xB0C","rate.volume":"Equivale a aquecer {litres} L dos {tank} L do tanque","rate.far_below":": {percent}% abaixo da f\xEDsica. Confirme o volume do tanque, a pot\xEAncia da resist\xEAncia e onde est\xE1 a sonda.","rate.far_above":": {percent}% acima da f\xEDsica. Confirme o volume do tanque, a pot\xEAncia da resist\xEAncia e onde est\xE1 a sonda.","rate.suggested_learned":"Sugerido: {rate} (aprendido)","rate.suggested_physics":"Sugerido: {rate} (pela f\xEDsica do tanque)","rate.suggested_default":"Sugerido: {rate} (valor inicial)","rate.use":"Usar","rate.down":"Menos 0,1 min por \xB0C","rate.up":"Mais 0,1 min por \xB0C","rate.recalculate":"Recalcular a partir do hist\xF3rico","rate.recalculating":"A rever a \xFAltima semana\u2026","rate.found":"Encontradas {count} aquecidas limpas no hist\xF3rico; aprendido {rate} min/\xB0C.","rate.found_too_few":"Encontradas {count} aquecidas limpas no hist\xF3rico; s\xE3o precisas {needed} para aprender.","solar.title":"Compara\xE7\xE3o solar","solar.none":"Ainda n\xE3o h\xE1 janelas registadas nos \xFAltimos 30 dias.","solar.would":"Com a regra solar ligada, a \xE1gua teria ficado pronta a tempo em {on_time} de {windows} janelas","solar.did":"Com a regra solar, a \xE1gua ficou pronta a tempo em {on_time} de {windows} janelas","solar.would_less":", e o aquecedor teria trabalhado menos {minutes} minutos","solar.would_more":", e o aquecedor teria trabalhado mais {minutes} minutos","solar.did_less":", e o aquecedor trabalhou menos {minutes} minutos","solar.did_more":", e o aquecedor trabalhou mais {minutes} minutos","solar.kwh":", cerca de {kwh} kWh","solar.applied":" A regra foi aplicada em {applied} delas: a tempo em {on_time}.","subline.starts_at":"Come\xE7a a aquecer por volta das {when}.","subline.starts_at_solar":"Come\xE7a a aquecer por volta das {when}, se o sol n\xE3o chegar.","subline.asked_by_one":"Pedido por {name}. Recebe um aviso quando estiver pronta.","subline.asked_by_many":"Pedido por {names}. Cada um \xE9 avisado quando estiver pronta.","names.and":" e ","today.you":"Voc\xEA","list.mine":"Os meus hor\xE1rios","list.count_one":"1 hor\xE1rio","list.count":"{count} hor\xE1rios","list.virtual":"Membro virtual \xB7 hor\xE1rios partilhados da casa","away.paused":"Em pausa. Os hor\xE1rios ficam guardados.","settings.no_people":"Ainda n\xE3o h\xE1 pessoas no Home Assistant para escolher."},pn={en:cn,pt:un};function se(a){return a?.toLowerCase().startsWith("pt")?"pt":"en"}function b(a){return se(a)==="pt"?"pt-PT":"en-GB"}function oe(a){return o(a,"weekday.letters").split(",")}function o(a,t,e={}){return pn[se(a)][t].replace(/\{(\w+)\}/g,(i,r)=>String(e[r]??i))}function $e(a){return a.callWS({type:"hot_water_ready/heaters"})}var le=class{constructor(t,e){this.onSnapshot=t;this.onMissing=e;this.generation=0}async follow(t,e){let n=this.generation,i=e;if(i===void 0){if(this.defaultEntryId??=$e(t).then(s=>s[0]?.entry_id),i=await this.defaultEntryId,n!==this.generation)return;if(i===void 0){this.defaultEntryId=void 0,this.onMissing();return}}if(i===this.entryId)return;this.stop();let r=this.generation;this.entryId=i,this.stopSubscription=t.connection.subscribeMessage(s=>{r===this.generation&&this.onSnapshot(s)},{type:"hot_water_ready/subscribe",entry_id:i}),this.stopSubscription.catch(()=>{r===this.generation&&(this.entryId=void 0,this.onMissing())})}stop(){this.generation++;let t=this.stopSubscription;this.stopSubscription=void 0,this.entryId=void 0,t?.then(e=>e()).catch(()=>{})}};function ot(a,t){if(a==="24")return!0;if(a==="12")return!1;let e=a==="system"?void 0:t;return!new Intl.DateTimeFormat(e,{hour:"numeric"}).format(new Date(2023,0,1,22)).includes("10")}function lt(a,t,e,n){return n?`${String(a).padStart(2,"0")}:${String(t).padStart(2,"0")}`:new Intl.DateTimeFormat(b(e),{timeZone:"UTC",hour:"numeric",minute:"2-digit",hourCycle:"h12"}).format(Date.UTC(2e3,0,1,a,t))}function ue(a,t,e=!0){let[n=0,i=0]=a.split(":").map(Number);return lt(n,i,t,e)}function ke(a,t,e=!0){return e?`${String(a).padStart(2,"0")}h`:new Intl.DateTimeFormat(b(t),{timeZone:"UTC",hour:"numeric",hourCycle:"h12"}).format(Date.UTC(2e3,0,1,a%24))}function dt(a,t=!0){return o(a,"week.hint",{start:ke(I/60,a,t),end:ke(F/60,a,t)})}function f(a,t,e){return new Intl.NumberFormat(b(t),{maximumFractionDigits:e}).format(a)}function B(a,t){return new Intl.DateTimeFormat("en-CA",{timeZone:t,year:"numeric",month:"2-digit",day:"2-digit"}).format(a)}function ct(a){let t=new Date(`${a}T12:00:00Z`);return t.setUTCDate(t.getUTCDate()+1),t.toISOString().slice(0,10)}function ce(a,t){let{language:e,timeZone:n,now:i}=t,r=new Date(a),s=Z(a,t),c=B(i,n);if(B(r,n)===c)return o(e,"when.today",{time:s});if(B(r,n)===ct(c))return o(e,"when.tomorrow",{time:s});let l=new Intl.DateTimeFormat(b(e),{timeZone:n,weekday:"long"}).format(r);return o(e,"when.weekday",{time:s,weekday:l})}function hn(a,t){let{language:e}=t;return a.status==="heating"&&a.ready_in_minutes!==null?o(e,"headline.heating_for",{minutes:a.ready_in_minutes}):a.status==="waiting"&&a.next_ready?o(e,"headline.ready_at",{when:ce(a.next_ready.at,t)}):o(e,`status.${a.status}`)}function ut(a){return new Map(a.members.map(t=>[t.id,t]))}function Ce(a,t,e){let n=ut(a);return t.map(i=>n.get(i)?.name??e.people?.[i]??i)}function pt(a){let t={};for(let[e,n]of Object.entries(a??{}))e.startsWith("person.")&&(t[e]=n.attributes.friendly_name??e);return t}function Te(a,t){return a.length<2?a.join(""):`${a.slice(0,-1).join(", ")}${o(t,"names.and")}${a.at(-1)??""}`}function ht(a,t,e){let n=t.map(i=>o(e.language,"item.at",{name:Ce(a,[i.member],e)[0]??"",time:Z(i.at,e)}));return Te(n,e.language)}function mn(a,t){let{language:e}=t,n=a.heat_now?.requesters??[];if(a.status==="heating"&&n.length>0){let i=Ce(a,n,t);return i.length===1?o(e,"subline.asked_by_one",{name:i[0]??""}):o(e,"subline.asked_by_many",{names:Te(i,e)})}if(a.status==="heating"&&a.heating_for.length>0)return o(e,"subline.for",{list:ht(a,a.heating_for,t)});if(a.status==="waiting"&&a.next_heat_start){let i=a.solar_aware?"subline.starts_at_solar":"subline.starts_at";return o(e,i,{when:ce(a.next_heat_start,t)})}return a.status==="ready"&&a.next_ready?o(e,"subline.next_at",{when:ce(a.next_ready.at,t)}):""}function gn(a,t){if(a.element_on===null)return"";let e=o(t,a.element_on?"element.on":"element.off");return a.power_w===null?e:o(t,"element.drawing",{state:e,watts:f(a.power_w,t,0)})}function mt(a,t){let{language:e}=t,{temperature:n,target:i}=a;return{temperature:n===null?"\u2013":`${f(n,e,1)}\xB0`,target:o(e,"ring.target",{target:f(i,e,1)}),badge:o(e,`status.${a.status}`).toLocaleUpperCase(b(e)),headline:hn(a,t),subline:mn(a,t),element:gn(a,e),keepHot:yn(a,t),fill:n===null||i<=0?0:Math.min(1,Math.max(0,n/i)),tone:a.status}}function fn(a,t){let e=t??a.me;return a.members.find(n=>n.id===e)??a.members[0]}function gt(a){let t=K(a);return t==="admin"?!0:t==="viewer"&&a.members.length>1}function ft(a,t){return fn(a,K(a)==="member"?void 0:t)}function _t(a){return B(a.now,a.timeZone)}function wt(){return{time:"07:00",weekdays:[0,1,2,3,4]}}function bt(a,t){let e=a.ready_times.find(n=>n.id===t);return e&&{id:e.id,time:e.time,weekdays:[...e.weekdays].sort()}}function Ee(a){return a.time!==""&&a.weekdays.length>0}var v=256,O=104,He=68;function y(a){return String(a).padStart(2,"0")}function Me(a,t){return t?y(a):String(a%12||12)}function Se(a,t){return{hourText:Me(a.hour,t),minuteText:y(a.minute)}}function Re(a,t,e=!0){let[n=7,i=0]=a.split(":").map(Number);return{hour:n,minute:i,part:"hour",mode:"dial",...Se({hour:n,minute:i},e),fresh:t}}function j(a,t){let e=a*Math.PI/6;return{x:v/2+t*Math.sin(e),y:v/2-t*Math.cos(e)}}function yt(a,t=!0){let e=Array.from({length:12},(n,i)=>i);return a==="minute"?e.map(n=>({value:n*5,label:y(n*5),...j(n,O)})):t?[...e.map(n=>({value:n,label:String(n),...j(n,O)})),...e.map(n=>({value:n+12,label:String(n+12),...j(n,He)}))]:e.map(n=>({value:n,label:String(n||12),...j(n,O)}))}function vt(a,t,e=!0){return a.part==="minute"?a.minute===t.value:(e?a.hour:a.hour%12)===t.value}function xt(a,t=!0){if(a.part==="minute"){let e=a.minute*Math.PI/30;return{x:v/2+O*Math.sin(e),y:v/2-O*Math.cos(e)}}return j(a.hour%12,t&&a.hour>=12?He:O)}function $t(a,t,e,n=!0){let i=t-v/2,r=e-v/2,s=(Math.atan2(i,-r)/(2*Math.PI)+1)%1;if(a.part==="minute"){let h=Math.round(s*60)%60;return{...a,minute:h,minuteText:y(h)}}let c=Math.round(s*12)%12,l=n?Math.hypot(i,r)<(O+He)/2:a.hour>=12,p=c+(l?12:0);return{...a,hour:p,hourText:Me(p,n)}}function kt(a,t,e=!0){if(a.part==="minute"){let i=(a.minute+t+60)%60;return{...a,minute:i,minuteText:y(i)}}let n=(a.hour+t+24)%24;return{...a,hour:n,hourText:Me(n,e)}}function St(a,t){return{...a,hour:a.hour%12+(t?12:0)}}function At(a,t=!0){if(!/^\d{1,2}$/.test(a.hourText)||!/^\d{1,2}$/.test(a.minuteText))return;let e=Number(a.hourText),n=Number(a.minuteText);if(!(n>59)){if(t)return e>23?void 0:`${y(e)}:${y(n)}`;if(!(e<1||e>12))return`${y(e%12+(a.hour>=12?12:0))}:${y(n)}`}}function Oe(a,t=!0){return a.mode==="keys"?At(a,t):`${y(a.hour)}:${y(a.minute)}`}function Ct(a,t=!0){if(a.mode==="dial")return{...a,mode:"keys",...Se(a,t)};let[e=a.hour,n=a.minute]=At(a,t)?.split(":").map(Number)??[];return{...a,mode:"dial",part:"hour",hour:e,minute:n,...Se({hour:e,minute:n},t)}}function Tt(a,t,e=!0){let n=oe(t);return[...a.ready_times].sort((i,r)=>i.time.localeCompare(r.time)||i.id.localeCompare(r.id)).map(i=>({id:i.id,time:ue(i.time,t,e),enabled:i.enabled,days:n.map((r,s)=>({letter:r,on:i.weekdays.includes(s)}))}))}function K(a){return a.is_admin?"admin":a.me?"member":"viewer"}function Et(a,t){return a.members.map(e=>({id:e.id,name:e.name,initial:e.name.slice(0,1).toLocaleUpperCase(),colour:e.colour,star:e.virtual,faded:e.away.on,selected:e.id===t}))}function Ht(a,t){let e=a.members.find(n=>n.id===a.me);return e?o(t,"greeting",{name:e.name}):""}function Z(a,t){let{minutes:e}=Ae(a,t.timeZone);return lt(Math.floor(e/60),e%60,t.language,t.hour24??!0)}function Mt(a,t,e){let n=ut(a);return a.today.map(i=>{let r=i.member===e,s=n.get(i.member);return{name:r?o(t.language,"today.you"):s?.name??"?",time:Z(i.at,t),colour:s?.colour??"",mine:r}})}function Rt(a,t){let e=a.ready_times.length,n=o(t,"list.count",{count:e});return a.virtual?n=o(t,"list.virtual"):e===1&&(n=o(t,"list.count_one")),{name:a.name,note:n}}function _n(a,t){let e=new Date(`${a}T12:00:00Z`),n=b(t),i=new Intl.DateTimeFormat(n,{timeZone:"UTC",day:"numeric"}).format(e),r=new Intl.DateTimeFormat(n,{timeZone:"UTC",month:"long"}).format(e);return se(t)==="pt"?`${i} de ${r.slice(0,1).toLocaleUpperCase("pt-PT")}${r.slice(1)}`:`${i} ${r}`}function Ot(a,t){return a.away.on?a.away.until?o(t.language,"away.line_until",{date:_n(a.away.until,t.language)}):o(t.language,"away.line"):""}var Dt="hot_water_ready/heat_now/start",wn="hot_water_ready/heat_now/cancel";function Pt(a){let t=a.can_ask_heat_now&&!a.heat_now_blocked&&a.automatic,e=a.heat_now;if(e?.asked){let i=e.requesters.length===1&&!e.unnamed;return[{message:{type:wn},label:i?"heat_now.cancel":"heat_now.leave"}]}if(!t)return[];if(e===null&&a.heating_for.some(i=>i.member===a.me))return[];let n=a.status==="heating"||e!==null;return[{message:{type:Dt},label:n?"heat_now.join":"heat_now.start"}]}function It(a){return a.message.type===Dt}var Nt=500,bn=[5,15,30,60,120];function Lt(a,t){let e=a.keep_hot_minutes;return[...new Set([...bn,e])].sort((i,r)=>i-r).map(i=>({minutes:i,label:i>=60&&i%60===0?o(t,"keep_hot.hours",{n:f(i/60,t,0)}):o(t,"keep_hot.minutes",{n:f(i,t,0)}),isDefault:i===e}))}function yn(a,t){let e=a.heat_now?.keep_until;return e?o(t.language,"keep_hot.until",{time:Z(e,t)}):""}var qt="hot_water_ready/switch_off";function zt(a){let t=(a.heat_now?.requesters.length??0)>0||!!a.heat_now?.unnamed;return a.can_switch_off&&(a.status==="heating"||t)}function Vt(a,t){let{language:e}=t,n=(a.heat_now?.requesters??[]).filter(s=>s!==a.viewer),i=a.heating_for.filter(s=>s.member!==a.viewer),r=[];if(n.length>0){let s=Te(Ce(a,n,t),e);r.push(o(e,n.length===1?"switch_off.asked_one":"switch_off.asked_many",{names:s}))}if(i.length>0){let s=ht(a,i,t);r.push(o(e,i.length===1?"switch_off.skipped_one":"switch_off.skipped_many",{list:s}))}return r.length===0&&r.push(o(e,"switch_off.nobody")),a.heating_for.length>0&&r.push(o(e,"switch_off.back")),{title:o(e,"switch_off.title"),lines:r}}function Ut(a,t){return a.faults.map(e=>o(t,`fault.${e}`))}var De="hot_water_ready/settings/set",vn={min:30,max:75,step:.5},xn={min:0,max:5,step:.5};function st(a,t,e){let n=Math.ceil(a/t.step-1e-9)*t.step-t.step,i=Math.floor(a/t.step+1e-9)*t.step+t.step;return{shown:f(a,e,1),down:n>=t.min-1e-9?n:null,up:i<=t.max+1e-9?i:null}}function Wt(a,t){let{language:e}=t,n=a.settings;if(!(!a.is_admin||!n))return{target:st(a.target,vn,e),margin:st(a.margin,xn,e),band:o(e,"settings.band",{stop:f(a.target+a.margin,e,1),restart:f(a.target-a.margin,e,1)}),automatic:a.automatic,people:Object.entries(t.people??{}).map(([i,r])=>({id:i,name:r,on:n.switch_off_people.includes(i)})).sort((i,r)=>i.name.localeCompare(r.name)),solar:En(n,e),notes:a.not_rising_checked?[]:[o(e,"note.not_rising_skipped")]}}var de={min:.5,max:60,step:.1},jt="hot_water_ready/rate/recalculate",Bt=1e3,$n=.25,P=a=>Math.round(a*10)/10;function kn(a,t){let e=new Date(a),{language:n,timeZone:i}=t,r=new Intl.DateTimeFormat(b(n),{timeZone:i,day:"numeric"}).format(e),s=new Intl.DateTimeFormat(b(n),{timeZone:i,month:"short"}).format(e).replace(".","");return`${r} ${s.slice(0,1).toLocaleUpperCase()}${s.slice(1)}, ${Z(a,t)}`}function Sn(a,t){if(a.source==="manual")return o(t,"rate.manual");if(a.source==="learned")return o(t,"rate.learned",{count:a.runs.length,days:a.window_days});let e=Math.max(1,a.min_runs-a.runs.length);return o(t,e===1?"rate.default_one":"rate.default_many",{count:e,days:a.window_days})}function An(a,t,e){let n=a.temperature;if(n===null)return null;let i=f(n,e,1),r=a.target-n;if(r<=0)return o(e,"rate.example_warm",{from:i});let s=r*t.used,c=s+t.lead_margin_minutes,l=Math.min(t.lead_cap_minutes,c);return o(e,"rate.example",{from:i,to:f(a.target,e,1),degrees:f(r,e,1),rate:f(t.used,e,1),minutes:Math.round(s),margin:t.lead_margin_minutes,lead:Math.round(l)})+(c>t.lead_cap_minutes?o(e,"rate.example_cap"):"")}function Cn(a,t){if(a.physics===null||a.tank_litres===null)return null;let e=a.used/a.physics,n=o(t,"rate.volume",{litres:Math.round(a.tank_litres*e),tank:f(a.tank_litres,t,0)}),i=Math.abs(e-1)>$n;return i&&(n+=o(t,e<1?"rate.far_below":"rate.far_above",{percent:Math.round(Math.abs(e-1)*100)})),{line:n,warn:i}}function Tn(a,t){if(a.source!=="manual")return null;let[e,n]=a.learned!==null?[a.learned,"rate.suggested_learned"]:a.physics!==null?[a.physics,"rate.suggested_physics"]:[a.default,"rate.suggested_default"],i=P(e);return a.manual!==null&&P(a.manual)===i?null:{value:i,line:o(t,n,{rate:f(i,t,1)})}}function Pe(a,t){let e=P(a),n=P(e-de.step),i=P(e+de.step);return{shown:f(e,t,1),down:n>=de.min?n:null,up:i<=de.max?i:null}}function Ft(a,t){let{language:e}=t,n=a.settings?.rate;if(!(!a.is_admin||!n))return{shown:f(n.used,e,1),used:P(n.used),fixed:n.source==="manual",source:Sn(n,e),runs:[...n.runs].sort((i,r)=>Date.parse(r.at)-Date.parse(i.at)).map(i=>({when:kn(i.at,t),rate:f(i.rate,e,1)})),example:An(a,n,e),physics:n.physics===null?null:o(e,"rate.physics",{rate:f(n.physics,e,1)}),check:Cn(n,e),stepper:Pe(n.used,e),suggestion:Tn(n,e)}}function Kt(a,t,e){return a.filter(n=>n.id===t?e:n.on).map(n=>n.id)}function En(a,t){let{windows:e,on_time:n,minutes_saved:i,kwh:r}=a.solar;if(e===0)return o(t,"solar.none");let s=a.solar_aware?"did":"would",c=o(t,`solar.${s}`,{on_time:n,windows:e});i!==0&&(c+=o(t,`solar.${s}_${i>0?"less":"more"}`,{minutes:Math.abs(i)}),r!==null&&(c+=o(t,"solar.kwh",{kwh:f(Math.abs(r),t,1)}))),c+=".";let{solar_windows:l,solar_on_time:p}=a.solar;return l>0&&(c+=o(t,"solar.applied",{applied:l,on_time:p})),c}var I=300,F=1440;function Ae(a,t){let e=new Date(a),n=new Intl.DateTimeFormat("en-GB",{timeZone:t,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(e).reduce((i,r)=>({...i,[r.type]:r.value}),{});return{day:B(e,t),minutes:Number(n.hour)*60+Number(n.minute)}}function Zt(a,t){let e=a.week;if(!a.is_admin||!e)return;let n=o(t.language,"week.days").split(","),i=n.map((l,p)=>Hn(e.monday,p)),r=a.members.map(l=>Rn(l,i,t.language,t.hour24??!0)),s=i.map((l,p)=>r.reduce((h,m)=>{let _=m.cells[p];return _&&!_.away?h+_.times.length:h},0)),c=Math.max(0,...s);return{days:i.map((l,p)=>({key:l,label:n[p]??l,today:l===e.today,bars:On(l,e.windows,t.timeZone)})),hours:[6,12,18,24].map(l=>({label:ke(l,t.language,t.hour24??!0),at:(l*60-I)/(F-I)})),rows:r,showers:s.reduce((l,p)=>l+p,0),windows:e.windows.length,busiest:c>0?n[s.indexOf(c)]??"":""}}function Hn(a,t){let e=a;for(let n=0;n<t;n+=1)e=ct(e);return e}function Mn(a,t){return a.away.on&&(a.away.until===null||t<=a.away.until)}function Rn(a,t,e,n){let i=a.ready_times.filter(p=>p.enabled),r=t.map((p,h)=>({times:i.filter(m=>m.weekdays.includes(h)).map(m=>m.time).sort().map(m=>ue(m,e,n)),away:Mn(a,p)})),s=r.every(p=>p.away),c=r.reduce((p,h)=>p+h.times.length,0),l=o(e,"week.per_week",{count:c});return s?l=o(e,"week.away"):a.virtual&&(l=o(e,"week.virtual",{count:c})),{id:a.id,name:a.name,colour:a.colour,initial:a.virtual?"\u2605":a.name[0]??"?",away:s,note:l,cells:r}}function On(a,t,e){let n=F-I,i=[];for(let r of t){let s=Ae(r.start,e),c=Ae(r.end,e);if(s.day>a||c.day<a)continue;let l=Math.max(I,s.day<a?0:s.minutes),p=Math.min(F,c.day>a?F:c.minutes);p>l&&i.push({from:(l-I)/n,length:(p-l)/n})}return i}function Gt(a,t){let e=a.cluster_warning;return e?o(t.language,"cluster.warning",{when:ce(e.at,t),needed:f(e.needed,t.language,0),cap:f(e.cap,t.language,1)}):""}var Dn=W`<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M20 5H4c-1.1 0-1.99.9-1.99 2L2 17c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg>`,Pn=W`<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>`,G="hot-water-ready-card",Ie=38,Yt=2*Math.PI*Ie,Ne=class extends S{constructor(){super(...arguments);this._missing=!1;this._settingsOpen=!1;this._offOpen=!1;this._holding=!1;this._held=!1;this._tab="people";this._error="";this._recalc={busy:!1,line:""};this._subscription=new le(e=>{this._heater=e,this._missing=!1,e.settings?.rate.manual===this._rateDraft&&(this._rateDraft=void 0)},()=>{this._missing=!0});this._holdEnd=()=>{window.clearTimeout(this._holdTimer),this._holding=!1}}static{this.properties={hass:{attribute:!1},_config:{state:!0},_heater:{state:!0},_missing:{state:!0},_selected:{state:!0},_sheet:{state:!0},_clock:{state:!0},_settingsOpen:{state:!0},_offOpen:{state:!0},_keep:{state:!0},_holding:{state:!0},_tab:{state:!0},_focus:{state:!0},_error:{state:!0},_rateDraft:{state:!0},_recalc:{state:!0}}}static async getStubConfig(e){let n=(await $e(e))[0];return n?{type:`custom:${G}`,entry_id:n.entry_id}:{type:`custom:${G}`}}setConfig(e){this._config=e}getCardSize(){return 6}get _language(){return this.hass?.locale?.language??this.hass?.language??"en"}get _hour24(){return ot(this.hass?.locale?.time_format,this._language)}get _context(){return{language:this._language,timeZone:this.hass?.config?.time_zone??Intl.DateTimeFormat().resolvedOptions().timeZone,now:new Date,people:pt(this.hass?.states),hour24:this._hour24}}connectedCallback(){super.connectedCallback(),this._follow()}disconnectedCallback(){super.disconnectedCallback(),this._subscription.stop()}updated(e){(e.has("hass")||e.has("_config"))&&this._follow(),e.has("_offOpen")&&this._offOpen&&this.renderRoot.querySelector(".off-keep")?.focus(),e.has("_keep")&&this._keep&&!e.get("_keep")&&this.renderRoot.querySelector(".keep-chip.on")?.focus()}_follow(){this.hass&&this._config&&this.isConnected&&this._subscription.follow(this.hass,this._config.entry_id)}async _call(e){if(!this.hass||!this._heater)return!1;this._error="";try{return await this.hass.callWS({entry_id:this._heater.entry_id,...e}),!0}catch(n){let i=(n instanceof Error,n.message);return this._error=o(this._language,"card.error",{message:i??String(n)}),!1}}async _save(e){let n=this._sheet;if(!n||!Ee(n))return;await this._call({...n.id?{type:"hot_water_ready/ready_time/update",ready_time_id:n.id}:{type:"hot_water_ready/ready_time/add"},member_id:e.id,time:n.time,weekdays:[...n.weekdays].sort()})&&(this._sheet=void 0)}async _remove(e,n){await this._call({type:"hot_water_ready/ready_time/remove",member_id:e.id,ready_time_id:n})&&(this._sheet=void 0)}render(){let e=this._language;if(this._missing)return d`<ha-card><div class="message">${o(e,"card.no_heater")}</div></ha-card>`;let n=this._heater;if(!n)return d`<ha-card><div class="message">${o(e,"card.loading")}</div></ha-card>`;let i=K(n),r=ft(n,this._selected),s=Zt(n,this._context);return d`
       <ha-card>
-        ${zt(n,e).map(c=>d`<div class="banner fault" role="alert">${c}</div>`)}
-        ${n.automatic?h:d`<div class="banner manual">${s(e,"manual")}</div>`}
-        ${n.cluster_warning?d`<div class="banner warning" role="alert">${Wt(n,this._context)}</div>`:h}
+        ${Ut(n,e).map(c=>d`<div class="banner fault" role="alert">${c}</div>`)}
+        ${n.automatic?u:d`<div class="banner manual">${o(e,"manual")}</div>`}
+        ${n.cluster_warning?d`<div class="banner warning" role="alert">${Gt(n,this._context)}</div>`:u}
         ${this._renderTop(n)}
         ${this._renderSettings(n)}
         ${this._renderTabs(n)}
-        ${o&&this._tab==="week"?this._renderWeek(o):d`
-              ${a==="member"?d`<div class="greeting">${At(n,e)}</div>`:this._renderAvatars(n,r)}
-              ${a==="member"&&r?this._renderToday(n,r):h}
-              ${r?d`<div class="panel">${this._renderListHead(r,a==="member")} ${this._renderList(r)}</div>
-                    ${this._sheet?this._renderSheet(r,this._sheet):h}
-                    ${this._sheet&&this._clock?this._renderClock(this._clock):h}`:d`<div class="message">${s(e,"members.none")}</div>`}
+        ${s&&this._tab==="week"?this._renderWeek(s):d`
+              ${i==="member"?d`<div class="greeting">${Ht(n,e)}</div>`:this._renderAvatars(n,r)}
+              ${i==="member"&&r?this._renderToday(n,r):u}
+              ${r?d`<div class="panel">${this._renderListHead(r,i==="member")} ${this._renderList(r)}</div>
+                    ${this._sheet?this._renderSheet(r,this._sheet):u}
+                    ${this._sheet&&this._clock?this._renderClock(this._clock):u}`:d`<div class="message">${o(e,"members.none")}</div>`}
             `}
-        ${this._error?d`<div class="error" role="alert">${this._error}</div>`:h}
-        ${this._offOpen?this._renderSwitchOff(n):h}
-        ${this._keep?this._renderKeepHot(n,this._keep):h}
+        ${this._error?d`<div class="error" role="alert">${this._error}</div>`:u}
+        ${this._offOpen?this._renderSwitchOff(n):u}
+        ${this._keep?this._renderKeepHot(n,this._keep):u}
       </ha-card>
-    `}_renderListHead(e,n){let a=this._language,r=Tt(e,a),o=Et(e,this._context),c=(l,p)=>this._call({type:"hot_water_ready/away/set",member_id:e.id,away:l,until:p});return d`
+    `}_renderListHead(e,n){let i=this._language,r=Rt(e,i),s=Ot(e,this._context),c=(l,p)=>this._call({type:"hot_water_ready/away/set",member_id:e.id,away:l,until:p});return d`
       <div class="list-head">
         <div class="list-title">
-          <span>${n?s(a,"list.mine"):r.name}</span>
-          ${n?h:d`<span class="hint">${r.note}</span>`}
+          <span>${n?o(i,"list.mine"):r.name}</span>
+          ${n?u:d`<span class="hint">${r.note}</span>`}
         </div>
         ${e.can_edit?d`<label class="away-toggle">
-              ${o||s(a,"away.line")}
+              ${s||o(i,"away.line")}
               <input
                 type="checkbox"
                 class="switch"
-                .checked=${M(e.away.on)}
+                .checked=${R(e.away.on)}
                 @change=${l=>{c(l.target.checked,null)}}
               />
-            </label>`:o?d`<span class="hint">${o}</span>`:h}
+            </label>`:s?d`<span class="hint">${s}</span>`:u}
       </div>
       ${e.away.on?d`<div class="paused">
-            <span>${s(a,"away.paused")}</span>
+            <span>${o(i,"away.paused")}</span>
             ${e.can_edit?d`<label class="until">
-                  ${s(a,"away.until_label")}
+                  ${o(i,"away.until_label")}
                   <input
                     type="date"
-                    min=${ut(this._context)}
-                    .value=${M(e.away.until??"")}
+                    min=${_t(this._context)}
+                    .value=${R(e.away.until??"")}
                     @change=${l=>{c(!0,l.target.value||null)}}
                   />
-                </label>`:h}
-          </div>`:h}
-    `}_renderToday(e,n){let a=this._language,r=Ct(e,this._context,n.id);return d`<div class="today">
-      <span class="today-label">${s(a,"today.label")}</span>
-      ${r.length===0?d`<span>${s(a,"today.nobody")}</span>`:r.map(o=>d`<span
-              class="chip ${o.mine?"mine":""}"
-              style=${o.mine?"":`--chip: var(--${o.colour}-color, var(--primary-color))`}
-              >${o.name} ${o.time}</span
+                </label>`:u}
+          </div>`:u}
+    `}_renderToday(e,n){let i=this._language,r=Mt(e,this._context,n.id);return d`<div class="today">
+      <span class="today-label">${o(i,"today.label")}</span>
+      ${r.length===0?d`<span>${o(i,"today.nobody")}</span>`:r.map(s=>d`<span
+              class="chip ${s.mine?"mine":""}"
+              style=${s.mine?"":`--chip: var(--${s.colour}-color, var(--primary-color))`}
+              >${s.name} ${s.time}</span
             >`)}
-    </div>`}_openIntegration(){history.pushState(null,"","/config/integrations/integration/hot_water_ready"),window.dispatchEvent(new CustomEvent("location-changed",{detail:{replace:!1}}))}_renderTop(e){let n=ct(e,this._context);return d`
+    </div>`}_openIntegration(){history.pushState(null,"","/config/integrations/integration/hot_water_ready"),window.dispatchEvent(new CustomEvent("location-changed",{detail:{replace:!1}}))}_renderTop(e){let n=mt(e,this._context);return d`
       <div class="top">
         <div class="gauge ${n.tone==="heating"?"glowing":""}">
           <span class="pulse"></span>
           <span class="orbit"></span>
           <svg class="ring" viewBox="0 0 92 92" role="img" aria-label="${n.temperature} ${n.target}">
-            <circle class="track" cx="46" cy="46" r=${Oe}></circle>
-            ${n.fill>0?q`<circle class="fill ${n.tone}" cx="46" cy="46" r=${Oe}
-                  stroke-dasharray="${n.fill*Bt} ${Bt}"
-                  transform="rotate(-90 46 46)"></circle>`:h}
+            <circle class="track" cx="46" cy="46" r=${Ie}></circle>
+            ${n.fill>0?W`<circle class="fill ${n.tone}" cx="46" cy="46" r=${Ie}
+                  stroke-dasharray="${n.fill*Yt} ${Yt}"
+                  transform="rotate(-90 46 46)"></circle>`:u}
             <text class="temperature" x="46" y="44">${n.temperature}</text>
             <text class="target" x="46" y="61">${n.target}</text>
           </svg>
@@ -74,216 +74,272 @@ var Z=globalThis,G=Z.ShadowRoot&&(Z.ShadyCSS===void 0||Z.ShadyCSS.nativeShadow)&
             <span class="badge ${n.tone}">${n.badge}</span>
             ${e.settings?d`<button
                   class="settings-button"
-                  aria-label=${s(this._language,"settings.open")}
+                  aria-label=${o(this._language,"settings.open")}
                   aria-expanded=${this._settingsOpen}
                   @click=${()=>this._settingsOpen=!this._settingsOpen}
                 >
                   ⚙
-                </button>`:h}
+                </button>`:u}
           </div>
           <div class="headline ${n.tone}">${n.headline}</div>
-          ${n.subline?d`<div class="subline">${n.subline}</div>`:h}
-          ${n.element?d`<div class="subline">${n.element}</div>`:h}
-          ${n.keepHot?d`<div class="subline">${n.keepHot}</div>`:h}
+          ${n.subline?d`<div class="subline">${n.subline}</div>`:u}
+          ${n.element?d`<div class="subline">${n.element}</div>`:u}
+          ${n.keepHot?d`<div class="subline">${n.keepHot}</div>`:u}
         </div>
         <div class="heat-now">
-          ${Nt(e)?d`<button class="switch-off-link" @click=${()=>this._offOpen=!0}>
-                ${s(this._language,"switch_off.link")}
-              </button>`:h}
-          ${Mt(e).map(a=>Ot(a)?d`<button
+          ${zt(e)?d`<button class="switch-off-link" @click=${()=>this._offOpen=!0}>
+                ${o(this._language,"switch_off.link")}
+              </button>`:u}
+          ${Pt(e).map(i=>It(i)?d`<button
                     class="keep-more"
-                    aria-label=${s(this._language,"keep_hot.more")}
-                    title=${s(this._language,"keep_hot.more")}
-                    @click=${()=>{this._openKeep(a)}}
+                    aria-label=${o(this._language,"keep_hot.more")}
+                    title=${o(this._language,"keep_hot.more")}
+                    @click=${()=>{this._openKeep(i)}}
                   >
                     ⋯
                   </button>
                   <button
                     class="primary holdable ${this._holding?"holding":""}"
-                    @pointerdown=${()=>{this._holdStart(a)}}
+                    @pointerdown=${()=>{this._holdStart(i)}}
                     @pointerup=${this._holdEnd}
                     @pointerleave=${this._holdEnd}
                     @pointercancel=${this._holdEnd}
                     @contextmenu=${r=>{r.preventDefault()}}
-                    @click=${()=>{if(this._held){this._held=!1;return}this._call(a.message)}}
+                    @click=${()=>{if(this._held){this._held=!1;return}this._call(i.message)}}
                   >
-                    ${s(this._language,a.label)}
+                    ${o(this._language,i.label)}
                   </button>`:d`<button
                   class="primary"
-                  @click=${()=>{this._call(a.message)}}
+                  @click=${()=>{this._call(i.message)}}
                 >
-                  ${s(this._language,a.label)}
+                  ${o(this._language,i.label)}
                 </button>`)}
         </div>
       </div>
-    `}_holdStart(e){this._held=!1,this._holding=!0,window.clearTimeout(this._holdTimer),this._holdTimer=window.setTimeout(()=>{this._holding=!1,this._held=!0,this._openKeep(e)},Pt)}_openKeep(e){this._heater&&(this._keep={action:e,minutes:this._heater.keep_hot_minutes})}_renderKeepHot(e,n){let a=this._language,r=()=>{this._keep=void 0,this._held=!1};return d`
+    `}_holdStart(e){this._held=!1,this._holding=!0,window.clearTimeout(this._holdTimer),this._holdTimer=window.setTimeout(()=>{this._holding=!1,this._held=!0,this._openKeep(e)},Nt)}_openKeep(e){this._heater&&(this._keep={action:e,minutes:this._heater.keep_hot_minutes})}_renderKeepHot(e,n){let i=this._language,r=()=>{this._keep=void 0,this._held=!1};return d`
       <div
         class="off-overlay"
-        @click=${o=>{o.target===o.currentTarget&&r()}}
+        @click=${s=>{s.target===s.currentTarget&&r()}}
       >
         <div
           class="off-sheet"
           role="dialog"
           aria-modal="true"
           aria-labelledby="keep-title"
-          @keydown=${o=>{o.key==="Escape"&&r()}}
+          @keydown=${s=>{s.key==="Escape"&&r()}}
         >
-          <div class="off-title" id="keep-title">${s(a,"keep_hot.title")}</div>
-          <p>${s(a,"keep_hot.hint")}</p>
+          <div class="off-title" id="keep-title">${o(i,"keep_hot.title")}</div>
+          <p>${o(i,"keep_hot.hint")}</p>
           <div class="keep-chips" role="radiogroup" aria-labelledby="keep-title">
-            ${Rt(e,a).map(o=>d`<button
-                class="keep-chip ${o.minutes===n.minutes?"on":""}"
+            ${Lt(e,i).map(s=>d`<button
+                class="keep-chip ${s.minutes===n.minutes?"on":""}"
                 role="radio"
-                aria-checked=${o.minutes===n.minutes}
-                @click=${()=>this._keep={...n,minutes:o.minutes}}
+                aria-checked=${s.minutes===n.minutes}
+                @click=${()=>this._keep={...n,minutes:s.minutes}}
               >
-                ${o.label}
+                ${s.label}
               </button>`)}
           </div>
           <button
             class="keep-start primary"
             @click=${async()=>{await this._call({...n.action.message,keep_minutes:n.minutes})&&r()}}
           >
-            ${s(a,n.action.label)}
+            ${o(i,n.action.label)}
           </button>
-          <button class="off-keep" @click=${r}>${s(a,"keep_hot.cancel")}</button>
+          <button class="off-keep" @click=${r}>${o(i,"keep_hot.cancel")}</button>
         </div>
       </div>
-    `}_renderSwitchOff(e){let n=this._language,a=It(e,this._context),r=()=>this._offOpen=!1;return d`
+    `}_renderSwitchOff(e){let n=this._language,i=Vt(e,this._context),r=()=>this._offOpen=!1;return d`
       <div class="off-overlay">
         <div
           class="off-sheet"
           role="dialog"
           aria-modal="true"
           aria-labelledby="off-title"
-          @keydown=${o=>{o.key==="Escape"&&r()}}
+          @keydown=${s=>{s.key==="Escape"&&r()}}
         >
-          <div class="off-title" id="off-title">${a.title}</div>
-          ${a.lines.map(o=>d`<p>${o}</p>`)}
+          <div class="off-title" id="off-title">${i.title}</div>
+          ${i.lines.map(s=>d`<p>${s}</p>`)}
           <button
             class="off-confirm"
-            @click=${async()=>{await this._call({type:Dt})&&r()}}
+            @click=${async()=>{await this._call({type:qt})&&r()}}
           >
-            ${s(n,"switch_off.confirm")}
+            ${o(n,"switch_off.confirm")}
           </button>
-          <button class="off-keep" @click=${r}>${s(n,"switch_off.keep")}</button>
+          <button class="off-keep" @click=${r}>${o(n,"switch_off.keep")}</button>
         </div>
       </div>
-    `}_renderTabs(e){if(!e.week)return h;let n=a=>d`<button
-      class="tab ${this._tab===a?"on":""}"
+    `}_renderTabs(e){if(!e.week)return u;let n=i=>d`<button
+      class="tab ${this._tab===i?"on":""}"
       role="tab"
-      aria-selected=${this._tab===a}
-      @click=${()=>this._tab=a}
+      aria-selected=${this._tab===i}
+      @click=${()=>this._tab=i}
     >
-      ${s(this._language,`tabs.${a}`)}
-    </button>`;return d`<div class="tabs" role="tablist">${n("people")}${n("week")}</div>`}_renderWeek(e){let n=this._language,a=this._focus;return d`
+      ${o(this._language,`tabs.${i}`)}
+    </button>`;return d`<div class="tabs" role="tablist">${n("people")}${n("week")}</div>`}_renderWeek(e){let n=this._language,i=this._focus;return d`
       <div class="week">
         <div class="totals">
-          <div><b>${e.showers}</b><span>${s(n,"week.showers")}</span></div>
-          <div><b>${e.windows}</b><span>${s(n,"week.windows")}</span></div>
-          <div><b>${e.busiest||"-"}</b><span>${s(n,"week.busiest")}</span></div>
+          <div><b>${e.showers}</b><span>${o(n,"week.showers")}</span></div>
+          <div><b>${e.windows}</b><span>${o(n,"week.windows")}</span></div>
+          <div><b>${e.busiest||"-"}</b><span>${o(n,"week.busiest")}</span></div>
         </div>
         <div class="grid">
           <span></span>
           ${e.days.map(r=>d`<span class="head ${r.today?"is-today":""}">${r.label}</span>`)}
           ${e.rows.map(r=>d`
               <button
-                class="who ${r.away?"away":""} ${a&&a!==r.id?"dim":""}"
-                aria-pressed=${a===r.id}
-                @click=${()=>this._focus=a===r.id?void 0:r.id}
+                class="who ${r.away?"away":""} ${i&&i!==r.id?"dim":""}"
+                aria-pressed=${i===r.id}
+                @click=${()=>this._focus=i===r.id?void 0:r.id}
               >
                 <span class="mini" style="background: var(--${r.colour}-color, var(--primary-color))"
                   >${r.initial}</span
                 >
                 <span class="who-text"><span>${r.name}</span><span class="hint">${r.note}</span></span>
               </button>
-              ${r.cells.map((o,c)=>d`<div
-                  class="cell ${e.days[c]?.today?"is-today":""} ${a&&a!==r.id?"dim":""}"
+              ${r.cells.map((s,c)=>d`<div
+                  class="cell ${e.days[c]?.today?"is-today":""} ${i&&i!==r.id?"dim":""}"
                 >
-                  ${o.times.map(l=>d`<span
-                      class="tag ${o.away?"away":""}"
-                      style=${o.away?"":`background: var(--${r.colour}-color, var(--primary-color))`}
+                  ${s.times.map(l=>d`<span
+                      class="tag ${s.away?"away":""}"
+                      style=${s.away?"":`background: var(--${r.colour}-color, var(--primary-color))`}
                       >${l}</span
                     >`)}
                 </div>`)}
             `)}
-          <span class="heating-label">${s(n,"week.heating")}</span>
+          <span class="heating-label">${o(n,"week.heating")}</span>
           <div class="hours">
             ${e.hours.map(r=>d`<span class="hint" style="top: ${(r.at*100).toFixed(1)}%">${r.label}</span>`)}
           </div>
           ${e.days.map(r=>d`<div class="bar ${r.today?"is-today":""}">
-              ${r.bars.map(o=>d`<span
+              ${r.bars.map(s=>d`<span
                     class="heat"
-                    style="top: ${(o.from*100).toFixed(1)}%; height: max(3px, ${(o.length*100).toFixed(1)}%)"
+                    style="top: ${(s.from*100).toFixed(1)}%; height: max(3px, ${(s.length*100).toFixed(1)}%)"
                   ></span>`)}
             </div>`)}
         </div>
-        <div class="hint">${rt(n,this._hour24)}</div>
+        <div class="hint">${dt(n,this._hour24)}</div>
       </div>
-    `}_renderSettings(e){let n=this._language,a=this._settingsOpen?Ut(e,this._context):void 0;if(!a)return h;let r=o=>this._call({type:Lt,...o});return d`
-      <div class="sheet settings" role="dialog" aria-label=${s(n,"settings.open")}>
+    `}_renderSettings(e){let n=this._language,i=this._settingsOpen?Wt(e,this._context):void 0;if(!i)return u;let r=s=>this._call({type:De,...s});return d`
+      <div class="sheet settings" role="dialog" aria-label=${o(n,"settings.open")}>
         <div class="sheet-head">
-          <div class="sheet-title">${s(n,"settings.open")}</div>
+          <div class="sheet-title">${o(n,"settings.open")}</div>
           <button class="secondary" @click=${()=>this._settingsOpen=!1}>
-            ${s(n,"settings.close")}
+            ${o(n,"settings.close")}
           </button>
         </div>
-        ${this._renderStepper(a.target,`${a.target.shown} \xB0C`,s(n,"settings.target"),s(n,"settings.target_hint"),["settings.target_down","settings.target_up"],o=>r({target:o}))}
-        ${this._renderStepper(a.margin,`\xB1 ${a.margin.shown}`,s(n,"settings.margin"),a.band,["settings.margin_down","settings.margin_up"],o=>r({margin:o}))}
+        ${this._renderStepper(i.target,`${i.target.shown} \xB0C`,o(n,"settings.target"),o(n,"settings.target_hint"),["settings.target_down","settings.target_up"],s=>r({target:s}))}
+        ${this._renderStepper(i.margin,`\xB1 ${i.margin.shown}`,o(n,"settings.margin"),i.band,["settings.margin_down","settings.margin_up"],s=>r({margin:s}))}
         <label class="setting">
           <span class="setting-text">
-            <span>${s(n,"settings.automatic")}</span>
-            <span class="hint">${s(n,"settings.automatic_hint")}</span>
+            <span>${o(n,"settings.automatic")}</span>
+            <span class="hint">${o(n,"settings.automatic_hint")}</span>
           </span>
           <input
             type="checkbox"
             class="switch"
-            .checked=${M(a.automatic)}
-            @change=${o=>r({automatic:o.target.checked})}
+            .checked=${R(i.automatic)}
+            @change=${s=>r({automatic:s.target.checked})}
           />
         </label>
         <div class="setting column">
-          <span>${s(n,"settings.switch_off")}</span>
-          <div class="people" role="group" aria-label=${s(n,"settings.switch_off")}>
-            <span class="hint">${s(n,"settings.switch_off_hint")}</span>
-            ${a.people.length===0?d`<span class="hint">${s(n,"settings.no_people")}</span>`:h}
-            ${a.people.map(o=>d`<label class="person">
+          <span>${o(n,"settings.switch_off")}</span>
+          <div class="people" role="group" aria-label=${o(n,"settings.switch_off")}>
+            <span class="hint">${o(n,"settings.switch_off_hint")}</span>
+            ${i.people.length===0?d`<span class="hint">${o(n,"settings.no_people")}</span>`:u}
+            ${i.people.map(s=>d`<label class="person">
                 <input
                   type="checkbox"
-                  .checked=${M(o.on)}
-                  @change=${c=>{let l=c.target.checked;r({switch_off_people:Vt(a.people,o.id,l)})}}
+                  .checked=${R(s.on)}
+                  @change=${c=>{let l=c.target.checked;r({switch_off_people:Kt(i.people,s.id,l)})}}
                 />
-                ${o.name}
+                ${s.name}
               </label>`)}
-            <span class="hint">${s(n,"settings.own_cancel")}</span>
+            <span class="hint">${o(n,"settings.own_cancel")}</span>
           </div>
         </div>
-        ${this._renderSolar(a)}
+        ${this._renderRate(e)}
+        ${this._renderSolar(i)}
         <button
           class="link"
           @click=${()=>{this._openIntegration()}}
         >
-          ${s(n,"settings.more")}</button>
+          ${o(n,"settings.more")}</button>
       </div>
-    `}_renderStepper(e,n,a,r,o,c){let l=(p,m,u)=>d`<button
+    `}_renderStepper(e,n,i,r,s,c){let l=(p,h,m)=>d`<button
       class="step"
-      aria-label=${s(this._language,m)}
+      aria-label=${o(this._language,h)}
       ?disabled=${p===null}
       @click=${()=>p===null?void 0:c(p)}
     >
-      ${u}
+      ${m}
     </button>`;return d`<div class="setting">
-      <span class="setting-text"><span>${a}</span><span class="hint">${r}</span></span>
-      ${l(e.down,o[0],"\u2212")}
+      <span class="setting-text"><span>${i}</span><span class="hint">${r}</span></span>
+      ${l(e.down,s[0],"\u2212")}
       <span class="value">${n}</span>
-      ${l(e.up,o[1],"+")}
+      ${l(e.up,s[1],"+")}
+    </div>`}_setRate(e){window.clearTimeout(this._rateTimer),this._call({type:De,rate:e}).then(n=>{n||(this._rateDraft=void 0)})}_stepRate(e){this._rateDraft=e,window.clearTimeout(this._rateTimer),this._rateTimer=window.setTimeout(()=>{this._setRate(e)},Bt)}async _recalculate(){let e=this._heater;if(!this.hass||!e||this._recalc.busy)return;let n=this._language;this._recalc={busy:!0,line:""};try{let i=await this.hass.callWS({type:jt,entry_id:e.entry_id}),r=i.learned===null?o(n,"rate.found_too_few",{count:i.runs,needed:e.settings?.rate.min_runs??3}):o(n,"rate.found",{count:i.runs,rate:new Intl.NumberFormat(b(n),{maximumFractionDigits:1}).format(i.learned)});this._recalc={busy:!1,line:r}}catch(i){let r=(i instanceof Error,i.message);this._recalc={busy:!1,line:o(n,"card.error",{message:r??String(i)})}}}_renderRate(e){let n=this._language,i=Ft(e,this._context);if(!i)return u;let r=this._rateDraft,s=r===void 0?i.stepper:Pe(r,n),c=(h,m)=>d`<button
+      class=${h===i.fixed?"mode on":"mode"}
+      aria-pressed=${h===i.fixed}
+      @click=${()=>{h!==i.fixed&&this._setRate(h?i.used:null)}}
+    >
+      ${o(n,m)}
+    </button>`,l=(h,m,_)=>d`<button
+      class="step"
+      aria-label=${o(n,m)}
+      ?disabled=${h===null}
+      @click=${()=>{h!==null&&this._stepRate(h)}}
+    >
+      ${_}
+    </button>`,p=r===void 0?i.suggestion:null;return d`<div class="setting column rate">
+      <div class="rate-head">
+        <span>${o(n,"rate.title")}</span>
+        <div class="modes" role="group" aria-label=${o(n,"rate.title")}>
+          ${c(!1,"rate.automatic")}${c(!0,"rate.fixed")}
+        </div>
+      </div>
+      ${i.fixed?d`<div class="rate-value">
+            ${l(s.down,"rate.down","\u2212")}
+            <span class="value">${s.shown}</span>
+            ${l(s.up,"rate.up","+")}
+            <span class="hint">${o(n,"rate.unit")}</span>
+          </div>`:d`<div class="rate-value">
+            <span class="rate-big">${i.shown}</span>
+            <span class="hint">${o(n,"rate.unit")}</span>
+          </div>`}
+      <span class="hint">${i.source}</span>
+      ${p?d`<div class="rate-suggestion">
+            <span class="hint">${p.line}</span>
+            <button
+              class="link"
+              @click=${()=>{this._setRate(p.value)}}
+            >
+              ${o(n,"rate.use")}
+            </button>
+          </div>`:u}
+      ${i.runs.length?d`<div class="rate-runs" role="list" aria-label=${o(n,"rate.runs")}>
+            ${i.runs.map(h=>d`<span class="rate-run" role="listitem"><span class="hint">${h.when}</span><b>${h.rate}</b></span>`)}
+          </div>`:u}
+      ${i.example?d`<span class="hint">${i.example}</span>`:u}
+      ${i.physics?d`<span class="hint">${i.physics}</span>`:u}
+      ${i.check?d`<span class=${i.check.warn?"hint rate-warn":"hint"} role=${i.check.warn?"alert":u}
+            >${i.check.line}</span
+          >`:u}
+      <button
+        class="recalc secondary"
+        ?disabled=${this._recalc.busy}
+        @click=${()=>{this._recalculate()}}
+      >
+        ${o(n,this._recalc.busy?"rate.recalculating":"rate.recalculate")}
+      </button>
+      ${this._recalc.line?d`<span class="hint" role="status">${this._recalc.line}</span>`:u}
     </div>`}_renderSolar(e){let n=this._language;return d`<div class="setting column solar">
-      <span>${s(n,"solar.title")}</span>
+      <span>${o(n,"solar.title")}</span>
       <span class="hint">${e.solar}</span>
-      ${e.notes.map(a=>d`<span class="hint">${a}</span>`)}
-    </div>`}_renderAvatars(e,n){if(!pt(e))return h;let a=K(e)==="admin";return d`
+      ${e.notes.map(i=>d`<span class="hint">${i}</span>`)}
+    </div>`}_renderAvatars(e,n){if(!gt(e))return u;let i=K(e)==="admin";return d`
       <div class="avatars" role="tablist">
-        ${St(e,n?.id).map(r=>d`
+        ${Et(e,n?.id).map(r=>d`
             <button
               class="avatar ${r.selected?"selected":""} ${r.faded?"faded":""}"
               role="tab"
@@ -291,28 +347,28 @@ var Z=globalThis,G=Z.ShadowRoot&&(Z.ShadyCSS===void 0||Z.ShadyCSS.nativeShadow)&
               @click=${()=>{this._selected=r.id,this._sheet=void 0}}
             >
               <span class="dot" style="background: var(--${r.colour}-color, var(--primary-color))"
-                >${r.initial}${r.star?d`<span class="star">★</span>`:h}</span
+                >${r.initial}${r.star?d`<span class="star">★</span>`:u}</span
               >
               <span class="label">${r.name}</span>
             </button>
           `)}
-        ${a?d`<button
+        ${i?d`<button
               class="avatar add-member"
               @click=${()=>{this._openIntegration()}}
             >
               <span class="dot plus">+</span>
-              <span class="label">${s(this._language,"members.add")}</span>
-            </button>`:h}
+              <span class="label">${o(this._language,"members.add")}</span>
+            </button>`:u}
       </div>
-    `}_renderList(e){let n=this._language,a=kt(e,n,this._hour24);return d`
+    `}_renderList(e){let n=this._language,i=Tt(e,n,this._hour24);return d`
       <div class="list ${e.away.on?"paused-list":""}">
-        ${a.length===0?d`<div class="empty">${s(n,"list.empty")}</div>`:h}
-        ${a.map(r=>d`
+        ${i.length===0?d`<div class="empty">${o(n,"list.empty")}</div>`:u}
+        ${i.map(r=>d`
             <div class="row ${r.enabled?"":"off"}">
               ${e.can_edit?d`<button
                     class="row-text"
-                    aria-label=${s(n,"list.edit")}
-                    @click=${()=>{this._sheet=mt(e,r.id),this._clock=void 0}}
+                    aria-label=${o(n,"list.edit")}
+                    @click=${()=>{this._sheet=bt(e,r.id),this._clock=void 0}}
                   >
                     ${this._rowText(r)}
                   </button>`:d`<div class="row-text">${this._rowText(r)}</div>`}
@@ -320,38 +376,38 @@ var Z=globalThis,G=Z.ShadowRoot&&(Z.ShadyCSS===void 0||Z.ShadyCSS.nativeShadow)&
                     <input
                       type="checkbox"
                       class="switch"
-                      aria-label=${s(n,"list.switch")}
-                      .checked=${M(r.enabled)}
-                      @change=${o=>this._call({type:"hot_water_ready/ready_time/update",member_id:e.id,ready_time_id:r.id,enabled:o.target.checked})}
+                      aria-label=${o(n,"list.switch")}
+                      .checked=${R(r.enabled)}
+                      @change=${s=>this._call({type:"hot_water_ready/ready_time/update",member_id:e.id,ready_time_id:r.id,enabled:s.target.checked})}
                     />
-                  `:h}
+                  `:u}
             </div>
           `)}
         ${e.can_edit?d`<button
               class="add"
-              @click=${()=>{this._sheet=gt(),this._clock=He(this._sheet.time,!0,this._hour24)}}
+              @click=${()=>{this._sheet=wt(),this._clock=Re(this._sheet.time,!0,this._hour24)}}
             >
-              + ${s(n,"list.add")}
-            </button>`:h}
+              + ${o(n,"list.add")}
+            </button>`:u}
       </div>
     `}_rowText(e){return d`<div class="time">${e.time}</div>
       <div class="days">
         ${e.days.map(n=>d`<span class="${n.on?"on":""}">${n.letter}</span>`)}
-      </div>`}_renderSheet(e,n){let a=this._language,r=re(a),o=s(a,n.id?"sheet.edit_title":"sheet.title"),c=l=>{let p=n.weekdays.includes(l)?n.weekdays.filter(m=>m!==l):[...n.weekdays,l];this._sheet={...n,weekdays:p}};return d`
-      <div class="sheet" role="dialog" aria-label=${o}>
-        <div class="sheet-title">${o}</div>
+      </div>`}_renderSheet(e,n){let i=this._language,r=oe(i),s=o(i,n.id?"sheet.edit_title":"sheet.title"),c=l=>{let p=n.weekdays.includes(l)?n.weekdays.filter(h=>h!==l):[...n.weekdays,l];this._sheet={...n,weekdays:p}};return d`
+      <div class="sheet" role="dialog" aria-label=${s}>
+        <div class="sheet-title">${s}</div>
         <div class="field">
-          ${s(a,"sheet.time")}
+          ${o(i,"sheet.time")}
           <button
             class="sheet-time"
-            aria-label=${s(a,"clock.change")}
-            @click=${()=>this._clock=He(n.time,!1,this._hour24)}
+            aria-label=${o(i,"clock.change")}
+            @click=${()=>this._clock=Re(n.time,!1,this._hour24)}
           >
-            ${le(n.time,a,this._hour24)}
+            ${ue(n.time,i,this._hour24)}
           </button>
         </div>
         <div class="field">
-          ${s(a,"sheet.days")}
+          ${o(i,"sheet.days")}
           <div class="day-toggles">
             ${r.map((l,p)=>d`<button
                   class="day ${n.weekdays.includes(p)?"on":""}"
@@ -364,68 +420,68 @@ var Z=globalThis,G=Z.ShadowRoot&&(Z.ShadyCSS===void 0||Z.ShadyCSS.nativeShadow)&
         </div>
         <div class="actions">
           ${n.id?d`<button class="remove" @click=${()=>this._remove(e,n.id??"")}>
-                ${s(a,"sheet.delete")}
-              </button>`:h}
-          <button class="secondary" @click=${()=>this._sheet=void 0}>${s(a,"sheet.cancel")}</button>
-          <button class="primary" ?disabled=${!Ce(n)} @click=${()=>this._save(e)}>
-            ${s(a,"sheet.save")}
+                ${o(i,"sheet.delete")}
+              </button>`:u}
+          <button class="secondary" @click=${()=>this._sheet=void 0}>${o(i,"sheet.cancel")}</button>
+          <button class="primary" ?disabled=${!Ee(n)} @click=${()=>this._save(e)}>
+            ${o(i,"sheet.save")}
           </button>
         </div>
       </div>
-    `}_dialAt(e,n){let a=e.currentTarget.getBoundingClientRect(),r=y/a.width;return bt(n,(e.clientX-a.left)*r,(e.clientY-a.top)*r,this._hour24)}_clockDone(e){let n=Me(e,this._hour24);!n||!this._sheet||(this._sheet={...this._sheet,time:n},this._clock=void 0)}_clockCancel(e){e.fresh&&(this._sheet=void 0),this._clock=void 0}_renderClockInput(e,n,a){let r=s(this._language,n==="hour"?"sheet.hour":"sheet.minute");return d`<label class="clock-box">
+    `}_dialAt(e,n){let i=e.currentTarget.getBoundingClientRect(),r=v/i.width;return $t(n,(e.clientX-i.left)*r,(e.clientY-i.top)*r,this._hour24)}_clockDone(e){let n=Oe(e,this._hour24);!n||!this._sheet||(this._sheet={...this._sheet,time:n},this._clock=void 0)}_clockCancel(e){e.fresh&&(this._sheet=void 0),this._clock=void 0}_renderClockInput(e,n,i){let r=o(this._language,n==="hour"?"sheet.hour":"sheet.minute");return d`<label class="clock-box">
       <input
-        class="clock-input ${a?"":"invalid"}"
+        class="clock-input ${i?"":"invalid"}"
         inputmode="numeric"
         maxlength="2"
         autocomplete="off"
         aria-label=${r}
-        .value=${M(n==="hour"?e.hourText:e.minuteText)}
-        @input=${o=>{let c=o.target.value;this._clock=n==="hour"?{...e,hourText:c}:{...e,minuteText:c}}}
-        @keydown=${o=>{o.key==="Enter"&&this._clockDone(e)}}
+        .value=${R(n==="hour"?e.hourText:e.minuteText)}
+        @input=${s=>{let c=s.target.value;this._clock=n==="hour"?{...e,hourText:c}:{...e,minuteText:c}}}
+        @keydown=${s=>{s.key==="Enter"&&this._clockDone(e)}}
       />
       <span>${r}</span>
-    </label>`}_renderClock(e){let n=this._language,a=this._hour24,r=e.mode==="keys",o=Me(e,a)!==void 0,c=s(n,r?"clock.title_keys":"clock.title"),l=a?h:d`<div class="clock-half" role="group">
+    </label>`}_renderClock(e){let n=this._language,i=this._hour24,r=e.mode==="keys",s=Oe(e,i)!==void 0,c=o(n,r?"clock.title_keys":"clock.title"),l=i?u:d`<div class="clock-half" role="group">
           ${[!1,!0].map(g=>d`<button
                 class=${e.hour>=12===g?"on":""}
                 aria-pressed=${e.hour>=12===g}
-                @click=${()=>this._clock=vt(e,g)}
+                @click=${()=>this._clock=St(e,g)}
               >
-                ${s(n,g?"clock.pm":"clock.am")}
+                ${o(n,g?"clock.pm":"clock.am")}
               </button>`)}
         </div>`,p=r?d`<div class="clock-head">
-            ${this._renderClockInput(e,"hour",o)}
+            ${this._renderClockInput(e,"hour",s)}
             <span class="clock-colon">:</span>
-            ${this._renderClockInput(e,"minute",o)} ${l}
+            ${this._renderClockInput(e,"minute",s)} ${l}
           </div>
-          ${o?h:d`<div class="clock-invalid" role="alert">${s(n,"clock.invalid")}</div>`}`:d`<div class="clock-head">
-          ${["hour","minute"].map((g,v)=>d`${v?d`<span class="clock-colon">:</span>`:h}
+          ${s?u:d`<div class="clock-invalid" role="alert">${o(n,"clock.invalid")}</div>`}`:d`<div class="clock-head">
+          ${["hour","minute"].map((g,x)=>d`${x?d`<span class="clock-colon">:</span>`:u}
                 <button
                   class="clock-part ${e.part===g?"on":""}"
                   aria-pressed=${e.part===g}
-                  aria-label=${s(n,g==="hour"?"sheet.hour":"sheet.minute")}
+                  aria-label=${o(n,g==="hour"?"sheet.hour":"sheet.minute")}
                   @click=${()=>this._clock={...e,part:g}}
                 >
                   ${g==="hour"?e.hourText:e.minuteText}
                 </button>`)}
           ${l}
-        </div>`,m=_t(e,a),u=y/2,f=r?h:d`<svg
+        </div>`,h=xt(e,i),m=v/2,_=r?u:d`<svg
           class="dial"
-          viewBox="0 0 ${y} ${y}"
+          viewBox="0 0 ${v} ${v}"
           role="slider"
           tabindex="0"
-          aria-label=${s(n,e.part==="hour"?"sheet.hour":"sheet.minute")}
+          aria-label=${o(n,e.part==="hour"?"sheet.hour":"sheet.minute")}
           aria-valuenow=${e.part==="hour"?e.hour:e.minute}
           aria-valuetext=${e.part==="hour"?e.hourText:e.minuteText}
           @pointerdown=${g=>{g.currentTarget.setPointerCapture(g.pointerId),this._clock=this._dialAt(g,e)}}
           @pointermove=${g=>{g.currentTarget.hasPointerCapture(g.pointerId)&&(this._clock=this._dialAt(g,this._clock??e))}}
           @pointerup=${()=>{this._clock?.part==="hour"&&(this._clock={...this._clock,part:"minute"})}}
-          @keydown=${g=>{let v={ArrowUp:1,ArrowRight:1,ArrowDown:-1,ArrowLeft:-1}[g.key];v!==void 0&&(g.preventDefault(),this._clock=yt(e,v,a))}}
+          @keydown=${g=>{let x={ArrowUp:1,ArrowRight:1,ArrowDown:-1,ArrowLeft:-1}[g.key];x!==void 0&&(g.preventDefault(),this._clock=kt(e,x,i))}}
         >
-          <circle class="dial-face" cx=${u} cy=${u} r=${u} />
-          <line class="dial-hand" x1=${u} y1=${u} x2=${m.x} y2=${m.y} />
-          <circle class="dial-hand-dot" cx=${u} cy=${u} r="4" />
-          <circle class="dial-knob" cx=${m.x} cy=${m.y} r="20" />
-          ${ft(e.part,a).map(g=>q`<text class="dial-mark ${wt(e,g,a)?"on":""}" x=${g.x} y=${g.y}>${g.label}</text>`)}
+          <circle class="dial-face" cx=${m} cy=${m} r=${m} />
+          <line class="dial-hand" x1=${m} y1=${m} x2=${h.x} y2=${h.y} />
+          <circle class="dial-hand-dot" cx=${m} cy=${m} r="4" />
+          <circle class="dial-knob" cx=${h.x} cy=${h.y} r="20" />
+          ${yt(e.part,i).map(g=>W`<text class="dial-mark ${vt(e,g,i)?"on":""}" x=${g.x} y=${g.y}>${g.label}</text>`)}
         </svg>`;return d`
       <div
         class="clock-overlay"
@@ -433,33 +489,33 @@ var Z=globalThis,G=Z.ShadowRoot&&(Z.ShadyCSS===void 0||Z.ShadyCSS.nativeShadow)&
       >
         <div class="clock-dialog" role="dialog" aria-modal="true" aria-label=${c}>
           <div class="clock-title">${c}</div>
-          ${p} ${f}
+          ${p} ${_}
           <div class="clock-actions">
             <button
               class="clock-mode"
-              aria-label=${s(n,r?"clock.to_dial":"clock.to_keys")}
-              title=${s(n,r?"clock.to_dial":"clock.to_keys")}
-              @click=${()=>this._clock=$t(e,a)}
+              aria-label=${o(n,r?"clock.to_dial":"clock.to_keys")}
+              title=${o(n,r?"clock.to_dial":"clock.to_keys")}
+              @click=${()=>this._clock=Ct(e,i)}
             >
-              ${r?$n:xn}
+              ${r?Pn:Dn}
             </button>
             <button
               class="clock-text"
               @click=${()=>{this._clockCancel(e)}}
             >
-              ${s(n,"sheet.cancel")}
+              ${o(n,"sheet.cancel")}
             </button>
             <button
               class="clock-text"
-              ?disabled=${!o}
+              ?disabled=${!s}
               @click=${()=>{this._clockDone(e)}}
             >
-              ${s(n,"clock.ok")}
+              ${o(n,"clock.ok")}
             </button>
           </div>
         </div>
       </div>
-    `}static{this.styles=pe`
+    `}static{this.styles=he`
     :host {
       --hwr-ready: var(--success-color, #2e7d32);
       --hwr-heating: var(--warning-color, #ef6c00);
@@ -907,6 +963,70 @@ var Z=globalThis,G=Z.ShadowRoot&&(Z.ShadyCSS===void 0||Z.ShadyCSS.nativeShadow)&
       text-align: center;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
+    }
+    .rate-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px 10px;
+    }
+    .modes {
+      display: inline-flex;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.3));
+    }
+    .mode {
+      min-height: 32px;
+      padding: 0 12px;
+      border: 0;
+      background: none;
+      color: var(--secondary-text-color);
+      font-weight: 700;
+    }
+    .mode.on {
+      background: var(--primary-color);
+      color: var(--text-primary-color, #fff);
+    }
+    .rate-value,
+    .rate-suggestion {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .rate-warn {
+      color: var(--warning-color, #ffa600);
+    }
+    .rate-big {
+      font-size: 28px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .rate-runs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .rate-run {
+      display: inline-flex;
+      gap: 6px;
+      align-items: baseline;
+      padding: 4px 8px;
+      border-radius: 8px;
+      background: var(--secondary-background-color, rgba(127, 127, 127, 0.15));
+      font-variant-numeric: tabular-nums;
+    }
+    .recalc {
+      align-self: flex-start;
+      min-height: 36px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 10px;
+      font-weight: 700;
+    }
+    .recalc[disabled] {
+      opacity: 0.6;
     }
     .link {
       align-self: flex-start;
@@ -1537,4 +1657,4 @@ var Z=globalThis,G=Z.ShadowRoot&&(Z.ShadyCSS===void 0||Z.ShadyCSS.nativeShadow)&
     .secondary {
       background: var(--secondary-background-color, rgba(127, 127, 127, 0.15));
     }
-  `}};if(!customElements.get(F)){customElements.define(F,Pe);let i=window;i.customCards=i.customCards??[],i.customCards.push({type:F,name:"Hot Water Ready",description:"Water temperature, ready times and heat now.",preview:!0})}export{Pe as HotWaterReadyCard};
+  `}};if(!customElements.get(G)){customElements.define(G,Ne);let a=window;a.customCards=a.customCards??[],a.customCards.push({type:G,name:"Hot Water Ready",description:"Water temperature, ready times and heat now.",preview:!0})}export{Ne as HotWaterReadyCard};

@@ -6,10 +6,11 @@ drawn (the water never fell more than 1 C below where it started). Its rate is m
 degree. The learned rate is the median of the runs of the last 7 days, once there are three.
 """
 
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from statistics import median
-from typing import Any
+from typing import Any, Literal
 
 from .parsing import aware_datetime, number
 
@@ -18,6 +19,11 @@ MIN_RISE = 3.0
 MAX_DIP = 1.0
 WINDOW = timedelta(days=7)
 MIN_RUNS = 3
+JOULES_PER_LITRE_DEGREE = 4186.0
+MIN_MANUAL_RATE = 0.5  # minutes per degree a fixed rate may be set to, as in the settings page
+MAX_MANUAL_RATE = 60.0
+
+type RateSource = Literal["manual", "learned", "default"]
 
 
 @dataclass
@@ -119,3 +125,43 @@ def rate_in_use(*, manual: float | None, learned: float | None, default: float) 
     if manual:
         return manual
     return learned or default
+
+
+def rate_source(*, manual: float | None, learned: float | None) -> RateSource:
+    """Where `rate_in_use` takes its value from."""
+    if manual:
+        return "manual"
+    return "learned" if learned else "default"
+
+
+def physics_rate(*, litres: float, element_watts: float) -> float:
+    """Minutes per degree to heat the whole tank with the element, nothing lost.
+
+    A check on the learned rate, not a replacement: a probe high in the tank sees the hot layer
+    first, so the learned rate is usually lower.
+    """
+    return litres * JOULES_PER_LITRE_DEGREE / element_watts / 60
+
+
+def replay(
+    samples: Iterable[tuple[datetime, float | None, bool | None]],
+    *,
+    sun_up: Callable[[datetime], bool | None],
+) -> RateState:
+    """The clean runs found again in history: (when, water temperature, heating) in time order.
+
+    The same learner and rules as live, except that history keeps no faults, so none is
+    assumed; a restart does not end a run here, which is why this can find runs live learning
+    lost.
+    """
+    learner = RateLearner()
+    last: datetime | None = None
+    for at, temperature, heating in samples:
+        learner.step(
+            now=at, temperature=temperature, heating=heating, sun_up=sun_up(at), fault=False
+        )
+        last = at
+    if last is not None and learner.state.current is None:
+        learner.state.runs = [(at, r) for at, r in learner.state.runs if at > last - WINDOW]
+    learner.state.current = None
+    return learner.state
