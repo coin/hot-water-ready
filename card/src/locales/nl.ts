@@ -158,6 +158,7 @@ export const nl: Record<TextKey, string> = {
   "list.count": "{count} klaartijden",
   "list.virtual": "Virtueel lid · gedeelde tijden van het huishouden",
   "away.paused": "Gepauzeerd. De tijden blijven bewaard.",
+  "member_settings.open": "Instellingen van de klaartijden",
   "visibility.private": "Privé",
   "visibility.hint_own": "Andere leden zien deze tijden en je Nu verwarmen-verzoeken niet; beheerders wel.",
   "visibility.hint_virtual": "Alleen beheerders zien deze tijden.",

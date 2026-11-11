@@ -158,6 +158,7 @@ export const sv: Record<TextKey, string> = {
   "list.count": "{count} klartider",
   "list.virtual": "Virtuell medlem · hushållets gemensamma tider",
   "away.paused": "Pausad. Tiderna sparas.",
+  "member_settings.open": "Inställningar för klartider",
   "visibility.private": "Privat",
   "visibility.hint_own": "Andra medlemmar ser inte de här tiderna eller dina Värm nu-förfrågningar; administratörer gör det.",
   "visibility.hint_virtual": "Bara administratörer ser de här tiderna.",

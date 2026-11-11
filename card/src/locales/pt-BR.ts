@@ -158,6 +158,7 @@ export const ptBR: Record<TextKey, string> = {
   "list.count": "{count} horários",
   "list.virtual": "Membro virtual · horários compartilhados da casa",
   "away.paused": "Em pausa. Os horários ficam salvos.",
+  "member_settings.open": "Configurações dos horários",
   "visibility.private": "Privado",
   "visibility.hint_own": "Os outros membros não veem estes horários nem seus pedidos de Aquecer agora; os administradores veem.",
   "visibility.hint_virtual": "Só os administradores veem estes horários.",

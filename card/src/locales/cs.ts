@@ -158,6 +158,7 @@ export const cs: Record<TextKey, string> = {
   "list.count": "Časy připravenosti: {count}",
   "list.virtual": "Virtuální člen · společné časy domácnosti",
   "away.paused": "Pozastaveno. Časy zůstávají uložené.",
+  "member_settings.open": "Nastavení časů připravenosti",
   "visibility.private": "Soukromé",
   "visibility.hint_own": "Ostatní členové tyto časy ani vaše požadavky Ohřát hned nevidí; správci ano.",
   "visibility.hint_virtual": "Tyto časy vidí jen správci.",

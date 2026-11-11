@@ -158,6 +158,7 @@ export const zhHans: Record<TextKey, string> = {
   "list.count": "{count} 个就绪时间",
   "list.virtual": "虚拟成员 · 家庭共享时间",
   "away.paused": "已暂停。时间会保留。",
+  "member_settings.open": "就绪时间设置",
   "visibility.private": "私密",
   "visibility.hint_own": "其他成员看不到这些时间和你的“立即加热”请求；管理员可以看到。",
   "visibility.hint_virtual": "只有管理员能看到这些时间。",

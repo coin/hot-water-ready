@@ -158,6 +158,7 @@ export const nb: Record<TextKey, string> = {
   "list.count": "{count} klartider",
   "list.virtual": "Virtuelt medlem · felles tider for husstanden",
   "away.paused": "På pause. Tidene beholdes.",
+  "member_settings.open": "Innstillinger for klartider",
   "visibility.private": "Privat",
   "visibility.hint_own": "Andre medlemmer ser ikke disse tidene eller dine Varm nå-forespørsler; administratorer gjør det.",
   "visibility.hint_virtual": "Bare administratorer ser disse tidene.",

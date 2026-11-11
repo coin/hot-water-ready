@@ -158,6 +158,7 @@ export const ru: Record<TextKey, string> = {
   "list.count": "Времён готовности: {count}",
   "list.virtual": "Виртуальный участник · общие времена дома",
   "away.paused": "Приостановлено. Времена сохранены.",
+  "member_settings.open": "Настройки времён готовности",
   "visibility.private": "Личное",
   "visibility.hint_own": "Другие участники не видят эти времена и ваши запросы «Нагреть сейчас»; администраторы видят.",
   "visibility.hint_virtual": "Эти времена видят только администраторы.",

@@ -158,6 +158,7 @@ export const es: Record<TextKey, string> = {
   "list.count": "{count} horas",
   "list.virtual": "Miembro virtual · horas compartidas de la casa",
   "away.paused": "En pausa. Las horas se conservan.",
+  "member_settings.open": "Ajustes de las horas",
   "visibility.private": "Privado",
   "visibility.hint_own": "Los demás miembros no ven estas horas ni tus peticiones de Calentar ahora; los administradores sí.",
   "visibility.hint_virtual": "Solo los administradores ven estas horas.",

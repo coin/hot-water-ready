@@ -158,6 +158,7 @@ export const fr: Record<TextKey, string> = {
   "list.count": "{count} horaires",
   "list.virtual": "Membre virtuel · horaires communs de la maison",
   "away.paused": "En pause. Les horaires sont conservés.",
+  "member_settings.open": "Réglages des horaires",
   "visibility.private": "Privé",
   "visibility.hint_own": "Les autres membres ne voient ni ces horaires ni vos demandes Chauffer maintenant ; les administrateurs les voient.",
   "visibility.hint_virtual": "Seuls les administrateurs voient ces horaires.",

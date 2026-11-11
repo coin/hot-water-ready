@@ -158,6 +158,7 @@ export const uk: Record<TextKey, string> = {
   "list.count": "Часи готовності: {count}",
   "list.virtual": "Віртуальний учасник · спільні часи дому",
   "away.paused": "Призупинено. Час збережено.",
+  "member_settings.open": "Налаштування часів готовності",
   "visibility.private": "Приватне",
   "visibility.hint_own": "Інші учасники не бачать ці часи та ваші запити «Нагріти зараз»; адміністратори бачать.",
   "visibility.hint_virtual": "Ці часи бачать лише адміністратори.",

@@ -84,6 +84,7 @@ export class HotWaterReadyCard extends LitElement {
     _sheet: { state: true },
     _clock: { state: true },
     _settingsOpen: { state: true },
+    _memberSettings: { state: true },
     _offOpen: { state: true },
     _keep: { state: true },
     _holding: { state: true },
@@ -103,6 +104,8 @@ export class HotWaterReadyCard extends LitElement {
   /** The popup setting the sheet's time, over the sheet. */
   private _clock: Clock | undefined;
   private _settingsOpen = false;
+  /** The member whose own settings (the "Privado" switch) are open, behind their ⚙. */
+  private _memberSettings: string | undefined;
   /** The "Desligar o aquecimento?" confirmation is open. */
   private _offOpen = false;
   /** The choice of how long to keep it hot, open for the button that was held, and the time picked. */
@@ -259,7 +262,8 @@ export class HotWaterReadyCard extends LitElement {
                 : this._renderAvatars(heater, member)}
               ${mode === "member" && member ? this._renderToday(heater, member) : nothing}
               ${member
-                ? html`<div class="panel">${this._renderListHead(member, mode === "member")} ${this._renderList(member)}</div>
+                ? html`${this._renderMemberSettings(member)}
+                    <div class="panel">${this._renderListHead(member, mode === "member")} ${this._renderList(member)}</div>
                     ${this._sheet ? this._renderSheet(member, this._sheet) : nothing}
                     ${this._sheet && this._clock ? this._renderClock(this._clock) : nothing}`
                 : html`<div class="message">${localize(language, "members.none")}</div>`}
@@ -281,7 +285,19 @@ export class HotWaterReadyCard extends LitElement {
     return html`
       <div class="list-head">
         <div class="list-title">
-          <span>${own ? localize(language, "list.mine") : head.name}</span>
+          <span class="list-name">
+            ${own ? localize(language, "list.mine") : head.name}
+            ${member.can_set_visibility
+              ? html`<button
+                  class="member-settings-button"
+                  aria-label=${localize(language, "member_settings.open")}
+                  aria-expanded=${this._memberSettings === member.id}
+                  @click=${() => (this._memberSettings = this._memberSettings === member.id ? undefined : member.id)}
+                >
+                  ⚙
+                </button>`
+              : nothing}
+          </span>
           ${own ? nothing : html`<span class="hint">${head.note}</span>`}
         </div>
         ${member.can_edit
@@ -300,7 +316,6 @@ export class HotWaterReadyCard extends LitElement {
             ? html`<span class="hint">${line}</span>`
             : nothing}
       </div>
-      ${this._renderPrivacy(member)}
       ${member.away.on
         ? html`<div class="paused">
             <span>${localize(language, "away.paused")}</span>
@@ -322,13 +337,23 @@ export class HotWaterReadyCard extends LitElement {
     `;
   }
 
-  /** The "Privado" switch under the list head, for whoever may set it (decision 15). */
-  private _renderPrivacy(member: MemberSnapshot): unknown {
-    const privacy = privacySwitch(member, this._language);
-    if (!privacy) return nothing;
-    return html`<div class="privacy">
-      <label class="privacy-toggle">
-        ${privacy.label}
+  /** A member's own settings, behind the ⚙ by their list's title: the "Privado" switch (decision 15). */
+  private _renderMemberSettings(member: MemberSnapshot): unknown {
+    const language = this._language;
+    const privacy = privacySwitch(member, language);
+    if (!privacy || this._memberSettings !== member.id) return nothing;
+    return html`<div class="sheet" role="dialog" aria-label=${localize(language, "member_settings.open")}>
+      <div class="sheet-head">
+        <div class="sheet-title">${localize(language, "member_settings.open")}</div>
+        <button class="secondary" @click=${() => (this._memberSettings = undefined)}>
+          ${localize(language, "settings.close")}
+        </button>
+      </div>
+      <label class="setting">
+        <span class="setting-text">
+          <span>${privacy.label}</span>
+          ${privacy.hint ? html`<span class="hint">${privacy.hint}</span>` : nothing}
+        </span>
         <input
           type="checkbox"
           class="switch"
@@ -339,7 +364,6 @@ export class HotWaterReadyCard extends LitElement {
           }}
         />
       </label>
-      ${privacy.hint ? html`<span class="hint">${privacy.hint}</span>` : nothing}
     </div>`;
   }
 
@@ -1792,17 +1816,19 @@ export class HotWaterReadyCard extends LitElement {
       gap: 12px;
       font-size: 14px;
     }
-    .privacy {
-      margin-top: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .privacy-toggle {
+    .list-name {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 8px;
+      gap: 2px;
+    }
+    .member-settings-button {
+      border: 0;
+      background: none;
+      padding: 0 4px;
+      font-size: 16px;
+      min-width: 32px;
+      min-height: 32px;
+      color: var(--secondary-text-color);
     }
     .away-toggle,
     .until {

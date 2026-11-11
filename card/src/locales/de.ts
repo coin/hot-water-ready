@@ -158,6 +158,7 @@ export const de: Record<TextKey, string> = {
   "list.count": "{count} Bereitzeiten",
   "list.virtual": "Virtuelles Mitglied · gemeinsame Zeiten des Haushalts",
   "away.paused": "Pausiert. Die Zeiten bleiben erhalten.",
+  "member_settings.open": "Einstellungen der Bereitzeiten",
   "visibility.private": "Privat",
   "visibility.hint_own": "Andere Mitglieder sehen diese Zeiten und deine Jetzt-heizen-Anfragen nicht; Administratoren schon.",
   "visibility.hint_virtual": "Nur Administratoren sehen diese Zeiten.",

@@ -158,6 +158,7 @@ export const pl: Record<TextKey, string> = {
   "list.count": "Godziny gotowości: {count}",
   "list.virtual": "Domownik wirtualny · wspólne godziny domu",
   "away.paused": "Wstrzymane. Godziny są zachowane.",
+  "member_settings.open": "Ustawienia godzin gotowości",
   "visibility.private": "Prywatne",
   "visibility.hint_own": "Inni członkowie nie widzą tych godzin ani Twoich próśb Grzej teraz; administratorzy widzą.",
   "visibility.hint_virtual": "Te godziny widzą tylko administratorzy.",
