@@ -344,6 +344,9 @@
     "visibility_own_only": {
       "message": "Bare medlemmet selv kan gjøre sine klartider private; for et medlem uten person en administrator."
     },
+    "heat_now_target_admins_only": {
+      "message": "Bare en administrator kan velge temperaturen for varm nå."
+    },
     "ready_time_gone": {
       "message": "Den klartiden finnes ikke lenger."
     },
@@ -471,6 +474,10 @@
         "keep_minutes": {
           "name": "Hold varmt i",
           "description": "Minutter å holde vannet varmt etter meldingen. Tomt: berederens innstilling."
+        },
+        "target": {
+          "name": "Temperatur",
+          "description": "Varm til denne temperaturen (35 til 45 °C) i stedet for varmtvannsberederens måltemperatur. Bare administratorer og automatiseringer."
         }
       }
     },

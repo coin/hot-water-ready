@@ -821,17 +821,24 @@ class Heater:
     def has_asked_heat_now(self, user: User | None) -> bool:
         return self.requester_key(user) in self.heat_now_requesters
 
-    async def async_heat_now(self, requester: str, keep_minutes: float | None = None) -> None:
+    def can_choose_heat_now_target(self, user: User | None) -> bool:
+        """Who may ask heat now for a temperature of their own: admins and automations (16)."""
+        return user is None or user.is_admin
+
+    async def async_heat_now(
+        self, requester: str, keep_minutes: float | None = None, target: float | None = None
+    ) -> None:
         """Ask for hot water now, or join the request already running.
 
         `keep_minutes` is how long to keep it hot after the message; None takes the option's.
+        `target` is a temperature of one's own (decision 16); None follows the heater's target.
         Refused, with the reason, while a fault stops heating (spec 4.6).
         """
         if blocking := self.faults & BLOCKING:
             raise HeatNowRefusedError(blocking)
         if not self.automatic:
             raise HeatNowRefusedError(frozenset())  # nothing would switch the heater on
-        self._controller.request_heat_now(dt_util.now(), requester, keep_minutes)
+        self._controller.request_heat_now(dt_util.now(), requester, keep_minutes, target)
         await self._async_saved_and_stepped()
 
     async def async_cancel_heat_now(self, requester: str | None = None) -> None:
@@ -1321,14 +1328,23 @@ class Heater:
         heat_now = self._controller.state.heat_now
         if heat_now is None or not self.heat_now_shown(hidden):
             return None
+        viewer = self.requester_key(user)
+        asked = viewer != NOBODY and viewer in heat_now.requesters
+        # Until when it is kept hot: the viewer's own time, else the latest of those they see.
+        if asked:
+            keep_until = heat_now.until.get(viewer)
+        else:
+            keep_until = max(
+                (at for r, at in heat_now.until.items() if r not in hidden), default=None
+            )
         return {
             "requesters": sorted(self.heat_now_requesters - hidden),
             "asked": self.has_asked_heat_now(user),
             # An automation's request names nobody: it keeps heating after the last person.
             "unnamed": NOBODY in heat_now.requesters,
-            "keep_until": None
-            if heat_now.keep_until is None
-            else dt_util.as_local(heat_now.keep_until).isoformat(),
+            "keep_until": None if keep_until is None else dt_util.as_local(keep_until).isoformat(),
+            # The temperature the viewer's own request heats to (decision 16).
+            "target": self._controller.heat_now_target(viewer) if asked else None,
         }
 
     def snapshot(self, user: User) -> dict[str, Any]:
@@ -1345,7 +1361,11 @@ class Heater:
         ready_in = None
         if status is Status.HEATING:  # 0 is past the target and finishing: no estimate to show
             # To the normal target, as the phone's "heating" message: "ready" is told there.
-            ready_in = minutes_to_ready(self._controller.settings, temperature) or None
+            settings = self._controller.settings
+            own = self._controller.heat_now_target(self.requester_key(user))
+            if own is not None and not self.heating_for(hidden):
+                settings = settings.with_target(own)  # heating for the viewer's own heat now
+            ready_in = minutes_to_ready(settings, temperature) or None
         me = self.user_member_id(user)
         return {
             "entry_id": self.entry_id,
@@ -1365,6 +1385,7 @@ class Heater:
             "is_admin": user.is_admin,
             "me": me,
             "can_ask_heat_now": self.can_ask_heat_now(user),
+            "can_choose_heat_now_target": self.can_choose_heat_now_target(user),
             "faults": sorted(self.faults),
             "not_rising_checked": self.not_rising_checked,
             "element_on": None if hidden else self.element_heating,

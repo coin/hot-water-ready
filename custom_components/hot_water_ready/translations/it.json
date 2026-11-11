@@ -344,6 +344,9 @@
     "visibility_own_only": {
       "message": "Solo il membro stesso può rendere privati i propri orari; per un membro senza persona, un amministratore."
     },
+    "heat_now_target_admins_only": {
+      "message": "Solo un amministratore può scegliere la temperatura di scalda ora."
+    },
     "ready_time_gone": {
       "message": "Quell'orario non esiste più."
     },
@@ -471,6 +474,10 @@
         "keep_minutes": {
           "name": "Mantieni calda per",
           "description": "Minuti per cui mantenere l'acqua calda dopo il messaggio. Vuoto: l'impostazione dello scaldacqua."
+        },
+        "target": {
+          "name": "Temperatura",
+          "description": "Scaldare fino a questa temperatura (da 35 a 45 °C) invece della temperatura obiettivo dello scaldabagno. Solo amministratori e automazioni."
         }
       }
     },

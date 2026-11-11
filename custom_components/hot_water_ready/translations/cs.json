@@ -344,6 +344,9 @@
     "visibility_own_only": {
       "message": "Své časy připravenosti může nastavit jako soukromé jen člen sám; u člena bez osoby správce."
     },
+    "heat_now_target_admins_only": {
+      "message": "Teplotu pro ohřát hned může zvolit jen správce."
+    },
     "ready_time_gone": {
       "message": "Tento čas připravenosti už neexistuje."
     },
@@ -471,6 +474,10 @@
         "keep_minutes": {
           "name": "Udržovat teplou po dobu",
           "description": "Počet minut, po které se voda po zprávě udržuje teplá. Prázdné: nastavení ohřívače."
+        },
+        "target": {
+          "name": "Teplota",
+          "description": "Ohřát na tuto teplotu (35 až 45 °C) místo cílové teploty ohřívače. Pouze správci a automatizace."
         }
       }
     },

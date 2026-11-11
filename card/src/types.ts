@@ -107,13 +107,22 @@ export interface HeaterSnapshot {
   keep_hot_minutes: number;
   /** Whether this viewer may ask for heat now (members and admins). */
   can_ask_heat_now: boolean;
+  /** Whether this viewer may ask heat now for a temperature of their own (admins, decision 16). */
+  can_choose_heat_now_target: boolean;
   /**
    * The heat-now request, if one is running. `requesters` are member ids or person entities;
    * `asked` is whether the viewer is one of them; `unnamed` whether an automation asked too,
    * which keeps it heating after the last person leaves. `keep_until` is when it stops keeping
-   * the water hot, once someone has been told; null before.
+   * the water hot: the viewer's own time when they asked, once they have been told; null before.
+   * `target` is the temperature the viewer's own request heats to; null when they did not ask.
    */
-  heat_now: { requesters: string[]; asked: boolean; unnamed: boolean; keep_until: string | null } | null;
+  heat_now: {
+    requesters: string[];
+    asked: boolean;
+    unnamed: boolean;
+    keep_until: string | null;
+    target: number | null;
+  } | null;
   /** The viewer as the heater knows them: their member id, else their person; null for neither. */
   viewer: string | null;
   /** Whether this viewer may switch the heater off for everyone (admins and the people listed). */

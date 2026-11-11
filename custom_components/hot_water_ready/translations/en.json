@@ -344,6 +344,9 @@
     "visibility_own_only": {
       "message": "Only the member may make their own ready times private; for a member with no person, an administrator."
     },
+    "heat_now_target_admins_only": {
+      "message": "Only an administrator may choose the temperature for heat now."
+    },
     "ready_time_gone": {
       "message": "That ready time no longer exists."
     },
@@ -471,6 +474,10 @@
         "keep_minutes": {
           "name": "Keep hot for",
           "description": "Minutes to keep the water hot after the message. Empty: the heater's setting."
+        },
+        "target": {
+          "name": "Temperature",
+          "description": "Heat to this temperature (35 to 45 °C) instead of the heater's target. Administrators and automations only."
         }
       }
     },

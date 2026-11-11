@@ -100,7 +100,7 @@ def test_no_time_ends_the_request_with_the_message() -> None:
     assert cylinder.controller.state.heat_now is None
 
 
-def test_the_longer_time_wins_when_two_people_ask() -> None:
+def test_each_keeps_their_own_time_and_the_longest_holds_the_request() -> None:
     cylinder = _cylinder(35.0)
     cylinder.heat_now("tiago", keep_minutes=30)
     cylinder.heat_now("maria", keep_minutes=5)
@@ -110,6 +110,7 @@ def test_the_longer_time_wins_when_two_people_ask() -> None:
     heat_now = cylinder.controller.state.heat_now
     assert heat_now is not None
     assert heat_now.keep_until == told + timedelta(minutes=30)
+    assert heat_now.until == {"tiago": told + timedelta(minutes=30)}  # Maria's 5 min are up
 
 
 def test_someone_asking_inside_the_time_starts_it_again() -> None:
@@ -292,8 +293,29 @@ def test_a_request_saved_before_the_time_existed_still_loads() -> None:
     state = ControllerState.from_dict({"heating": True, "heat_now": saved})
 
     assert state.heat_now is not None
-    assert state.heat_now.keep_minutes == Settings().keep_hot_minutes
+    assert state.heat_now.keeps == {"tiago": Settings().keep_hot_minutes}
     assert state.heat_now.keep_until is None
+    assert state.heat_now.targets == {}
+
+
+def test_a_request_saved_with_one_time_for_everyone_still_loads() -> None:
+    from custom_components.hot_water_ready.core.controller import ControllerState  # noqa: PLC0415
+
+    saved = {
+        "started_at": "2026-11-02T12:00:00+00:00",
+        "deadline": "2026-11-02T16:15:00+00:00",
+        "target": 42.0,
+        "requesters": ["maria", "tiago"],
+        "told": ["tiago"],
+        "starting": False,
+        "keep_minutes": 30.0,
+        "keep_until": "2026-11-02T12:40:00+00:00",
+    }
+    state = ControllerState.from_dict({"heating": True, "heat_now": saved})
+
+    assert state.heat_now is not None
+    assert state.heat_now.keeps == {"maria": 30.0, "tiago": 30.0}
+    assert state.heat_now.until == {"tiago": datetime.fromisoformat("2026-11-02T12:40:00+00:00")}
 
 
 def test_cancelling_inside_a_window_that_is_not_heating_switches_off() -> None:

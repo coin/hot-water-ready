@@ -7,6 +7,10 @@ import {
   heatNowActions,
   choosesKeepTime,
   keepHotChoices,
+  heatNowTargetField,
+  heatNowTargetHint,
+  heatNowTargetStart,
+  heatNowTargetStepper,
   awayLine,
   privacySwitch,
   greeting,
@@ -103,6 +107,7 @@ const cold: HeaterSnapshot = {
   is_admin: true,
   me: "m1",
   can_ask_heat_now: true,
+  can_choose_heat_now_target: true,
   faults: [],
   heat_now_blocked: false,
   not_rising_checked: true,
@@ -152,14 +157,20 @@ describe("heaterView", () => {
   it("says until when it keeps the water hot after the message", () => {
     const keeping = {
       ...cold,
-      heat_now: { requesters: ["m1"], asked: true, unnamed: false, keep_until: "2026-11-02T18:25:00+00:00" },
+      heat_now: {
+        requesters: ["m1"],
+        asked: true,
+        unnamed: false,
+        keep_until: "2026-11-02T18:25:00+00:00",
+        target: 42,
+      },
     };
     expect(heaterView(keeping, pt).keepHot).toBe("A manter a água quente até às 18:25");
     expect(heaterView(keeping, en).keepHot).toBe("Keeping hot until 18:25");
   });
 
   it("says nothing about keeping it hot before the message", () => {
-    const asked = { ...cold, heat_now: { requesters: ["m1"], asked: true, unnamed: false, keep_until: null } };
+    const asked = { ...cold, heat_now: { requesters: ["m1"], asked: true, unnamed: false, keep_until: null, target: null } };
     expect(heaterView(asked, pt).keepHot).toBe("");
     expect(heaterView(cold, pt).keepHot).toBe("");
   });
@@ -248,7 +259,7 @@ describe("heaterView", () => {
   });
 
   it("names who asked for heat now while heating", () => {
-    const one = { ...cold, status: "heating" as const, heat_now: { requesters: ["m2"], asked: false, unnamed: false, keep_until: null } };
+    const one = { ...cold, status: "heating" as const, heat_now: { requesters: ["m2"], asked: false, unnamed: false, keep_until: null, target: null } };
     expect(heaterView(one, pt).subline).toBe("Pedido por Maria. Recebe um aviso quando estiver pronta.");
     expect(heaterView(one, en).subline).toBe("Asked for by Maria. They are told when it is ready.");
     const two = { ...one, heat_now: { ...one.heat_now, requesters: ["m2", "person.ana"] } };
@@ -539,6 +550,38 @@ describe("privacySwitch", () => {
   });
 });
 
+describe("heat now to an admin's own temperature (decision 16)", () => {
+  it("starts at the heater's target, brought inside 35 to 45", () => {
+    expect(heatNowTargetStart(cold)).toBe(42);
+    expect(heatNowTargetStart({ ...cold, target: 50 })).toBe(45);
+    expect(heatNowTargetStart({ ...cold, target: 30 })).toBe(35);
+  });
+
+  it("steps one degree at a time and stops at the ends", () => {
+    expect(heatNowTargetStepper(42, "pt")).toEqual({ value: 42, shown: "42 °C", down: 41, up: 43 });
+    expect(heatNowTargetStepper(45, "pt").up).toBeNull();
+    expect(heatNowTargetStepper(35, "pt").down).toBeNull();
+    expect(heatNowTargetStepper(42.5, "pt")).toEqual({ value: 42.5, shown: "42,5 °C", down: 42, up: 43 });
+  });
+
+  it("sends a temperature only when it is not the heater's own", () => {
+    expect(heatNowTargetField(cold, 42)).toEqual({});
+    expect(heatNowTargetField(cold, undefined)).toEqual({});
+    expect(heatNowTargetField(cold, 38)).toEqual({ target: 38 });
+    expect(heatNowTargetField({ ...cold, target: 50 }, 45)).toEqual({ target: 45 });
+  });
+
+  it("shows the viewer's own temperature on the ring while their request runs", () => {
+    const own = { requesters: ["m1"], asked: true, unnamed: false, keep_until: null, target: 45 };
+    expect(heaterView({ ...cold, heat_now: own }, pt).target).toBe("alvo 45°");
+    expect(heaterView({ ...cold, heat_now: { ...own, asked: false, target: null } }, pt).target).toBe("alvo 42°");
+  });
+
+  it("says the heater's target stays as it is", () => {
+    expect(heatNowTargetHint(cold, "pt")).toBe("Só para este pedido; o aquecedor continua nos 42 °C.");
+  });
+});
+
 describe("keepHotChoices", () => {
   it("offers 5 min to 2 h with the heater's time picked", () => {
     const choices = keepHotChoices(cold, "pt");
@@ -555,7 +598,7 @@ describe("keepHotChoices", () => {
   it("is offered by holding the buttons that ask, not the ones that cancel", () => {
     expect(heatNowActions(cold).map(choosesKeepTime)).toEqual([true]);
     expect(heatNowActions({ ...cold, status: "heating" }).map(choosesKeepTime)).toEqual([true]);
-    const mine = { ...cold, heat_now: { requesters: ["m1"], asked: true, unnamed: false, keep_until: null } };
+    const mine = { ...cold, heat_now: { requesters: ["m1"], asked: true, unnamed: false, keep_until: null, target: null } };
     expect(heatNowActions(mine).map(choosesKeepTime)).toEqual([false]);
   });
 });
@@ -572,16 +615,16 @@ describe("heatNowActions", () => {
 
   it("offers to be told when it is hot while it heats, for a ready time or for someone else", () => {
     expect(heatNowActions({ ...cold, status: "heating" })).toEqual([join]);
-    expect(heatNowActions({ ...cold, heat_now: { requesters: ["m2"], asked: false, unnamed: false, keep_until: null } })).toEqual([join]);
+    expect(heatNowActions({ ...cold, heat_now: { requesters: ["m2"], asked: false, unnamed: false, keep_until: null, target: null } })).toEqual([join]);
     expect(translations.pt["heat_now.join"]).toBe("Avisar-me quando estiver quente");
   });
 
   it("lets the only one who asked cancel", () => {
-    expect(heatNowActions({ ...cold, heat_now: { requesters: ["m1"], asked: true, unnamed: false, keep_until: null } })).toEqual([cancel]);
+    expect(heatNowActions({ ...cold, heat_now: { requesters: ["m1"], asked: true, unnamed: false, keep_until: null, target: null } })).toEqual([cancel]);
   });
 
   it("lets someone leave when an automation asked too, as heating goes on", () => {
-    expect(heatNowActions({ ...cold, heat_now: { requesters: ["m1"], asked: true, unnamed: true, keep_until: null } })).toEqual([leave]);
+    expect(heatNowActions({ ...cold, heat_now: { requesters: ["m1"], asked: true, unnamed: true, keep_until: null, target: null } })).toEqual([leave]);
   });
 
   it("offers nothing while it heats for the viewer's own ready time: they are told anyway", () => {
@@ -590,7 +633,7 @@ describe("heatNowActions", () => {
   });
 
   it("lets one of several who asked leave", () => {
-    expect(heatNowActions({ ...cold, heat_now: { requesters: ["m1", "m2"], asked: true, unnamed: false, keep_until: null } })).toEqual([leave]);
+    expect(heatNowActions({ ...cold, heat_now: { requesters: ["m1", "m2"], asked: true, unnamed: false, keep_until: null, target: null } })).toEqual([leave]);
     expect(translations.pt["heat_now.leave"]).toBe("Não me avisar");
   });
 
@@ -608,9 +651,9 @@ describe("switchOffShown", () => {
   });
 
   it("is shown while a heat-now request waits without heating, to end it", () => {
-    const waiting = { ...cold, status: "fault" as const, heat_now: { requesters: ["m2"], asked: false, unnamed: false, keep_until: null } };
+    const waiting = { ...cold, status: "fault" as const, heat_now: { requesters: ["m2"], asked: false, unnamed: false, keep_until: null, target: null } };
     expect(switchOffShown(waiting)).toBe(true);
-    expect(switchOffShown({ ...waiting, heat_now: { requesters: [], asked: false, unnamed: true, keep_until: null } })).toBe(true);
+    expect(switchOffShown({ ...waiting, heat_now: { requesters: [], asked: false, unnamed: true, keep_until: null, target: null } })).toBe(true);
     expect(switchOffShown({ ...waiting, can_switch_off: false })).toBe(false);
   });
 });
@@ -620,7 +663,7 @@ describe("switchOffSheet", () => {
     const heating = {
       ...cold,
       status: "heating" as const,
-      heat_now: { requesters: ["m1", "person.ana"], asked: true, unnamed: false, keep_until: null },
+      heat_now: { requesters: ["m1", "person.ana"], asked: true, unnamed: false, keep_until: null, target: null },
       heating_for: [{ member: "m2", at: "2026-11-02T07:00:00+00:00" }],
     };
     expect(switchOffSheet(heating, pt)).toEqual({
@@ -640,7 +683,7 @@ describe("switchOffSheet", () => {
       me: null, // an administrator who is not a member
       viewer: null,
       status: "heating" as const,
-      heat_now: { requesters: ["m2", "person.ana"], asked: false, unnamed: false, keep_until: null },
+      heat_now: { requesters: ["m2", "person.ana"], asked: false, unnamed: false, keep_until: null, target: null },
       heating_for: [
         { member: "m2", at: "2026-11-02T07:00:00+00:00" },
         { member: "m1", at: "2026-11-02T07:30:00+00:00" },
@@ -653,7 +696,7 @@ describe("switchOffSheet", () => {
   });
 
   it("just says heating stops when nobody else loses out", () => {
-    const mine = { ...cold, status: "heating" as const, heat_now: { requesters: ["m1"], asked: true, unnamed: false, keep_until: null } };
+    const mine = { ...cold, status: "heating" as const, heat_now: { requesters: ["m1"], asked: true, unnamed: false, keep_until: null, target: null } };
     expect(switchOffSheet(mine, pt).lines).toEqual(["O aquecimento pára agora."]);
   });
 
@@ -663,7 +706,7 @@ describe("switchOffSheet", () => {
       me: null,
       viewer: "person.ana",
       status: "heating" as const,
-      heat_now: { requesters: ["person.ana"], asked: true, unnamed: false, keep_until: null },
+      heat_now: { requesters: ["person.ana"], asked: true, unnamed: false, keep_until: null, target: null },
       heating_for: [{ member: "person.ana", at: "2026-11-02T07:00:00+00:00" }],
     };
     expect(switchOffSheet(listed, pt).lines).toEqual([
@@ -693,7 +736,7 @@ describe("heatNowActions during a fault", () => {
   });
 
   it("still lets someone cancel a request that was running when the fault came", () => {
-    const running = { ...cold, heat_now_blocked: true, heat_now: { requesters: ["m1"], asked: true, unnamed: false, keep_until: null } };
+    const running = { ...cold, heat_now_blocked: true, heat_now: { requesters: ["m1"], asked: true, unnamed: false, keep_until: null, target: null } };
     expect(heatNowActions(running)).toEqual([
       { message: { type: "hot_water_ready/heat_now/cancel" }, label: "heat_now.cancel" },
     ]);

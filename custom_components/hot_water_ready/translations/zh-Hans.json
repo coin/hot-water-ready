@@ -344,6 +344,9 @@
     "visibility_own_only": {
       "message": "只有成员本人可以将自己的就绪时间设为私密；没有关联人员的成员由管理员设置。"
     },
+    "heat_now_target_admins_only": {
+      "message": "只有管理员可以选择立即加热的温度。"
+    },
     "ready_time_gone": {
       "message": "该就绪时间已不存在。"
     },
@@ -471,6 +474,10 @@
         "keep_minutes": {
           "name": "保温时长",
           "description": "消息发出后保持热水的分钟数。留空：使用热水器的设置。"
+        },
+        "target": {
+          "name": "温度",
+          "description": "加热到此温度（35 至 45 °C），而不是热水器的目标温度。仅限管理员和自动化。"
         }
       }
     },

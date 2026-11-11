@@ -172,9 +172,17 @@ control is off.
 **Keeping it hot**: after the message the heater keeps the water hot for 5 minutes (an option),
 heating again if it drops to the target minus the margin, then switches off without another
 message. The card shows *Keeping hot until 18:25*. Hold *Heat now* for half a second, or press
-⋯ next to it, to pick 5, 15 or 30 minutes, 1 or 2 hours for that request; when several people
-ask, the longest wins, and someone told later starts the time again. The `heat_now` action takes
-`keep_minutes` for the same.
+⋯ next to it, to pick 5, 15 or 30 minutes, 1 or 2 hours for that request. Each person's time
+starts at their own message, and they leave the request when it is up; heating stops when the
+last one leaves. The `heat_now` action takes `keep_minutes` for the same.
+
+**Your own temperature** (administrators): the same sheet also has a temperature, one degree at a
+time from 35 to 45 °C, starting at the heater's target. It is for that request only; the heater's
+target does not change. With several people asking, the heater heats to the highest temperature
+among them, and each is told when the water reaches their own: someone who asked for the target
+is told at it while an administrator's higher request heats on. The card's ring shows your own
+temperature while your request runs. The `heat_now` action takes `target` for the same, from an
+administrator or an automation.
 
 **Switching off for everyone**: administrators, and the people chosen in the options, also see
 *Switch off the heating…* while it heats, which asks for confirmation and names who loses out.

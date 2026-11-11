@@ -77,6 +77,7 @@ describe("HeaterSubscription", () => {
       is_admin: true,
       me: null,
       can_ask_heat_now: true,
+      can_choose_heat_now_target: false,
       settings: null,
       week: null,
       cluster_warning: null,

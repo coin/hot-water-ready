@@ -16,6 +16,13 @@ heat_now:
           min: 0
           max: 120
           unit_of_measurement: min
+    target:
+      selector:
+        number:
+          min: 35
+          max: 45
+          step: 1
+          unit_of_measurement: °C
 add_ready_time:
   fields:
     member:

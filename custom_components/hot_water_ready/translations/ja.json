@@ -344,6 +344,9 @@
     "visibility_own_only": {
       "message": "準備時刻を非公開にできるのはそのメンバー本人だけです。人物のないメンバーは管理者が設定します。"
     },
+    "heat_now_target_admins_only": {
+      "message": "今すぐ加熱の温度を選べるのは管理者だけです。"
+    },
     "ready_time_gone": {
       "message": "その準備時刻はもう存在しません。"
     },
@@ -471,6 +474,10 @@
         "keep_minutes": {
           "name": "保温時間",
           "description": "メッセージの後にお湯を保温する分数。空欄: ヒーターの設定値。"
+        },
+        "target": {
+          "name": "温度",
+          "description": "給湯器の目標温度の代わりにこの温度（35〜45 °C）まで加熱します。管理者と自動化のみ。"
         }
       }
     },

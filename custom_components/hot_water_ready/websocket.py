@@ -23,7 +23,7 @@ from .const import (
     MIN_TARGET,
     signal_heater_updated,
 )
-from .core.controller import MAX_KEEP_HOT_MINUTES
+from .core.controller import HEAT_NOW_MAX_TARGET, HEAT_NOW_MIN_TARGET, MAX_KEEP_HOT_MINUTES
 from .core.rate import MAX_MANUAL_RATE, MIN_MANUAL_RATE
 from .core.visibility import Visibility
 from .heater import (
@@ -322,6 +322,10 @@ async def ws_set_visibility(
         probatio.Optional("keep_minutes"): probatio.All(
             probatio.Coerce(float), probatio.Range(min=0, max=MAX_KEEP_HOT_MINUTES)
         ),
+        probatio.Optional("target"): probatio.All(
+            probatio.Coerce(float),
+            probatio.Range(min=HEAT_NOW_MIN_TARGET, max=HEAT_NOW_MAX_TARGET),
+        ),
     }
 )
 @websocket_api.async_response
@@ -338,8 +342,15 @@ async def ws_heat_now(
             hass, connection, msg, websocket_api.ERR_UNAUTHORIZED, "ask_members_only"
         )
         return
+    if "target" in msg and not heater.can_choose_heat_now_target(connection.user):
+        await _async_error(
+            hass, connection, msg, websocket_api.ERR_UNAUTHORIZED, "heat_now_target_admins_only"
+        )
+        return
     try:
-        await heater.async_heat_now(heater.requester_key(connection.user), msg.get("keep_minutes"))
+        await heater.async_heat_now(
+            heater.requester_key(connection.user), msg.get("keep_minutes"), msg.get("target")
+        )
     except HeatNowRefusedError as err:
         connection.send_error(msg["id"], "refused", await heater.async_refusal_message(err))
         return

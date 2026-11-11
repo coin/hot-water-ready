@@ -332,6 +332,7 @@ async def test_the_card_knows_an_automation_also_asked(
         "asked": True,
         "unnamed": True,
         "keep_until": None,
+        "target": 42.0,
     }
 
 

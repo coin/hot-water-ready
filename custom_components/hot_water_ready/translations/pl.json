@@ -344,6 +344,9 @@
     "visibility_own_only": {
       "message": "Tylko sam członek może ustawić swoje godziny gotowości jako prywatne; dla członka bez osoby robi to administrator."
     },
+    "heat_now_target_admins_only": {
+      "message": "Tylko administrator może wybrać temperaturę dla grzania teraz."
+    },
     "ready_time_gone": {
       "message": "Ta godzina gotowości już nie istnieje."
     },
@@ -471,6 +474,10 @@
         "keep_minutes": {
           "name": "Utrzymuj ciepłą przez",
           "description": "Minuty utrzymywania ciepłej wody po wiadomości. Puste: ustawienie podgrzewacza."
+        },
+        "target": {
+          "name": "Temperatura",
+          "description": "Grzej do tej temperatury (od 35 do 45 °C) zamiast do temperatury docelowej podgrzewacza. Tylko administratorzy i automatyzacje."
         }
       }
     },

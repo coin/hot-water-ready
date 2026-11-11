@@ -344,6 +344,9 @@
     "visibility_own_only": {
       "message": "Solo el propio miembro puede hacer privadas sus horas; para un miembro sin persona, un administrador."
     },
+    "heat_now_target_admins_only": {
+      "message": "Solo un administrador puede elegir la temperatura de calentar ahora."
+    },
     "ready_time_gone": {
       "message": "Esa hora ya no existe."
     },
@@ -471,6 +474,10 @@
         "keep_minutes": {
           "name": "Mantener caliente durante",
           "description": "Minutos que se mantiene el agua caliente después del mensaje. Vacío: el ajuste del calentador."
+        },
+        "target": {
+          "name": "Temperatura",
+          "description": "Calentar hasta esta temperatura (35 a 45 °C) en lugar de la temperatura objetivo del calentador. Solo administradores y automatizaciones."
         }
       }
     },

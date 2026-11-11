@@ -344,6 +344,9 @@
     "visibility_own_only": {
       "message": "Alleen het lid zelf kan zijn klaartijden privé maken; voor een lid zonder persoon een beheerder."
     },
+    "heat_now_target_admins_only": {
+      "message": "Alleen een beheerder mag de temperatuur voor nu verwarmen kiezen."
+    },
     "ready_time_gone": {
       "message": "Die klaartijd bestaat niet meer."
     },
@@ -471,6 +474,10 @@
         "keep_minutes": {
           "name": "Warm houden gedurende",
           "description": "Minuten om het water na het bericht warm te houden. Leeg: de instelling van de boiler."
+        },
+        "target": {
+          "name": "Temperatuur",
+          "description": "Verwarmen tot deze temperatuur (35 tot 45 °C) in plaats van de doeltemperatuur van de boiler. Alleen beheerders en automatiseringen."
         }
       }
     },

@@ -344,6 +344,9 @@
     "visibility_own_only": {
       "message": "Nur das Mitglied selbst kann seine Bereitzeiten privat machen; bei einem Mitglied ohne Person ein Administrator."
     },
+    "heat_now_target_admins_only": {
+      "message": "Nur ein Administrator darf die Temperatur für Jetzt heizen wählen."
+    },
     "ready_time_gone": {
       "message": "Diese Bereitzeit gibt es nicht mehr."
     },
@@ -471,6 +474,10 @@
         "keep_minutes": {
           "name": "Heiß halten für",
           "description": "Minuten, die das Wasser nach der Nachricht heiß gehalten wird. Leer: die Einstellung des Boilers."
+        },
+        "target": {
+          "name": "Temperatur",
+          "description": "Auf diese Temperatur heizen (35 bis 45 °C) statt auf die Zieltemperatur des Boilers. Nur Administratoren und Automationen."
         }
       }
     },

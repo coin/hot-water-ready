@@ -183,7 +183,10 @@ function elementOf(heater: HeaterSnapshot, language: string): string {
 
 export function heaterView(heater: HeaterSnapshot, context: ViewContext): HeaterView {
   const { language } = context;
-  const { temperature, target } = heater;
+  const { temperature } = heater;
+  // While the viewer's own heat now runs, the ring shows the temperature it heats to (16).
+  const own = heater.heat_now?.asked ? heater.heat_now.target : null;
+  const target = own ?? heater.target;
   return {
     temperature: temperature === null ? "–" : `${formatNumber(temperature, language, 1)}°`,
     target: localize(language, "ring.target", { target: formatNumber(target, language, 1) }),
@@ -570,6 +573,47 @@ export function keepHotChoices(heater: HeaterSnapshot, language: string): KeepHo
         : localize(language, "keep_hot.minutes", { n: formatNumber(value, language, 0) }),
     isDefault: value === fallback,
   }));
+}
+
+/** The temperatures an admin may ask heat now for (decision 16), as the server allows. */
+export const HEAT_NOW_MIN_TARGET = 35;
+export const HEAT_NOW_MAX_TARGET = 45;
+
+export interface HeatNowTargetStepper {
+  value: number;
+  shown: string;
+  /** The value one degree down or up, or null at the end of the range. */
+  down: number | null;
+  up: number | null;
+}
+
+/** Where the temperature starts: the heater's target, brought inside 35 to 45 °C. */
+export function heatNowTargetStart(heater: HeaterSnapshot): number {
+  return Math.min(Math.max(heater.target, HEAT_NOW_MIN_TARGET), HEAT_NOW_MAX_TARGET);
+}
+
+/** The − and + around a chosen temperature, one degree at a time. */
+export function heatNowTargetStepper(value: number, language: string): HeatNowTargetStepper {
+  const down = Math.max(Math.ceil(value) - 1, HEAT_NOW_MIN_TARGET);
+  const up = Math.min(Math.floor(value) + 1, HEAT_NOW_MAX_TARGET);
+  return {
+    value,
+    shown: `${formatNumber(value, language, Number.isInteger(value) ? 0 : 1)} °C`,
+    down: down < value ? down : null,
+    up: up > value ? up : null,
+  };
+}
+
+/** What heat now sends for a chosen temperature: nothing when it is the heater's own target,
+ * so the request goes on following the heater's target. */
+export function heatNowTargetField(heater: HeaterSnapshot, value: number | undefined): { target?: number } {
+  return value === undefined || value === heater.target ? {} : { target: value };
+}
+
+/** The line under the temperature: it is for this request only. */
+export function heatNowTargetHint(heater: HeaterSnapshot, language: string): string {
+  const digits = Number.isInteger(heater.target) ? 0 : 1;
+  return localize(language, "heat_now_target.hint", { target: formatNumber(heater.target, language, digits) });
 }
 
 function keepHotLine(heater: HeaterSnapshot, context: ViewContext): string {

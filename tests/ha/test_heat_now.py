@@ -279,6 +279,7 @@ async def test_card_sees_who_asked_and_whether_it_may_cancel(
         "asked": False,
         "unnamed": False,
         "keep_until": None,
+        "target": None,
     }
     assert snapshot["keep_hot_minutes"] == 5
     assert snapshot["viewer"] == MARIA
@@ -464,7 +465,7 @@ async def test_an_automation_chooses_how_long_to_keep_it_hot(
 
     heat_now = heater.runtime_data._controller.state.heat_now
     assert heat_now is not None
-    assert heat_now.keep_minutes == 15
+    assert heat_now.keeps == {"": 15}
 
 
 async def test_the_default_time_is_an_option(hass: HomeAssistant, heater: MockConfigEntry) -> None:

@@ -344,6 +344,9 @@
     "visibility_own_only": {
       "message": "Só o próprio membro pode tornar seus horários privados; para um membro sem pessoa, um administrador."
     },
+    "heat_now_target_admins_only": {
+      "message": "Somente um administrador pode escolher a temperatura do aquecer agora."
+    },
     "ready_time_gone": {
       "message": "Esse horário não existe mais."
     },
@@ -471,6 +474,10 @@
         "keep_minutes": {
           "name": "Manter quente por",
           "description": "Minutos para manter a água quente depois da mensagem. Vazio: a configuração do aquecedor."
+        },
+        "target": {
+          "name": "Temperatura",
+          "description": "Aquecer até esta temperatura (35 a 45 °C) em vez da temperatura alvo do aquecedor. Somente administradores e automações."
         }
       }
     },

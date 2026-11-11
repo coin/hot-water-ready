@@ -20,6 +20,10 @@ import {
   heatNowActions,
   choosesKeepTime,
   keepHotChoices,
+  heatNowTargetField,
+  heatNowTargetHint,
+  heatNowTargetStart,
+  heatNowTargetStepper,
   HOLD_MS,
   heaterView,
   houseTodayChips,
@@ -109,7 +113,8 @@ export class HotWaterReadyCard extends LitElement {
   /** The "Desligar o aquecimento?" confirmation is open. */
   private _offOpen = false;
   /** The choice of how long to keep it hot, open for the button that was held, and the time picked. */
-  private _keep: { action: HeatNowAction; minutes: number } | undefined;
+  /** The keep-hot sheet: the action, the time picked and, for an admin, the temperature. */
+  private _keep: { action: HeatNowAction; minutes: number; target?: number } | undefined;
   /** The button is being held: its fill runs while the hold lasts. */
   private _holding = false;
   private _holdTimer: number | undefined;
@@ -499,11 +504,17 @@ export class HotWaterReadyCard extends LitElement {
 
   private _openKeep(action: HeatNowAction): void {
     if (!this._heater) return;
-    this._keep = { action, minutes: this._heater.keep_hot_minutes };
+    const heater = this._heater;
+    this._keep = heater.can_choose_heat_now_target
+      ? { action, minutes: heater.keep_hot_minutes, target: heatNowTargetStart(heater) }
+      : { action, minutes: heater.keep_hot_minutes };
   }
 
   /** How long to keep it hot after the message: the heater's time picked, the action's label to send. */
-  private _renderKeepHot(heater: HeaterSnapshot, keep: { action: HeatNowAction; minutes: number }): unknown {
+  private _renderKeepHot(
+    heater: HeaterSnapshot,
+    keep: { action: HeatNowAction; minutes: number; target?: number },
+  ): unknown {
     const language = this._language;
     const close = () => {
       this._keep = undefined;
@@ -526,6 +537,7 @@ export class HotWaterReadyCard extends LitElement {
             if (event.key === "Escape") close();
           }}
         >
+          ${keep.target === undefined ? nothing : this._renderHeatNowTarget(heater, keep, keep.target)}
           <div class="off-title" id="keep-title">${localize(language, "keep_hot.title")}</div>
           <p>${localize(language, "keep_hot.hint")}</p>
           <div class="keep-chips" role="radiogroup" aria-labelledby="keep-title">
@@ -543,7 +555,12 @@ export class HotWaterReadyCard extends LitElement {
           <button
             class="keep-start primary"
             @click=${async () => {
-              if (await this._call({ ...keep.action.message, keep_minutes: keep.minutes })) close();
+              const message = {
+                ...keep.action.message,
+                keep_minutes: keep.minutes,
+                ...heatNowTargetField(heater, keep.target),
+              };
+              if (await this._call(message)) close();
             }}
           >
             ${localize(language, keep.action.label)}
@@ -552,6 +569,34 @@ export class HotWaterReadyCard extends LitElement {
         </div>
       </div>
     `;
+  }
+
+  /** An admin's own temperature for this request, degree by degree from the heater's (16). */
+  private _renderHeatNowTarget(
+    heater: HeaterSnapshot,
+    keep: { action: HeatNowAction; minutes: number; target?: number },
+    target: number,
+  ): unknown {
+    const language = this._language;
+    const stepper = heatNowTargetStepper(target, language);
+    const step = (to: number | null, key: "heat_now_target.down" | "heat_now_target.up", sign: string) =>
+      html`<button
+        class="step"
+        aria-label=${localize(language, key)}
+        ?disabled=${to === null}
+        @click=${() => {
+          if (to !== null) this._keep = { ...keep, target: to };
+        }}
+      >
+        ${sign}
+      </button>`;
+    return html`<div class="off-title" id="target-title">${localize(language, "heat_now_target.title")}</div>
+      <div class="target-value" role="group" aria-labelledby="target-title">
+        ${step(stepper.down, "heat_now_target.down", "−")}
+        <span class="value" aria-live="polite">${stepper.shown}</span>
+        ${step(stepper.up, "heat_now_target.up", "+")}
+      </div>
+      <p>${heatNowTargetHint(heater, language)}</p>`;
   }
 
   /** The confirmation before switching off: who loses out, "Desligar" in red, focus on "Cancelar". */
@@ -2344,6 +2389,11 @@ export class HotWaterReadyCard extends LitElement {
       color: var(--primary-text-color);
       font-size: 18px;
       line-height: 1;
+    }
+    .target-value {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
     .keep-chips {
       display: flex;

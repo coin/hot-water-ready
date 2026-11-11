@@ -16,6 +16,9 @@ from .parsing import aware_datetime, flag, name_list, number, optional_aware_dat
 # The probe reads in 0.1 C steps; compare with a little slack so 43.0 counts as reaching 43.
 _EPSILON = 1e-6
 MAX_KEEP_HOT_MINUTES = 120.0  # the longest heat now keeps the water hot after the message
+# The temperatures an admin may ask heat now for, apart from the heater's target (decision 16).
+HEAT_NOW_MIN_TARGET = 35.0
+HEAT_NOW_MAX_TARGET = 45.0
 
 
 @dataclass(frozen=True)
@@ -82,18 +85,39 @@ class Window:
 
 @dataclass
 class HeatNow:
-    """A request for hot water as soon as possible (spec 4.6), from one or more people."""
+    """A request for hot water as soon as possible (spec 4.6), from one or more people.
+
+    Each requester has their own temperature and their own time to keep it hot (decision 16):
+    the request heats to the highest temperature among those still in it, each is told at their
+    own, and each leaves when their own time after the message is up.
+    """
 
     started_at: datetime
     deadline: datetime
-    target: float
+    target: float  # the highest temperature asked for, as the last step saw it
     requesters: frozenset[str]
     told: frozenset[str] = frozenset()
     starting: bool = True  # pressed, not yet looked at by a step
-    # How long to keep the water hot after the message: the longest anyone asked for.
-    keep_minutes: float = 0.0
-    # Until when; set when someone is told, and moved on when someone else is told later.
-    keep_until: datetime | None = None
+    # Each requester's time to keep it hot after their message, in minutes.
+    keeps: dict[str, float] = field(default_factory=dict)
+    # A temperature chosen by an admin, by requester; anyone else follows the heater's target.
+    targets: dict[str, float] = field(default_factory=dict)
+    # Until when each requester told is kept; they leave the request then.
+    until: dict[str, datetime] = field(default_factory=dict)
+
+    @property
+    def keep_until(self) -> datetime | None:
+        """When the last of those told stops being kept, if anyone has been told."""
+        return max(self.until.values(), default=None)
+
+    def leave(self, requesters: Iterable[str]) -> None:
+        """These people are no longer in the request."""
+        gone = frozenset(requesters)
+        self.requesters -= gone
+        self.told -= gone
+        for table in (self.keeps, self.targets, self.until):
+            for requester in gone:
+                table.pop(requester, None)
 
 
 @dataclass
@@ -130,10 +154,9 @@ class ControllerState:
                 "requesters": sorted(heat_now.requesters),
                 "told": sorted(heat_now.told),
                 "starting": heat_now.starting,
-                "keep_minutes": heat_now.keep_minutes,
-                "keep_until": None
-                if heat_now.keep_until is None
-                else heat_now.keep_until.isoformat(),
+                "keeps": dict(sorted(heat_now.keeps.items())),
+                "targets": dict(sorted(heat_now.targets.items())),
+                "until": {r: at.isoformat() for r, at in sorted(heat_now.until.items())},
             },
             "told": sorted([member, at.isoformat()] for member, at in self.told),
             "told_heating": sorted([member, at.isoformat()] for member, at in self.told_heating),
@@ -187,17 +210,7 @@ class ControllerState:
         raw_now = data.get("heat_now")
         heat_now = None
         if raw_now is not None:
-            heat_now = HeatNow(
-                started_at=aware_datetime(raw_now["started_at"]),
-                deadline=aware_datetime(raw_now["deadline"]),
-                target=number(raw_now["target"]),
-                requesters=name_list(raw_now["requesters"]),
-                told=name_list(raw_now["told"]),
-                starting=flag(raw_now["starting"]),
-                # Saved by earlier versions, before the time to keep it hot existed.
-                keep_minutes=number(raw_now.get("keep_minutes", Settings.keep_hot_minutes)),
-                keep_until=optional_aware_datetime(raw_now.get("keep_until")),
-            )
+            heat_now = _parse_heat_now(raw_now)
         return cls(
             window=window,
             heating=flag(data.get("heating", False)),
@@ -206,6 +219,39 @@ class ControllerState:
             told=frozenset(told),
             told_heating=frozenset(told_heating),
         )
+
+
+def _parse_heat_now(raw: dict[str, Any]) -> HeatNow:
+    requesters = name_list(raw["requesters"])
+    told = name_list(raw["told"])
+    if "keeps" in raw:
+        keeps = {r: number(m) for r, m in _table(raw["keeps"]).items()}
+        targets = {r: number(t) for r, t in _table(raw.get("targets", {})).items()}
+        until = {r: aware_datetime(at) for r, at in _table(raw.get("until", {})).items()}
+    else:
+        # Saved before decision 16: one time for everyone, from earlier still the default.
+        minutes = number(raw.get("keep_minutes", Settings.keep_hot_minutes))
+        keeps = dict.fromkeys(requesters, minutes)
+        targets = {}
+        shared = optional_aware_datetime(raw.get("keep_until"))
+        until = {} if shared is None else dict.fromkeys(told, shared)
+    return HeatNow(
+        started_at=aware_datetime(raw["started_at"]),
+        deadline=aware_datetime(raw["deadline"]),
+        target=number(raw["target"]),
+        requesters=requesters,
+        told=told,
+        starting=flag(raw["starting"]),
+        keeps=keeps,
+        targets=targets,
+        until=until,
+    )
+
+
+def _table(raw: object) -> dict[str, object]:
+    if not isinstance(raw, dict) or not all(isinstance(key, str) for key in raw):
+        raise TypeError("table")
+    return raw
 
 
 def _parse_pairs(raw: object) -> set[tuple[str, datetime]]:
@@ -358,41 +404,71 @@ class Controller:
         self._lead_water: float | None = None  # this step's lead temperature, if any
 
     def request_heat_now(
-        self, now: datetime, requester: str, keep_minutes: float | None = None
+        self,
+        now: datetime,
+        requester: str,
+        keep_minutes: float | None = None,
+        target: float | None = None,
     ) -> None:
         """Someone asks for hot water now, or joins a request already running.
 
-        After the message the band keeps the water hot for `keep_minutes` (the settings' time
-        when None, at most two hours); with several people the longest wins. The request ends
-        when everyone who asked has been told and that time is up, when it is cancelled, or,
-        while nobody has been told yet, after the lead cap plus the lead margin, like version 1.
+        `target` is a temperature of their own (decision 16; None follows the heater's target).
+        The request heats to the highest temperature among those in it, and each is told when the
+        water reaches theirs. After that message the band keeps the water for `keep_minutes` (the
+        settings' time when None, at most two hours), and then that person leaves the request.
+        It ends when nobody is left, when it is cancelled, or, while nobody in it has been told,
+        after the lead cap plus the lead margin, like version 1. Asking again replaces one's own
+        temperature and time; a new temperature is told again.
         """
         now = now.astimezone(UTC)
         settings = self.settings
         keep = settings.keep_hot_minutes if keep_minutes is None else keep_minutes
         keep = min(max(keep, 0.0), MAX_KEEP_HOT_MINUTES)
+        if target is not None:
+            target = min(max(target, HEAT_NOW_MIN_TARGET), HEAT_NOW_MAX_TARGET)
         heat_now = self.state.heat_now
         if heat_now is None:
             limit = timedelta(minutes=settings.lead_cap_minutes + settings.lead_margin_minutes)
-            self.state.heat_now = HeatNow(
+            heat_now = HeatNow(
                 started_at=now,
                 deadline=now + limit,
-                target=settings.target,
-                requesters=frozenset({requester}),
-                keep_minutes=keep,
+                target=settings.target if target is None else target,
+                requesters=frozenset(),
             )
+            self.state.heat_now = heat_now
+        elif requester in heat_now.requesters and heat_now.targets.get(requester) != target:
+            heat_now.told -= {requester}
+            heat_now.until.pop(requester, None)
+        heat_now.requesters |= {requester}
+        heat_now.keeps[requester] = keep
+        if target is None:
+            heat_now.targets.pop(requester, None)
         else:
-            heat_now.requesters |= {requester}
-            heat_now.keep_minutes = max(heat_now.keep_minutes, keep)
+            heat_now.targets[requester] = target
 
     def withdraw_heat_now(self, requester: str) -> None:
         """One person no longer wants heat now; the request ends when nobody is left."""
         heat_now = self.state.heat_now
         if heat_now is None or requester not in heat_now.requesters:
             return
-        heat_now.requesters -= {requester}
+        heat_now.leave({requester})
         if not heat_now.requesters:
             self.cancel_heat_now()
+
+    def heat_now_target(self, requester: str | None = None) -> float | None:
+        """The temperature heat now heats to: one requester's, or with no one named the highest
+        among those in it; None without a request (or when that requester is not in it)."""
+        heat_now = self.state.heat_now
+        if heat_now is None:
+            return None
+        if requester is not None:
+            if requester not in heat_now.requesters:
+                return None
+            return heat_now.targets.get(requester, self.settings.target)
+        return max(
+            (heat_now.targets.get(r, self.settings.target) for r in heat_now.requesters),
+            default=self.settings.target,
+        )
 
     def switch_off(self, now: datetime, by: Iterable[str] = ()) -> frozenset[str]:
         """Switch the heater off now: the heat-now request ends and the open window is skipped.
@@ -519,13 +595,14 @@ class Controller:
         return minutes_to_ready(self.settings, temperature) or 0
 
     def target_now(self) -> float:
-        """The highest target asked for now: a raised cluster's, else the normal one."""
+        """The highest target asked for now: a raised cluster's, heat now's (an admin's may be
+        above or below the heater's, decision 16), else the normal one."""
         window = self.state.window
-        if window is None:
-            return self.settings.target
-        if self.state.heat_now is None:
-            return window.target
-        return max(window.target, self.settings.target)
+        wanted = [] if window is None else [window.target]
+        heat_now = self.heat_now_target()
+        if heat_now is not None:
+            wanted.append(heat_now)
+        return max(wanted, default=self.settings.target)
 
     def stop_point_now(self) -> float:
         """Where heating stops now: the target asked for, plus the margin (spec 4.4, 4.5)."""
@@ -562,8 +639,9 @@ class Controller:
         if heat_now is None or not heat_now.starting:
             return
         heat_now.starting = False
-        if temperature < self.settings.target - _EPSILON:
-            self.state.heating = True  # a request below the target heats to target + margin
+        heat_now.target = self.heat_now_target() or heat_now.target
+        if temperature < heat_now.target - _EPSILON:
+            self.state.heating = True  # a request below its target heats to target + margin
 
     def _tell_heat_now(
         self, now: datetime, temperature: float, events: list[ControllerEvent]
@@ -571,24 +649,30 @@ class Controller:
         heat_now = self.state.heat_now
         if heat_now is None:
             return
-        waiting = heat_now.requesters - heat_now.told
-        if waiting and temperature >= self.settings.target - _EPSILON:
+        waiting = frozenset(
+            requester
+            for requester in heat_now.requesters - heat_now.told
+            if temperature >= (self.heat_now_target(requester) or 0.0) - _EPSILON
+        )
+        if waiting:
             heat_now.told |= waiting
-            # The time starts at the message, and starts again for whoever is told later.
-            restart = now + timedelta(minutes=heat_now.keep_minutes)
-            if heat_now.keep_until is None or restart > heat_now.keep_until:
-                heat_now.keep_until = restart
+            # Each one's time starts at their own message.
+            for requester in waiting:
+                minutes = heat_now.keeps.get(requester, self.settings.keep_hot_minutes)
+                heat_now.until[requester] = now + timedelta(minutes=minutes)
             events.append(
                 ControllerEvent("heat_now_ready", heat_now.started_at, waiting, temperature)
             )
-        keep_until = heat_now.keep_until
-        if heat_now.told >= heat_now.requesters and keep_until is not None and now >= keep_until:
-            self.cancel_heat_now()  # everyone told and the time is up, even mid-band
+        done = [r for r in heat_now.told if r in heat_now.until and now >= heat_now.until[r]]
+        if done:
+            heat_now.leave(done)
+            if not heat_now.requesters:
+                self.cancel_heat_now()  # everyone told and their time up, even mid-band
 
     def _time_out_heat_now(self, now: datetime, events: list[ControllerEvent]) -> None:
         heat_now = self.state.heat_now
-        # Once someone is told, the time to keep it hot ends the request instead.
-        if heat_now is None or now < heat_now.deadline or heat_now.keep_until is not None:
+        # While someone told is kept, their time to keep it hot ends the request instead.
+        if heat_now is None or now < heat_now.deadline or heat_now.until:
             return
         waiting = heat_now.requesters - heat_now.told
         if waiting:
@@ -719,10 +803,10 @@ class Controller:
     def _band(self, temperature: float, cluster_target: float | None) -> None:
         """Stop at target + margin; restart at target - margin.
 
-        The window's target is its cluster's (spec 4.5), heat now's the normal one, and the band
-        follows the higher of those asked for. A request that starts below its target (a window
-        opening, heat now pressed, or a target raised while one is running) heats straight to
-        target + margin, even from inside the band.
+        The window's target is its cluster's (spec 4.5), heat now's the highest its requesters
+        ask for (decision 16), and the band follows the higher of those asked for. A request that
+        starts below its target (a window opening, heat now pressed, or a target raised while one
+        is running) heats straight to target + margin, even from inside the band.
         """
         settings = self.settings
         state = self.state
@@ -731,7 +815,7 @@ class Controller:
         heat_now = state.heat_now
         requests: list[tuple[Window | HeatNow | None, float]] = [
             (window, settings.target if cluster_target is None else cluster_target),
-            (heat_now, settings.target),
+            (heat_now, self.heat_now_target() or settings.target),
         ]
         for request, wanted in requests:
             if request is not None and request.target != wanted:

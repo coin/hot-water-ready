@@ -344,6 +344,9 @@
     "visibility_own_only": {
       "message": "Bara medlemmen själv kan göra sina klartider privata; för en medlem utan person en administratör."
     },
+    "heat_now_target_admins_only": {
+      "message": "Endast en administratör kan välja temperaturen för värm nu."
+    },
     "ready_time_gone": {
       "message": "Den klartiden finns inte längre."
     },
@@ -471,6 +474,10 @@
         "keep_minutes": {
           "name": "Håll varmt i",
           "description": "Minuter att hålla vattnet varmt efter meddelandet. Tomt: beredarens inställning."
+        },
+        "target": {
+          "name": "Temperatur",
+          "description": "Värm till den här temperaturen (35 till 45 °C) i stället för varmvattenberedarens måltemperatur. Endast administratörer och automationer."
         }
       }
     },
