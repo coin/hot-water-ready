@@ -174,6 +174,9 @@ const en = {
   "list.count": "{count} ready times",
   "list.virtual": "Virtual member · shared household times",
   "away.paused": "Paused. The times are kept.",
+  "visibility.private": "Private",
+  "visibility.hint_own": "Other members do not see these times or your Heat now requests; administrators do.",
+  "visibility.hint_virtual": "Only administrators see these times.",
   "settings.no_people": "There are no people in Home Assistant to choose from yet.",
 };
 
@@ -337,6 +340,9 @@ const pt: Record<TextKey, string> = {
   "list.count": "{count} horários",
   "list.virtual": "Membro virtual · horários partilhados da casa",
   "away.paused": "Em pausa. Os horários ficam guardados.",
+  "visibility.private": "Privado",
+  "visibility.hint_own": "Os outros membros não vêem estes horários nem os seus pedidos de Aquecer agora; os administradores vêem.",
+  "visibility.hint_virtual": "Só os administradores vêem estes horários.",
   "settings.no_people": "Ainda não há pessoas no Home Assistant para escolher.",
 };
 

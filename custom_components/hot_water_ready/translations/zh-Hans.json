@@ -341,6 +341,9 @@
     "edit_own_only": {
       "message": "您只能更改自己的就绪时间。"
     },
+    "visibility_own_only": {
+      "message": "只有成员本人可以将自己的就绪时间设为私密；没有关联人员的成员由管理员设置。"
+    },
     "ready_time_gone": {
       "message": "该就绪时间已不存在。"
     },

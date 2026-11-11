@@ -158,5 +158,8 @@ export const ru: Record<TextKey, string> = {
   "list.count": "Времён готовности: {count}",
   "list.virtual": "Виртуальный участник · общие времена дома",
   "away.paused": "Приостановлено. Времена сохранены.",
+  "visibility.private": "Личное",
+  "visibility.hint_own": "Другие участники не видят эти времена и ваши запросы «Нагреть сейчас»; администраторы видят.",
+  "visibility.hint_virtual": "Эти времена видят только администраторы.",
   "settings.no_people": "В Home Assistant пока нет людей для выбора.",
 };

@@ -22,6 +22,7 @@ from .core.household import Away
 from .core.probes import ProbeState
 from .core.rate import RateState
 from .core.ready_times import ReadyTime
+from .core.visibility import Visibility
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -37,6 +38,7 @@ class HeaterData:
     margin: float = DEFAULT_MARGIN
     ready_times: dict[str, list[ReadyTime]] = field(default_factory=dict)
     away: dict[str, Away] = field(default_factory=dict)
+    visibility: dict[str, Visibility] = field(default_factory=dict)  # public when missing
     controller: ControllerState | None = None
     faults: FaultState | None = None
     automatic: bool = True  # off: the heater is run by hand and left alone (spec 4.7)
@@ -93,6 +95,16 @@ def away_from_dict(raw: object) -> Away:
     if until is not None and not isinstance(until, str):
         raise TypeError("bad until")
     return Away(on=on, until=None if until is None else date.fromisoformat(until))
+
+
+def visibility_from_raw(raw: object) -> Visibility:
+    """Read a member's visibility; anything unknown is public, with a warning."""
+    if raw is None:
+        return Visibility.PUBLIC
+    if isinstance(raw, str) and raw in Visibility:
+        return Visibility(raw)
+    _LOGGER.warning("Stored visibility %r is unknown; using public", raw)
+    return Visibility.PUBLIC
 
 
 def _number(raw: object, default: float, low: float, high: float) -> float:
@@ -159,6 +171,8 @@ class HeaterStore:
                     data.away[member_id] = away_from_dict(stored["away"])
                 except (TypeError, ValueError) as err:
                     _LOGGER.warning("Ignored an invalid away %r: %s", stored["away"], err)
+            if "visibility" in stored:
+                data.visibility[member_id] = visibility_from_raw(stored["visibility"])
             ready_times = stored.get("ready_times") or []
             if not isinstance(ready_times, list):
                 _LOGGER.warning("Ignored ready times that are not a list: %r", ready_times)
@@ -181,8 +195,11 @@ class HeaterStore:
                         ready_time_to_dict(r) for r in data.ready_times.get(member_id, [])
                     ],
                     "away": away_to_dict(data.away.get(member_id, Away())),
+                    "visibility": data.visibility.get(member_id, Visibility.PUBLIC).value,
                 }
-                for member_id in sorted(set(data.ready_times) | set(data.away))
+                for member_id in sorted(
+                    set(data.ready_times) | set(data.away) | set(data.visibility)
+                )
             },
             "controller": None if data.controller is None else data.controller.to_dict(),
             "faults": None if data.faults is None else data.faults.to_dict(),

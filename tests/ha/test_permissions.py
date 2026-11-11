@@ -25,6 +25,7 @@ MESSAGES: dict[str, dict[str, Any]] = {
     f"{DOMAIN}/ready_time/update": {"member_id": TIAGO, "ready_time_id": "x", "enabled": False},
     f"{DOMAIN}/ready_time/remove": {"member_id": TIAGO, "ready_time_id": "x"},
     f"{DOMAIN}/away/set": {"member_id": TIAGO, "away": True},
+    f"{DOMAIN}/visibility/set": {"member_id": TIAGO, "visibility": "private"},
     f"{DOMAIN}/heat_now/start": {},
     f"{DOMAIN}/heat_now/cancel": {},
     f"{DOMAIN}/switch_off": {},

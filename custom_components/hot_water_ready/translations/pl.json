@@ -341,6 +341,9 @@
     "edit_own_only": {
       "message": "Możesz zmieniać tylko własne godziny gotowości."
     },
+    "visibility_own_only": {
+      "message": "Tylko sam członek może ustawić swoje godziny gotowości jako prywatne; dla członka bez osoby robi to administrator."
+    },
     "ready_time_gone": {
       "message": "Ta godzina gotowości już nie istnieje."
     },

@@ -55,14 +55,14 @@ class NextReadySensor(HeaterEntity, SensorEntity):
 
     @property
     def native_value(self) -> datetime | None:
-        """The next ready time of anyone."""
-        coming = self.heater.next_ready()
+        """The next ready time of anyone public: every user sees this entity (decision 15)."""
+        coming = self.heater.next_ready(hidden=self.heater.private_members)
         return None if coming is None else coming.at
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """The names of the members it is for."""
-        coming = self.heater.next_ready()
+        coming = self.heater.next_ready(hidden=self.heater.private_members)
         if coming is None:
             return {"members": []}
         names = {member.id: member.name for member in self.heater.members}
@@ -76,7 +76,9 @@ class MemberNextReadySensor(MemberEntity, SensorEntity):
 
     @property
     def native_value(self) -> datetime | None:
-        """This member's next ready time."""
+        """This member's next ready time; none while the member is private (decision 15)."""
+        if self.member_id in self.heater.private_members:
+            return None
         coming = self.heater.next_ready(self.member_id)
         return None if coming is None else coming.at
 

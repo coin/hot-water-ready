@@ -121,6 +121,14 @@ the clock. *+ Add a ready time* opens the clock straight away.
 
 **Away** pauses a member's ready times, optionally until a last day, after which it ends by itself.
 
+**Private** keeps a member's ready times and heat-now requests to themselves and the
+administrators. Other members' cards leave them out, and show the heater heating only for their
+own times and requests, from when their own window would start; the element's state and power
+are left out for them too. The calendar and the next ready time sensors leave private times out
+for everyone; the status sensor stays true. A member sets their own; an administrator sets a
+virtual member's, but not another person's. Home Assistant has no per-entity permissions, so the
+relay, the power sensor, History and the temperature rising stay visible to anyone who looks.
+
 ## The card
 
 - **Top**: the water temperature in a ring with the target, a plain sentence ("Ready at 07:00",

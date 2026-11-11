@@ -341,6 +341,9 @@
     "edit_own_only": {
       "message": "Du får bara ändra dina egna klartider."
     },
+    "visibility_own_only": {
+      "message": "Bara medlemmen själv kan göra sina klartider privata; för en medlem utan person en administratör."
+    },
     "ready_time_gone": {
       "message": "Den klartiden finns inte längre."
     },

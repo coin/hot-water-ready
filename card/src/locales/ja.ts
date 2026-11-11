@@ -158,5 +158,8 @@ export const ja: Record<TextKey, string> = {
   "list.count": "準備時刻 {count} 件",
   "list.virtual": "仮想メンバー · 家族共通の時刻",
   "away.paused": "一時停止中。時刻は保持されます。",
+  "visibility.private": "非公開",
+  "visibility.hint_own": "ほかのメンバーにはこれらの時刻と「今すぐ加熱」の依頼は表示されません。管理者には表示されます。",
+  "visibility.hint_virtual": "これらの時刻は管理者にのみ表示されます。",
   "settings.no_people": "Home Assistant に選択できる人がまだいません。",
 };

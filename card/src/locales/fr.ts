@@ -158,5 +158,8 @@ export const fr: Record<TextKey, string> = {
   "list.count": "{count} horaires",
   "list.virtual": "Membre virtuel · horaires communs de la maison",
   "away.paused": "En pause. Les horaires sont conservés.",
+  "visibility.private": "Privé",
+  "visibility.hint_own": "Les autres membres ne voient ni ces horaires ni vos demandes Chauffer maintenant ; les administrateurs les voient.",
+  "visibility.hint_virtual": "Seuls les administrateurs voient ces horaires.",
   "settings.no_people": "Il n'y a encore aucune personne dans Home Assistant à choisir.",
 };

@@ -24,6 +24,10 @@ export interface MemberSnapshot {
   /** ISO datetime of this member's next ready time. */
   next_ready: string | null;
   ready_times: ReadyTimeSnapshot[];
+  /** Public or private (decision 15); null when the viewer is not told, as others are not. */
+  visibility: "public" | "private" | null;
+  /** Whether the viewer may make this member private: the member themselves, an admin for a virtual one. */
+  can_set_visibility: boolean;
 }
 
 /** The heating rate in use and how it was found (spec 4.2), for the settings sheet. */

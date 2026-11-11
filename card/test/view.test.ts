@@ -8,6 +8,7 @@ import {
   choosesKeepTime,
   keepHotChoices,
   awayLine,
+  privacySwitch,
   greeting,
   heaterView,
   houseTodayChips,
@@ -56,6 +57,8 @@ const tiago: MemberSnapshot = {
   away: { on: false, until: null },
   next_ready: null,
   ready_times: [],
+  visibility: "public",
+  can_set_visibility: true,
 };
 const maria: MemberSnapshot = { ...tiago, id: "m2", name: "Maria", colour: "green", can_edit: false };
 
@@ -513,6 +516,26 @@ describe("awayLine", () => {
   it("names the last day away", () => {
     expect(awayLine({ ...tiago, away: { on: true, until: "2026-11-04" } }, pt)).toBe("Ausente até 4 de Novembro");
     expect(awayLine({ ...tiago, away: { on: true, until: "2026-11-04" } }, en)).toBe("Away until 4 November");
+  });
+});
+
+describe("privacySwitch", () => {
+  it("is not offered to whoever may not set it", () => {
+    expect(privacySwitch({ ...maria, can_set_visibility: false, visibility: null }, "pt")).toBeNull();
+  });
+
+  it("is off with no line while public", () => {
+    expect(privacySwitch(tiago, "pt")).toEqual({ label: "Privado", on: false, hint: "" });
+  });
+
+  it("says who still sees a private member's times", () => {
+    const own = privacySwitch({ ...tiago, visibility: "private" }, "pt");
+    expect(own?.on).toBe(true);
+    expect(own?.hint).toBe(
+      "Os outros membros não vêem estes horários nem os seus pedidos de Aquecer agora; os administradores vêem.",
+    );
+    const guests = privacySwitch({ ...tiago, virtual: true, visibility: "private" }, "en");
+    expect(guests?.hint).toBe("Only administrators see these times.");
   });
 });
 

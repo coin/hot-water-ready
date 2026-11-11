@@ -12,6 +12,8 @@ import {
   SWITCH_OFF_COMMAND,
   avatarViews,
   awayLine,
+  privacySwitch,
+  VISIBILITY_COMMAND,
   clusterWarning,
   faultBanner,
   greeting,
@@ -298,6 +300,7 @@ export class HotWaterReadyCard extends LitElement {
             ? html`<span class="hint">${line}</span>`
             : nothing}
       </div>
+      ${this._renderPrivacy(member)}
       ${member.away.on
         ? html`<div class="paused">
             <span>${localize(language, "away.paused")}</span>
@@ -317,6 +320,27 @@ export class HotWaterReadyCard extends LitElement {
           </div>`
         : nothing}
     `;
+  }
+
+  /** The "Privado" switch under the list head, for whoever may set it (decision 15). */
+  private _renderPrivacy(member: MemberSnapshot): unknown {
+    const privacy = privacySwitch(member, this._language);
+    if (!privacy) return nothing;
+    return html`<div class="privacy">
+      <label class="privacy-toggle">
+        ${privacy.label}
+        <input
+          type="checkbox"
+          class="switch"
+          .checked=${live(privacy.on)}
+          @change=${(event: Event) => {
+            const visibility = (event.target as HTMLInputElement).checked ? "private" : "public";
+            void this._call({ type: VISIBILITY_COMMAND, member_id: member.id, visibility });
+          }}
+        />
+      </label>
+      ${privacy.hint ? html`<span class="hint">${privacy.hint}</span>` : nothing}
+    </div>`;
   }
 
   private _renderToday(heater: HeaterSnapshot, member: MemberSnapshot): unknown {
@@ -1767,6 +1791,18 @@ export class HotWaterReadyCard extends LitElement {
       align-items: center;
       gap: 12px;
       font-size: 14px;
+    }
+    .privacy {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .privacy-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
     }
     .away-toggle,
     .until {

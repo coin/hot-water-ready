@@ -25,7 +25,11 @@ async def async_setup_entry(
 
 
 class WindowsCalendar(HeaterEntity, CalendarEntity):
-    """Each heating window as an event: when the heater may heat, and for whom."""
+    """Each heating window as an event: when the heater may heat, and for whom.
+
+    Every user sees the same entity, so private members' ready times are left out for everyone
+    (decision 15): the windows are those the public members' ready times alone make.
+    """
 
     _summary = "{members}"  # replaced by the translated text once added
 
@@ -38,7 +42,10 @@ class WindowsCalendar(HeaterEntity, CalendarEntity):
     def event(self) -> CalendarEvent | None:
         """The window now, or the next one."""
         now = dt_util.utcnow()
-        for window in self.heater.windows_between(now - timedelta(days=1), now + LOOK_AHEAD):
+        hidden = self.heater.private_members
+        for window in self.heater.windows_between(
+            now - timedelta(days=1), now + LOOK_AHEAD, hidden
+        ):
             if window.end > now:
                 return self._event(window)
         return None
@@ -49,7 +56,9 @@ class WindowsCalendar(HeaterEntity, CalendarEntity):
         """The windows that overlap [start_date, end_date)."""
         # A window starts before its first ready time, so look a day earlier and later.
         windows = self.heater.windows_between(
-            start_date - timedelta(days=1), end_date + timedelta(days=1)
+            start_date - timedelta(days=1),
+            end_date + timedelta(days=1),
+            self.heater.private_members,
         )
         return [self._event(w) for w in windows if w.start < end_date and w.end > start_date]
 

@@ -158,5 +158,8 @@ export const da: Record<TextKey, string> = {
   "list.count": "{count} klartider",
   "list.virtual": "Virtuelt medlem · husstandens fælles tider",
   "away.paused": "På pause. Tiderne bevares.",
+  "visibility.private": "Privat",
+  "visibility.hint_own": "Andre medlemmer kan ikke se disse tider eller dine Opvarm nu-anmodninger; administratorer kan.",
+  "visibility.hint_virtual": "Kun administratorer kan se disse tider.",
   "settings.no_people": "Der er endnu ingen personer i Home Assistant at vælge imellem.",
 };

@@ -488,6 +488,22 @@ function dayAndMonth(day: string, language: string): string {
   return `${number} ${month}`;
 }
 
+export const VISIBILITY_COMMAND = "hot_water_ready/visibility/set";
+
+/**
+ * The "Privado" switch (decision 15): shown only to whoever may set it, the member themselves or
+ * an admin for a virtual member. While on, a line says who still sees the times.
+ */
+export function privacySwitch(
+  member: MemberSnapshot,
+  language: string,
+): { label: string; on: boolean; hint: string } | null {
+  if (!member.can_set_visibility) return null;
+  const on = member.visibility === "private";
+  const hint = on ? localize(language, member.virtual ? "visibility.hint_virtual" : "visibility.hint_own") : "";
+  return { label: localize(language, "visibility.private"), on, hint };
+}
+
 /** "Ausente", "Ausente até 4 de Novembro", or nothing while the member is home. */
 export function awayLine(member: MemberSnapshot, context: Pick<ViewContext, "language">): string {
   if (!member.away.on) return "";

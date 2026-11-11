@@ -341,6 +341,9 @@
     "edit_own_only": {
       "message": "Vous ne pouvez modifier que vos propres horaires."
     },
+    "visibility_own_only": {
+      "message": "Seul le membre lui-même peut rendre ses horaires privés ; pour un membre sans personne, un administrateur."
+    },
     "ready_time_gone": {
       "message": "Cet horaire n'existe plus."
     },

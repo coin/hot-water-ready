@@ -341,6 +341,9 @@
     "edit_own_only": {
       "message": "Du kannst nur deine eigenen Bereitzeiten ändern."
     },
+    "visibility_own_only": {
+      "message": "Nur das Mitglied selbst kann seine Bereitzeiten privat machen; bei einem Mitglied ohne Person ein Administrator."
+    },
     "ready_time_gone": {
       "message": "Diese Bereitzeit gibt es nicht mehr."
     },

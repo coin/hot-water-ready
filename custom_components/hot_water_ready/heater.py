@@ -90,6 +90,7 @@ from .core.rate import (
 from .core.ready_times import ReadyTime
 from .core.solar import SolarTrend
 from .core.status import Status, heater_status
+from .core.visibility import Visibility, hidden_members, visible_occurrences
 from .history import async_samples, lead_water
 from .messages import (
     async_message,
@@ -346,10 +347,11 @@ class Heater:
             element_power_w=float(watts) if watts else None,
         )
 
-    def cluster_warning(self) -> PlannedWindow | None:
+    def cluster_warning(self, hidden: frozenset[str] = frozenset()) -> PlannedWindow | None:
         """The next cluster, within a day, that even the maximum temperature cannot carry."""
         now = dt_util.utcnow()
-        return next_warning(self.windows_between(now - timedelta(hours=6), now + HORIZON), now)
+        windows = self.windows_between(now - timedelta(hours=6), now + HORIZON, hidden)
+        return next_warning(windows, now)
 
     def comparison_records(self) -> list[dict[str, Any]]:
         """The per-window record of the last year, as plain data, for the diagnostics."""
@@ -501,36 +503,111 @@ class Heater:
         """A member's away."""
         return self._data.away.get(member_id, Away())
 
-    def occurrences(self, start: datetime, end: datetime) -> list[Occurrence]:
+    def occurrences(
+        self, start: datetime, end: datetime, hidden: frozenset[str] = frozenset()
+    ) -> list[Occurrence]:
         """Every member's ready times in [start, end), away skipped, same times together.
 
         A ready time is a wall-clock time in the house's time zone (spec 4.1), and the core
         places it in the zone of `start`: so `start` goes over to house time first, whatever
-        zone the caller used (UTC, or the calendar's).
+        zone the caller used (UTC, or the calendar's). The `hidden` members are left out, for
+        someone who may not see them (decision 15); the controller passes none.
         """
         start = dt_util.as_local(start)
         plans = [
             MemberPlan(member.id, tuple(self.ready_times(member.id)), self.away(member.id))
             for member in self.members
         ]
-        return household_occurrences(plans, start=start, end=end)
+        return visible_occurrences(household_occurrences(plans, start=start, end=end), hidden)
 
-    def windows_between(self, start: datetime, end: datetime) -> list[PlannedWindow]:
+    def windows_between(
+        self, start: datetime, end: datetime, hidden: frozenset[str] = frozenset()
+    ) -> list[PlannedWindow]:
         """The heating windows of the ready times in [start, end), in UTC (spec 5, 6).
 
         Their starts are estimated from the water now; see `core.controller.planned_windows`.
         Ready times in a window that was switched off are left out: they get no hot water.
+        Without the `hidden` members, a window is the one the others' ready times alone make.
         """
         return planned_windows(
-            self._controller.settings, self.planned_occurrences(start, end), self.lead_temperature
+            self._controller.settings,
+            self.planned_occurrences(start, end, hidden),
+            self.lead_temperature,
         )
 
-    def planned_occurrences(self, start: datetime, end: datetime) -> list[Occurrence]:
+    def planned_occurrences(
+        self, start: datetime, end: datetime, hidden: frozenset[str] = frozenset()
+    ) -> list[Occurrence]:
         """The ready times in [start, end) that will get hot water: those in a window that was
         switched off are left out. Everything that says what will happen reads these; only the
         controller reads all of them, to know which window was skipped."""
         off_until = self._controller.state.off_until
-        return [o for o in self.occurrences(start, end) if off_until is None or o.at >= off_until]
+        return [
+            o
+            for o in self.occurrences(start, end, hidden)
+            if off_until is None or o.at >= off_until
+        ]
+
+    # ------------------------------------------------------------------ visibility
+
+    def visibility(self, member_id: str) -> Visibility:
+        """A member's visibility (decision 15); public unless set."""
+        return self._data.visibility.get(member_id, Visibility.PUBLIC)
+
+    @property
+    def private_members(self) -> frozenset[str]:
+        """The members whose ready times and requests only they and admins see."""
+        return frozenset(m.id for m in self.members if self.visibility(m.id) is Visibility.PRIVATE)
+
+    def hidden_for(self, user: User | None) -> frozenset[str]:
+        """The members this user may not see; none for admins, automations and Home Assistant."""
+        if user is None:
+            return frozenset()
+        return hidden_members(
+            self.private_members, viewer_member=self.user_member_id(user), is_admin=user.is_admin
+        )
+
+    def can_set_visibility(self, user: User | None, member_id: str) -> bool:
+        """A linked member sets their own; an admin sets a virtual member's (decision 15).
+
+        An admin does not make another person's ready times private: hiding is the owner's choice.
+        """
+        if user is None:
+            return True
+        if self.member(member_id).virtual:
+            return user.is_admin
+        return self.user_member_id(user) == member_id
+
+    async def async_set_visibility(self, member_id: str, visibility: Visibility) -> None:
+        """Make a member public or private; every card and entity shows the change at once."""
+        self.member(member_id)
+        self._data.visibility[member_id] = visibility
+        await self._async_saved_and_stepped()
+
+    def heating_shown(self, hidden: frozenset[str]) -> bool:
+        """Whether someone who may not see `hidden` is shown the heater heating.
+
+        Shown for a visible heat-now request (an automation's, naming no one, counts), or while
+        a window the visible ready times alone would make is open: the heater would heat then
+        anyway. Heating that starts earlier for a private ready time is not shown before that.
+        """
+        if not self.heating:
+            return False
+        heat_now, window = self._controller.state.heat_now, self._controller.state.window
+        if not hidden or (heat_now is None and window is None):
+            return True
+        if self.heat_now_shown(hidden):
+            return True
+        now = dt_util.utcnow()
+        return any(
+            planned.start <= now < planned.end
+            for planned in self.windows_between(now - timedelta(days=1), now + HORIZON, hidden)
+        )
+
+    def heat_now_shown(self, hidden: frozenset[str]) -> bool:
+        """Whether someone who may not see `hidden` is shown the heat-now request."""
+        heat_now = self._controller.state.heat_now
+        return heat_now is not None and bool(heat_now.requesters - hidden)
 
     def _week(self) -> dict[str, Any]:
         """This week, Monday to Sunday in the house's time zone: when the heater may heat."""
@@ -550,11 +627,11 @@ class Heater:
             ],
         }
 
-    def today(self) -> list[Occurrence]:
+    def today(self, hidden: frozenset[str] = frozenset()) -> list[Occurrence]:
         """Everyone's ready times today, midnight to midnight in house time; skipped ones out."""
         midnight = dt_util.start_of_local_day()
         tomorrow = dt_util.start_of_local_day(midnight.date() + timedelta(days=1))
-        return self.planned_occurrences(midnight, tomorrow)
+        return self.planned_occurrences(midnight, tomorrow, hidden)
 
     async def async_set_away(self, member_id: str, on: bool, until: date | None) -> None:
         """Pause or resume a member's ready times; an end date ends the pause by itself.
@@ -576,10 +653,12 @@ class Heater:
         if expired:
             self._store.async_delay_save(self._data)
 
-    def next_ready(self, member_id: str | None = None) -> Occurrence | None:
+    def next_ready(
+        self, member_id: str | None = None, hidden: frozenset[str] = frozenset()
+    ) -> Occurrence | None:
         """The next ready time from now, of one member or of anyone; skipped ones left out."""
         now = dt_util.now()
-        for occurrence in self.planned_occurrences(now, now + HORIZON):
+        for occurrence in self.planned_occurrences(now, now + HORIZON, hidden):
             if member_id is None or member_id in occurrence.members:
                 return occurrence
         return None
@@ -784,6 +863,9 @@ class Heater:
         control off, the water already hot) only a waiting heat-now request ends, so it cannot
         start heating later on its own; a window holding its water is left alone.
         """
+        hidden = self.hidden_for(user)
+        if hidden and not (self.heating_shown(hidden) or self.heat_now_shown(hidden)):
+            return  # nothing this user is shown heats or waits to: there is nothing to offer
         names = set() if user is None else {self.requester_key(user), self.person_of(user)}
         by = {name for name in names if name}
         heat_now = self._controller.state.heat_now
@@ -804,13 +886,13 @@ class Heater:
         for who in sorted(lost):
             await self._async_tell_one(who, message, f"{DOMAIN}_{self.entry_id}_{who}_off")
 
-    def heating_for(self) -> list[tuple[str, datetime]]:
+    def heating_for(self, hidden: frozenset[str] = frozenset()) -> list[tuple[str, datetime]]:
         """The members, and their ready times, the open window heats for; earliest first."""
         window = self._controller.state.window
         if window is None:
             return []
         return sorted(
-            ((member, window.ready_for(member)[1]) for member in window.members),
+            ((member, window.ready_for(member)[1]) for member in window.members - hidden),
             key=lambda pair: (pair[1], pair[0]),
         )
 
@@ -1218,21 +1300,50 @@ class Heater:
         options = {**self.entry.options, CONF_SWITCH_OFF_PEOPLE: people}
         self.hass.config_entries.async_update_entry(self.entry, options=options)
 
-    def next_heat_start(self) -> datetime | None:
+    def next_heat_start(self, hidden: frozenset[str] = frozenset()) -> datetime | None:
         """When heating is planned to start next, for ready times in the coming two days."""
         now = dt_util.utcnow()
-        start = next_heat_start(self.windows_between(now, now + timedelta(days=2)), now)
+        start = next_heat_start(self.windows_between(now, now + timedelta(days=2), hidden), now)
         off_until = self._controller.state.off_until
         if start is not None and off_until is not None and start < off_until:
             return off_until  # switched off: nothing heats before the skipped window would end
         return start
 
+    def _status_for(self, hidden: frozenset[str]) -> Status:
+        """The status as someone who may not see `hidden` is shown it: heating for them alone
+        shows as what the water would be without it. The status sensor stays truthful."""
+        status = self.status
+        if status is Status.HEATING and not self.heating_shown(hidden):
+            return heater_status(temperature=self.temperature, target=self.target)
+        return status
+
+    def _heat_now_snapshot(self, user: User, hidden: frozenset[str]) -> dict[str, Any] | None:
+        heat_now = self._controller.state.heat_now
+        if heat_now is None or not self.heat_now_shown(hidden):
+            return None
+        return {
+            "requesters": sorted(self.heat_now_requesters - hidden),
+            "asked": self.has_asked_heat_now(user),
+            # An automation's request names nobody: it keeps heating after the last person.
+            "unnamed": NOBODY in heat_now.requesters,
+            "keep_until": None
+            if heat_now.keep_until is None
+            else dt_util.as_local(heat_now.keep_until).isoformat(),
+        }
+
     def snapshot(self, user: User) -> dict[str, Any]:
-        """Everything the card needs, as plain data, for this viewer."""
+        """Everything the card needs, as plain data, for this viewer.
+
+        Private members other than the viewer's own are left out for anyone but an admin
+        (decision 15): their ready times, their requests, and heating only they want. So is the
+        element's state, which would show heating the card does not.
+        """
+        hidden = self.hidden_for(user)
         temperature = self.temperature
-        next_ready = self.next_ready()
+        next_ready = self.next_ready(hidden=hidden)
+        status = self._status_for(hidden)
         ready_in = None
-        if self.heating:  # 0 means it is past the target and finishing: no estimate to show
+        if status is Status.HEATING:  # 0 is past the target and finishing: no estimate to show
             # To the normal target, as the phone's "heating" message: "ready" is told there.
             ready_in = minutes_to_ready(self._controller.settings, temperature) or None
         me = self.user_member_id(user)
@@ -1242,10 +1353,10 @@ class Heater:
             "temperature": temperature,
             "target": self.target,
             "margin": self.margin,
-            "status": self.status.value,
+            "status": status.value,
             "ready_in_minutes": ready_in,
             "next_heat_start": None
-            if (start := self.next_heat_start()) is None
+            if (start := self.next_heat_start(hidden)) is None
             else dt_util.as_local(start).isoformat(),
             "solar_aware": self.solar_aware,
             "next_ready": None
@@ -1256,32 +1367,22 @@ class Heater:
             "can_ask_heat_now": self.can_ask_heat_now(user),
             "faults": sorted(self.faults),
             "not_rising_checked": self.not_rising_checked,
-            "element_on": self.element_heating,
-            "power_w": self._number(self._power_sensor),
+            "element_on": None if hidden else self.element_heating,
+            "power_w": None if hidden else self._number(self._power_sensor),
             "heat_now_blocked": bool(self.faults & BLOCKING),
             "automatic": self.automatic,
             "keep_hot_minutes": self._controller.settings.keep_hot_minutes,
-            "heat_now": None
-            if (heat_now := self._controller.state.heat_now) is None
-            else {
-                "requesters": sorted(self.heat_now_requesters),
-                "asked": self.has_asked_heat_now(user),
-                # An automation's request names nobody: it keeps heating after the last person.
-                "unnamed": NOBODY in heat_now.requesters,
-                "keep_until": None
-                if heat_now.keep_until is None
-                else dt_util.as_local(heat_now.keep_until).isoformat(),
-            },
+            "heat_now": self._heat_now_snapshot(user, hidden),
             "viewer": self.requester_key(user) or None,
             "can_switch_off": self.can_switch_off(user),
             "heating_for": [
                 {"member": member, "at": dt_util.as_local(at).isoformat()}
-                for member, at in self.heating_for()
+                for member, at in (self.heating_for(hidden) if status is Status.HEATING else [])
             ],
             "settings": self._settings_snapshot() if user.is_admin else None,
             "week": self._week() if user.is_admin else None,
             "cluster_warning": None
-            if (warning := self.cluster_warning()) is None
+            if (warning := self.cluster_warning(hidden)) is None
             else {
                 "at": dt_util.as_local(warning.ready_times[0].at).isoformat(),
                 "needed": round(warning.needed),
@@ -1289,7 +1390,7 @@ class Heater:
             },
             "today": [
                 {"member": member_id, "at": occurrence.at.isoformat()}
-                for occurrence in self.today()
+                for occurrence in self.today(hidden)
                 for member_id in sorted(occurrence.members)
             ],
             "members": [
@@ -1300,10 +1401,17 @@ class Heater:
                     "can_edit": self.can_edit(user, member.id),
                     "virtual": member.virtual,
                     "away": away_to_dict(self.away(member.id)),
-                    "ready_times": [ready_time_to_dict(r) for r in self.ready_times(member.id)],
+                    "ready_times": []
+                    if member.id in hidden
+                    else [ready_time_to_dict(r) for r in self.ready_times(member.id)],
                     "next_ready": None
-                    if (mine := self.next_ready(member.id)) is None
+                    if member.id in hidden or (mine := self.next_ready(member.id)) is None
                     else mine.at.isoformat(),
+                    # Told only to whoever sees it anyway: others are not told who is private.
+                    "visibility": self.visibility(member.id).value
+                    if user.is_admin or self.can_set_visibility(user, member.id)
+                    else None,
+                    "can_set_visibility": self.can_set_visibility(user, member.id),
                 }
                 for member in self.members
             ],

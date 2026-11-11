@@ -158,5 +158,8 @@ export const es: Record<TextKey, string> = {
   "list.count": "{count} horas",
   "list.virtual": "Miembro virtual · horas compartidas de la casa",
   "away.paused": "En pausa. Las horas se conservan.",
+  "visibility.private": "Privado",
+  "visibility.hint_own": "Los demás miembros no ven estas horas ni tus peticiones de Calentar ahora; los administradores sí.",
+  "visibility.hint_virtual": "Solo los administradores ven estas horas.",
   "settings.no_people": "Aún no hay personas en Home Assistant para elegir.",
 };

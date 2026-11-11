@@ -8,6 +8,7 @@ from homeassistant.core import HomeAssistant
 import pytest
 
 from custom_components.hot_water_ready.core.ready_times import ReadyTime
+from custom_components.hot_water_ready.core.visibility import Visibility
 from custom_components.hot_water_ready.storage import HeaterStore
 
 
@@ -150,3 +151,30 @@ async def test_window_saved_before_per_member_reports_loads(
     assert data.controller is not None
     assert data.controller.window is not None
     assert data.controller.all_told(data.controller.window)
+
+
+async def test_visibility_loads_back(hass: HomeAssistant) -> None:
+    store = HeaterStore(hass, "entry1")
+    data = await store.async_load()
+    data.visibility["m1"] = Visibility.PRIVATE
+    await store.async_save(data)
+
+    loaded = await HeaterStore(hass, "entry1").async_load()
+    assert loaded.visibility == {"m1": Visibility.PRIVATE}
+
+
+@pytest.mark.parametrize("raw", ["secret", 1, ["private"], {"level": "private"}, True])
+async def test_unknown_visibility_loads_as_public(
+    hass: HomeAssistant, hass_storage: dict[str, Any], raw: Any, caplog: pytest.LogCaptureFixture
+) -> None:
+    hass_storage["hot_water_ready.entry1"] = {
+        "version": 1,
+        "minor_version": 1,
+        "key": "hot_water_ready.entry1",
+        "data": {"members": {"m1": {"ready_times": [], "visibility": raw}}},
+    }
+    with caplog.at_level(logging.WARNING):
+        data = await HeaterStore(hass, "entry1").async_load()
+
+    assert data.visibility == {"m1": Visibility.PUBLIC}
+    assert "visibility" in caplog.text

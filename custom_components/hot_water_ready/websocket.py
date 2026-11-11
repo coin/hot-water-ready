@@ -25,6 +25,7 @@ from .const import (
 )
 from .core.controller import MAX_KEEP_HOT_MINUTES
 from .core.rate import MAX_MANUAL_RATE, MIN_MANUAL_RATE
+from .core.visibility import Visibility
 from .heater import (
     AwayDateInThePastError,
     Heater,
@@ -59,6 +60,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_update_ready_time)
     websocket_api.async_register_command(hass, ws_remove_ready_time)
     websocket_api.async_register_command(hass, ws_set_away)
+    websocket_api.async_register_command(hass, ws_set_visibility)
     websocket_api.async_register_command(hass, ws_heat_now)
     websocket_api.async_register_command(hass, ws_cancel_heat_now)
     websocket_api.async_register_command(hass, ws_switch_off)
@@ -275,6 +277,41 @@ async def ws_set_away(
             hass, connection, msg, websocket_api.ERR_INVALID_FORMAT, "away_date_in_past"
         )
         return
+    connection.send_result(msg["id"])
+
+
+@websocket_api.websocket_command(
+    {
+        probatio.Required("type"): f"{DOMAIN}/visibility/set",
+        probatio.Required("entry_id"): str,
+        probatio.Required("member_id"): str,
+        probatio.Required("visibility"): probatio.In([v.value for v in Visibility]),
+    }
+)
+@websocket_api.async_response
+async def ws_set_visibility(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Make a member's ready times and requests public or private (decision 15).
+
+    Only the member themselves, or an admin for a virtual member: an admin editing someone's
+    ready times does not make that person private.
+    """
+    heater = _loaded_heater(hass, msg["entry_id"])
+    if heater is None:
+        await _async_error(hass, connection, msg, websocket_api.ERR_NOT_FOUND, "heater_not_found")
+        return
+    try:
+        allowed = heater.can_set_visibility(connection.user, msg["member_id"])
+    except MemberNotFoundError:
+        await _async_error(hass, connection, msg, websocket_api.ERR_NOT_FOUND, "member_not_found")
+        return
+    if not allowed:
+        await _async_error(
+            hass, connection, msg, websocket_api.ERR_UNAUTHORIZED, "visibility_own_only"
+        )
+        return
+    await heater.async_set_visibility(msg["member_id"], Visibility(msg["visibility"]))
     connection.send_result(msg["id"])
 
 
