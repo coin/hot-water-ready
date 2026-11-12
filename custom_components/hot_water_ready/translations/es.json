@@ -477,7 +477,7 @@
         },
         "target": {
           "name": "Temperatura",
-          "description": "Calentar hasta esta temperatura (35 a 45 °C) en lugar de la temperatura objetivo del calentador. Solo administradores y automatizaciones."
+          "description": "Calentar hasta esta temperatura (30 a 45 °C) en lugar de la temperatura objetivo del calentador. Solo administradores y automatizaciones."
         }
       }
     },

@@ -110,14 +110,14 @@ def test_withdrawing_the_higher_request_stops_heating_above_the_others() -> None
     assert cylinder.controller.state.heat_now is not None  # Maria's time goes on
 
 
-def test_a_temperature_outside_35_to_45_is_brought_inside() -> None:
+def test_a_temperature_outside_30_to_45_is_brought_inside() -> None:
     high = _cylinder(30.0)
     high.heat_now("tiago", target=60)
-    low = _cylinder(30.0)
+    low = _cylinder(25.0)
     low.heat_now("tiago", target=20)
 
     assert high.controller.heat_now_target("tiago") == 45.0
-    assert low.controller.heat_now_target("tiago") == 35.0
+    assert low.controller.heat_now_target("tiago") == 30.0
 
 
 def test_asking_again_for_another_temperature_is_told_again() -> None:

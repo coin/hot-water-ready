@@ -477,7 +477,7 @@
         },
         "target": {
           "name": "Temperatur",
-          "description": "Varm til denne temperaturen (35 til 45 °C) i stedet for varmtvannsberederens måltemperatur. Bare administratorer og automatiseringer."
+          "description": "Varm til denne temperaturen (30 til 45 °C) i stedet for varmtvannsberederens måltemperatur. Bare administratorer og automatiseringer."
         }
       }
     },

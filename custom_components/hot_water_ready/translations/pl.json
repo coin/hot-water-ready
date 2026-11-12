@@ -477,7 +477,7 @@
         },
         "target": {
           "name": "Temperatura",
-          "description": "Grzej do tej temperatury (od 35 do 45 °C) zamiast do temperatury docelowej podgrzewacza. Tylko administratorzy i automatyzacje."
+          "description": "Grzej do tej temperatury (od 30 do 45 °C) zamiast do temperatury docelowej podgrzewacza. Tylko administratorzy i automatyzacje."
         }
       }
     },

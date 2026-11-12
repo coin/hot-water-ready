@@ -17,7 +17,7 @@ from .parsing import aware_datetime, flag, name_list, number, optional_aware_dat
 _EPSILON = 1e-6
 MAX_KEEP_HOT_MINUTES = 120.0  # the longest heat now keeps the water hot after the message
 # The temperatures an admin may ask heat now for, apart from the heater's target (decision 16).
-HEAT_NOW_MIN_TARGET = 35.0
+HEAT_NOW_MIN_TARGET = 30.0
 HEAT_NOW_MAX_TARGET = 45.0
 
 

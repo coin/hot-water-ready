@@ -477,7 +477,7 @@
         },
         "target": {
           "name": "Temperatura",
-          "description": "Scaldare fino a questa temperatura (da 35 a 45 °C) invece della temperatura obiettivo dello scaldabagno. Solo amministratori e automazioni."
+          "description": "Scaldare fino a questa temperatura (da 30 a 45 °C) invece della temperatura obiettivo dello scaldabagno. Solo amministratori e automazioni."
         }
       }
     },

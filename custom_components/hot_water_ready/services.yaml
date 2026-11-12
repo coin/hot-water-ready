@@ -19,7 +19,7 @@ heat_now:
     target:
       selector:
         number:
-          min: 35
+          min: 30
           max: 45
           step: 1
           unit_of_measurement: °C

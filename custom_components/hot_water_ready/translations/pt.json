@@ -477,7 +477,7 @@
         },
         "target": {
           "name": "Temperatura",
-          "description": "Aquecer até esta temperatura (35 a 45 °C) em vez da temperatura alvo do aquecedor. Só administradores e automatizações."
+          "description": "Aquecer até esta temperatura (30 a 45 °C) em vez da temperatura alvo do aquecedor. Só administradores e automatizações."
         }
       }
     },

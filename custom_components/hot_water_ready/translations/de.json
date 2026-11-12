@@ -477,7 +477,7 @@
         },
         "target": {
           "name": "Temperatur",
-          "description": "Auf diese Temperatur heizen (35 bis 45 °C) statt auf die Zieltemperatur des Boilers. Nur Administratoren und Automationen."
+          "description": "Auf diese Temperatur heizen (30 bis 45 °C) statt auf die Zieltemperatur des Boilers. Nur Administratoren und Automationen."
         }
       }
     },

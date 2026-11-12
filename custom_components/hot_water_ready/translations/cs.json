@@ -477,7 +477,7 @@
         },
         "target": {
           "name": "Teplota",
-          "description": "Ohřát na tuto teplotu (35 až 45 °C) místo cílové teploty ohřívače. Pouze správci a automatizace."
+          "description": "Ohřát na tuto teplotu (30 až 45 °C) místo cílové teploty ohřívače. Pouze správci a automatizace."
         }
       }
     },

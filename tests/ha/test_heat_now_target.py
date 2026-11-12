@@ -65,8 +65,8 @@ async def test_a_member_may_not_choose_a_temperature(
     assert heater.runtime_data._controller.state.heat_now is None
 
 
-@pytest.mark.parametrize("target", [34, 46])
-async def test_a_temperature_outside_35_to_45_is_refused(
+@pytest.mark.parametrize("target", [29, 46])
+async def test_a_temperature_outside_30_to_45_is_refused(
     hass: HomeAssistant,
     heater: MockConfigEntry,
     hass_ws_client: WebSocketGenerator,

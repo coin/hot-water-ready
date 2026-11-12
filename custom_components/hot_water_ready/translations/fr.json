@@ -477,7 +477,7 @@
         },
         "target": {
           "name": "Température",
-          "description": "Chauffer jusqu'à cette température (35 à 45 °C) au lieu de la consigne du chauffe-eau. Administrateurs et automatisations uniquement."
+          "description": "Chauffer jusqu'à cette température (30 à 45 °C) au lieu de la consigne du chauffe-eau. Administrateurs et automatisations uniquement."
         }
       }
     },

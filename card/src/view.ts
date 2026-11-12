@@ -576,7 +576,7 @@ export function keepHotChoices(heater: HeaterSnapshot, language: string): KeepHo
 }
 
 /** The temperatures an admin may ask heat now for (decision 16), as the server allows. */
-export const HEAT_NOW_MIN_TARGET = 35;
+export const HEAT_NOW_MIN_TARGET = 30;
 export const HEAT_NOW_MAX_TARGET = 45;
 
 export interface HeatNowTargetStepper {
@@ -587,7 +587,7 @@ export interface HeatNowTargetStepper {
   up: number | null;
 }
 
-/** Where the temperature starts: the heater's target, brought inside 35 to 45 °C. */
+/** Where the temperature starts: the heater's target, brought inside 30 to 45 °C. */
 export function heatNowTargetStart(heater: HeaterSnapshot): number {
   return Math.min(Math.max(heater.target, HEAT_NOW_MIN_TARGET), HEAT_NOW_MAX_TARGET);
 }

@@ -551,16 +551,16 @@ describe("privacySwitch", () => {
 });
 
 describe("heat now to an admin's own temperature (decision 16)", () => {
-  it("starts at the heater's target, brought inside 35 to 45", () => {
+  it("starts at the heater's target, brought inside 30 to 45", () => {
     expect(heatNowTargetStart(cold)).toBe(42);
     expect(heatNowTargetStart({ ...cold, target: 50 })).toBe(45);
-    expect(heatNowTargetStart({ ...cold, target: 30 })).toBe(35);
+    expect(heatNowTargetStart({ ...cold, target: 25 })).toBe(30);
   });
 
   it("steps one degree at a time and stops at the ends", () => {
     expect(heatNowTargetStepper(42, "pt")).toEqual({ value: 42, shown: "42 °C", down: 41, up: 43 });
     expect(heatNowTargetStepper(45, "pt").up).toBeNull();
-    expect(heatNowTargetStepper(35, "pt").down).toBeNull();
+    expect(heatNowTargetStepper(30, "pt").down).toBeNull();
     expect(heatNowTargetStepper(42.5, "pt")).toEqual({ value: 42.5, shown: "42,5 °C", down: 42, up: 43 });
   });
 

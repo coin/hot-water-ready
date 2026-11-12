@@ -477,7 +477,7 @@
         },
         "target": {
           "name": "Temperature",
-          "description": "Heat to this temperature (35 to 45 °C) instead of the heater's target. Administrators and automations only."
+          "description": "Heat to this temperature (30 to 45 °C) instead of the heater's target. Administrators and automations only."
         }
       }
     },

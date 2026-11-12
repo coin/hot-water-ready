@@ -477,7 +477,7 @@
         },
         "target": {
           "name": "Temperatuur",
-          "description": "Verwarmen tot deze temperatuur (35 tot 45 °C) in plaats van de doeltemperatuur van de boiler. Alleen beheerders en automatiseringen."
+          "description": "Verwarmen tot deze temperatuur (30 tot 45 °C) in plaats van de doeltemperatuur van de boiler. Alleen beheerders en automatiseringen."
         }
       }
     },
