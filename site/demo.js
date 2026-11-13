@@ -229,13 +229,18 @@ function snapshot() {
   const T = goal(window);
   const day = dayOf(house.t);
   const faults = house.sensorFault ? ["sensor_unavailable"] : [];
-  const status = faults.length ? "fault" : !house.automatic ? "manual" : house.element ? "heating" : window || house.heatNow ? "ready" : "waiting";
+  const status = faults.length ? "fault" : !house.automatic ? "manual" : house.element ? null : window || house.heatNow ? "ready" : "waiting";
   const upcoming = [...readyTimesOn(day), ...readyTimesOn(day + 1)].filter((i) => i.at >= house.t && visibleTo(i.member));
   const nextAt = upcoming[0]?.at;
   const next = nextWindow();
   const own = house.heatNow?.people[viewer];
   const people = heatNowPeople().filter(([id]) => visibleTo(id));
   const toldTimes = people.filter(([, e]) => e.told).map(([, e]) => e.until);
+  // As the integration does: a viewer who may not see someone is not told whether the element is
+  // on or what it draws, and heating only for people they may not see shows as the water would be.
+  const hidesSomeone = house.members.some((m) => !visibleTo(m.id));
+  const heatingShown = house.element && ((window && window.items.some((i) => visibleTo(i.member))) || people.length > 0);
+  const heatingStatus = heatingShown ? "heating" : !house.sensorFault && house.temp >= house.target ? "ready" : "waiting";
 
   return {
     entry_id: ENTRY,
@@ -243,8 +248,8 @@ function snapshot() {
     temperature: house.sensorFault ? null : round1(house.temp),
     target: house.target,
     margin: house.margin,
-    status,
-    ready_in_minutes: house.element && T !== null && T > house.temp ? Math.ceil((T - house.temp) * house.rate) : null,
+    status: status ?? heatingStatus,
+    ready_in_minutes: heatingShown && T !== null && T > house.temp ? Math.ceil((T - house.temp) * house.rate) : null,
     next_heat_start: !window && next && next.start - house.t < 2 * DAY ? iso(next.start) : null,
     solar_aware: false,
     next_ready: nextAt === undefined ? null : { at: iso(nextAt), members: upcoming.filter((i) => i.at === nextAt).map((i) => i.member) },
@@ -253,8 +258,8 @@ function snapshot() {
     faults,
     not_rising_checked: true,
     heat_now_blocked: faults.length > 0,
-    element_on: house.element,
-    power_w: house.element ? 2850 : 0,
+    element_on: hidesSomeone ? null : house.element,
+    power_w: hidesSomeone ? null : house.element ? 2850 : 0,
     automatic: house.automatic,
     keep_hot_minutes: house.keepDefault,
     can_ask_heat_now: true,
@@ -489,12 +494,27 @@ if (!customElements.get("ha-card")) customElements.define("ha-card", HaCard);
 
 let card;
 let language = "en";
+let mode = "full";
+
+// The compact card's tap goes to the full card, as on a real dashboard with
+// tap_action navigate; here the demo catches the hass-action and swaps the card.
+const COMPACT = {
+  compact: true,
+  tap_action: { action: "navigate", navigation_path: "#full-card" },
+};
 
 function mountCard() {
   card = document.createElement("hot-water-ready-card");
-  card.setConfig({ type: "custom:hot-water-ready-card", entry_id: ENTRY });
+  card.setConfig({ type: "custom:hot-water-ready-card", entry_id: ENTRY, ...(mode === "compact" ? COMPACT : {}) });
   card.hass = makeHass(language);
   $("#card-slot").replaceChildren(card);
+  $$("[data-mode]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
+}
+
+function setMode(next) {
+  if (next === mode) return;
+  mode = next;
+  mountCard();
 }
 
 function renderFeed() {
@@ -608,6 +628,10 @@ function wire() {
       onChange();
     }),
   );
+  $$("[data-mode]").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
+  $("#card-slot").addEventListener("hass-action", (e) => {
+    if (mode === "compact" && e.detail?.config?.tap_action?.action === "navigate") setMode("full");
+  });
   $("#language").addEventListener("change", (e) => {
     language = e.target.value;
     card.hass = makeHass(language);
@@ -625,6 +649,7 @@ function wire() {
   });
   $("#reset").addEventListener("click", () => {
     viewer = "ana";
+    mode = "full";
     goTo(SCENES.morning.at);
     mountCard();
   });
