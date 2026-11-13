@@ -5,6 +5,9 @@ want it. Each member sets the times they want hot water; the integration works o
 the heater, keeps it in a temperature band, and tells them when the water is ready. It brings its
 own dashboard card.
 
+**[Try the card in a simulated house](https://coin.github.io/hot-water-ready/)**: the real card, a
+Tuesday morning, four people and a tank that heats and cools.
+
 Requires Home Assistant 2026.10 or later. The integration and the card follow Home Assistant's
 language: English, European and Brazilian Portuguese, German, French, Spanish, Italian, Dutch,
 Polish, Swedish, Danish, Norwegian, Czech, Russian, Ukrainian, Japanese and Simplified Chinese
@@ -289,3 +292,6 @@ integration's *Download diagnostics*, with names and people left out.
   `python dev/trial.py` runs the trial scenarios against it and writes a report.
 - `cd card && node ../dev/screenshots.mjs` renders the README's card images into `docs/images/`
   from the built card and a sample household (run `npm run build` first).
+- `site/` is the project page and its live demo: the built card fed by a small simulated house
+  (`site/demo.js`) instead of Home Assistant. `node dev/site.mjs` puts it together in
+  `dist/site/`; serve that folder to try it. Each release publishes it to GitHub Pages.

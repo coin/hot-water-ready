@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hot Water Ready</title>
+  <meta name="description" content="A Home Assistant integration that has stored hot water ready when each person in the house wants it, and tells them. Try the real card in a simulated house.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%23f2711c' stroke-width='5' stroke-dasharray='58 80' stroke-linecap='round' transform='rotate(130 16 16)'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="#">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="12" class="brand-track"/><circle cx="16" cy="16" r="12" class="brand-arc"/></svg>
+      Hot Water Ready
+    </a>
+    <nav aria-label="Sections">
+      <a href="#demo">Try it</a>
+      <a href="#how">How it decides</a>
+      <a href="#install">Install</a>
+      <a href="#automations">Automations</a>
+      <a href="https://github.com/coin/hot-water-ready">GitHub</a>
+    </nav>
+    <button class="theme" id="theme" aria-label="Switch between light and dark">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>
+    </button>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Home Assistant integration · card included</p>
+      <h1>Hot water at the time <em>each person</em> needs it.</h1>
+      <p class="lede">Everyone in the house sets their shower times. Hot Water Ready works out when to switch the
+        heater on from the water's temperature and how fast your tank really heats, keeps it hot
+        while it's needed, and tells each person on their phone when it's ready. The rest of the day the heater stays off.</p>
+      <div class="cta">
+        <a class="button primary" href="#install">Install with HACS</a>
+        <a class="button" href="#demo">Play with the real card ↓</a>
+      </div>
+    </section>
+
+    <section class="stage" id="demo" aria-label="Live demo">
+      <div class="stage-head">
+        <h2>A Tuesday in a house of four</h2>
+        <p>This is the real card, not a picture. A small simulated house stands in for Home Assistant: the clock runs,
+          the water cools, people shower at their times. Tap anything on the card.</p>
+      </div>
+
+      <div class="stage-grid">
+        <aside class="panel controls" aria-label="Demo controls">
+          <div class="clock-block">
+            <div class="clock" id="clock" aria-live="off">06:20</div>
+            <div class="clock-day" id="clock-day">Tuesday</div>
+          </div>
+          <div class="row">
+            <button class="chip" id="play" aria-pressed="false"><span>Pause</span></button>
+            <div class="seg" role="group" aria-label="Speed">
+              <button class="chip" data-speed="1" aria-pressed="false">1×</button>
+              <button class="chip" data-speed="2" aria-pressed="true">2×</button>
+              <button class="chip" data-speed="8" aria-pressed="false">8×</button>
+            </div>
+          </div>
+          <p class="hint">1× is one simulated minute a second.</p>
+
+          <h3>Jump to</h3>
+          <div class="scenes">
+            <button class="scene" data-scene="dawn"><b>04:40</b><span>Before anyone's up</span></button>
+            <button class="scene" data-scene="morning"><b>06:20</b><span>Heating for Ana</span></button>
+            <button class="scene" data-scene="late"><b>07:36</b><span>Rui in the shower</span></button>
+            <button class="scene" data-scene="evening"><b>19:05</b><span>Before Mia's 19:30</span></button>
+          </div>
+
+          <h3>Look at it as</h3>
+          <div class="people" role="group" aria-label="Whose phone">
+            <button class="person" data-viewer="ana" aria-pressed="true"><i style="background:var(--blue-color)"></i><span><b>Ana</b><small>administrator</small></span></button>
+            <button class="person" data-viewer="rui" aria-pressed="false"><i style="background:var(--green-color)"></i><span><b>Rui</b><small>member</small></span></button>
+            <button class="person" data-viewer="mia" aria-pressed="false"><i style="background:var(--purple-color)"></i><span><b>Mia</b><small>member, private</small></span></button>
+          </div>
+
+          <h3>Make something happen</h3>
+          <div class="row wrap">
+            <button class="chip" id="shower">🚿 Shower now</button>
+            <button class="chip" id="fault" aria-pressed="false">Unplug the sensor</button>
+            <button class="chip ghost" id="reset">Start over</button>
+          </div>
+
+          <label class="select">
+            <span>Language of the card</span>
+            <select id="language">
+              <option value="en">English</option>
+              <option value="pt">Português (Portugal)</option>
+              <option value="pt-BR">Português (Brasil)</option>
+              <option value="es">Español</option>
+              <option value="fr">Français</option>
+              <option value="de">Deutsch</option>
+              <option value="it">Italiano</option>
+              <option value="nl">Nederlands</option>
+              <option value="da">Dansk</option>
+              <option value="sv">Svenska</option>
+              <option value="nb">Norsk bokmål</option>
+              <option value="pl">Polski</option>
+              <option value="cs">Čeština</option>
+              <option value="ru">Русский</option>
+              <option value="uk">Українська</option>
+              <option value="ja">日本語</option>
+              <option value="zh-Hans">简体中文</option>
+            </select>
+          </label>
+        </aside>
+
+        <div class="phone" aria-label="The card">
+          <div class="phone-notch" aria-hidden="true"></div>
+          <div class="phone-screen ha" id="card-slot"><p class="loading">Loading the card…</p></div>
+        </div>
+
+        <aside class="panel house" aria-label="Inside the house">
+          <div class="readouts">
+            <div><small>Water, top probe</small><b id="water">–</b></div>
+            <div><small>Element</small><b id="element">off</b></div>
+          </div>
+          <figure class="chart-wrap">
+            <svg id="chart" viewBox="0 0 420 190" role="img" aria-label="Today's water temperature, the heating periods, and everyone's ready times"></svg>
+            <figcaption><span class="key key-line"></span>water <span class="key key-heat"></span>heating <span class="key key-band"></span>band around the target</figcaption>
+          </figure>
+          <div id="plan" class="plan" aria-live="polite"></div>
+          <h3>Phones</h3>
+          <ul class="feed" id="feed" aria-live="polite"></ul>
+        </aside>
+      </div>
+    </section>
+
+    <section class="how" id="how">
+      <h2>How it decides</h2>
+      <div class="steps">
+        <article>
+          <span class="num">1</span>
+          <h3>Everyone sets their times</h3>
+          <p>Each person adds ready times on a clock face, like a phone alarm, and the days they repeat.
+            Times close together share one heating window, so the heater keeps going between two showers
+            instead of letting the water cool.</p>
+        </article>
+        <article>
+          <span class="num">2</span>
+          <h3>It starts as late as it can</h3>
+          <p>The start is the degrees still to go, times the minutes your heater needs per degree, plus a margin.
+            That rate is learned from the heater's own clean heats, so a fast tank starts late and a slow one early.
+            Colder water starts earlier, warmer water later.</p>
+        </article>
+        <article>
+          <span class="num">3</span>
+          <h3>Hot, then quiet</h3>
+          <p>At the target it tells the people it heated for, and holds the water in a band around the target
+            until their window ends. Then the heater stays off until the next one.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="features" aria-label="What it does">
+      <article><h3>Heat now</h3><p>Hot water outside the plan. Several people can ask; each is told when it's ready. Hold the button to keep it hot for 5 minutes to 2 hours.</p></article>
+      <article><h3>Your own temperature</h3><p>Administrators can heat one request to anything from 30 to 45 °C without touching the heater's target. The highest request wins.</p></article>
+      <article><h3>Private times</h3><p>A member can keep their times to themselves. Others' cards leave them out; the administrators still see them.</p></article>
+      <article><h3>Switch off for everyone</h3><p>Administrators can stop a heat, with a confirmation that names who loses out. Those people are told.</p></article>
+      <article><h3>Faults, said plainly</h3><p>A silent sensor, a heater that doesn't warm the water, a relay stuck on: a red banner, a Repairs entry and a message.</p></article>
+      <article><h3>Away</h3><p>Away pauses a person's times, until a last day if you like, and ends by itself.</p></article>
+      <article><h3>Two probes</h3><p>A second probe lower in the tank makes the start allow for cold water below the top, and notices a probe coming loose.</p></article>
+      <article><h3>17 languages</h3><p>The integration and the card follow Home Assistant's language. Try it in the demo above.</p></article>
+    </section>
+
+    <section class="install" id="install">
+      <h2>Install</h2>
+      <div class="install-grid">
+        <ol class="install-steps">
+          <li><b>Add the repository to HACS.</b> In Home Assistant's Marketplace, add
+            <code>coin/hot-water-ready</code> as a custom repository of type <i>Integration</i>.</li>
+          <li><b>Install and restart.</b> Install <i>Hot Water Ready</i>, then restart Home Assistant.</li>
+          <li><b>Add the heater.</b> <i>Settings → Devices &amp; services → Add integration</i>. Choose the heater
+            (a switch or a thermostat), the water temperature sensor and, if you have one, a power sensor.</li>
+          <li><b>Add the people.</b> On the heater, <i>Add member</i>: a Home Assistant person, or a virtual one such as Guests.</li>
+          <li><b>Put the card on a dashboard.</b> The integration loads it itself; there is no resource to add.</li>
+        </ol>
+        <div class="code-block">
+          <div class="code-head"><span>card.yaml</span><button class="copy" data-copy="card-yaml">Copy</button></div>
+          <pre id="card-yaml"><code>type: custom:hot-water-ready-card
+# entry_id: optional, the heater to show
+# when the house has more than one</code></pre>
+        </div>
+      </div>
+      <div class="needs">
+        <h3>What you need</h3>
+        <ul>
+          <li><b>Home Assistant 2026.10</b> or later.</li>
+          <li><b>Something that heats the water:</b> a switch on the element, or a thermostat (climate entity) with the modes <code>heat</code> and <code>off</code>.</li>
+          <li><b>A temperature sensor in the water.</b></li>
+          <li>Optional: a <b>power sensor</b> on the heater, to notice a heater that draws nothing or a relay stuck on.</li>
+          <li>Optional: a <b>second probe</b> lower in the tank.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="automations" id="automations">
+      <h2>From automations and voice</h2>
+      <p class="section-lede">The actions follow the same permissions as the card. Members are named by their device.</p>
+      <div class="code-grid">
+        <div class="code-block">
+          <div class="code-head"><span>Heat now, hotter, kept an hour</span><button class="copy" data-copy="y-heat">Copy</button></div>
+          <pre id="y-heat"><code>action: hot_water_ready.heat_now
+data:
+  heater: &lt;config entry id&gt;
+  member: &lt;device id of a member&gt;  # who is told
+  target: 44         # optional, 30 to 45 °C
+  keep_minutes: 60   # optional</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-head"><span>Add a ready time</span><button class="copy" data-copy="y-add">Copy</button></div>
+          <pre id="y-add"><code>action: hot_water_ready.add_ready_time
+data:
+  member: &lt;device id of a member&gt;
+  time: "07:00"
+  weekdays: [mon, tue, wed, thu, fri]</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-head"><span>Away until after Christmas</span><button class="copy" data-copy="y-away">Copy</button></div>
+          <pre id="y-away"><code>action: hot_water_ready.set_away
+data:
+  member: &lt;device id of a member&gt;
+  away: true
+  until: "2026-12-26"</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-head"><span>Switch off for everyone</span><button class="copy" data-copy="y-off">Copy</button></div>
+          <pre id="y-off"><code>action: hot_water_ready.switch_off
+data:
+  heater: &lt;config entry id&gt;</code></pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>Hot Water Ready is open source, on <a href="https://github.com/coin/hot-water-ready">GitHub</a>, where the
+      <a href="https://github.com/coin/hot-water-ready#readme">README</a> explains every option.
+      The demo above simplifies the integration's controller to run in your browser; your own house runs the real one.</p>
+  </footer>
+
+  <script type="module">
+    import { start } from "./demo.js";
+    import "./hot-water-ready-card.js";
+    start();
+  </script>
+  <script>
+    (function () {
+      var root = document.documentElement, key = "hwr-theme";
+      try { var saved = localStorage.getItem(key); if (saved) root.dataset.theme = saved; } catch (e) {}
+      document.getElementById("theme").addEventListener("click", function () {
+        var dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+        root.dataset.theme = dark ? "light" : "dark";
+        try { localStorage.setItem(key, root.dataset.theme); } catch (e) {}
+      });
+      document.querySelectorAll(".copy").forEach(function (b) {
+        b.addEventListener("click", function () {
+          var text = document.getElementById(b.dataset.copy).innerText;
+          navigator.clipboard.writeText(text).then(function () {
+            b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+          });
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
