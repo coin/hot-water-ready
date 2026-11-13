@@ -166,6 +166,7 @@
       <article><h3>Faults, said plainly</h3><p>A silent sensor, a heater that doesn't warm the water, a relay stuck on: a red banner, a Repairs entry and a message.</p></article>
       <article><h3>Away</h3><p>Away pauses a person's times, until a last day if you like, and ends by itself.</p></article>
       <article><h3>Two probes</h3><p>A second probe lower in the tank makes the start allow for cold water below the top, and notices a probe coming loose.</p></article>
+      <article><h3>Compact card</h3><p>For a dashboard the whole house sees: the ring, the status and the sentence under it, no buttons. Each person sees only what the full card would show them; a tap can open the full card.</p></article>
       <article><h3>17 languages</h3><p>The integration and the card follow Home Assistant's language. Try it in the demo above.</p></article>
     </section>
 
@@ -179,13 +180,20 @@
           <li><b>Add the heater.</b> <i>Settings → Devices &amp; services → Add integration</i>. Choose the heater
             (a switch or a thermostat), the water temperature sensor and, if you have one, a power sensor.</li>
           <li><b>Add the people.</b> On the heater, <i>Add member</i>: a Home Assistant person, or a virtual one such as Guests.</li>
-          <li><b>Put the card on a dashboard.</b> The integration loads it itself; there is no resource to add.</li>
+          <li><b>Put the card on a dashboard.</b> The integration loads it itself; there is no resource to add.
+            For a shared dashboard, the compact card shows only the top, with no buttons.</li>
         </ol>
         <div class="code-block">
           <div class="code-head"><span>card.yaml</span><button class="copy" data-copy="card-yaml">Copy</button></div>
           <pre id="card-yaml"><code>type: custom:hot-water-ready-card
 # entry_id: optional, the heater to show
-# when the house has more than one</code></pre>
+# when the house has more than one
+
+# Compact, for a shared dashboard:
+# compact: true
+# tap_action:  # optional, else a tap does nothing
+#   action: navigate
+#   navigation_path: /dashboard-home/showers</code></pre>
         </div>
       </div>
       <div class="needs">

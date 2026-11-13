@@ -74,11 +74,12 @@ Everything else is in the heater's options (*Configure*):
 ### Two probes
 
 A second probe lower down tells the integration how much of the tank is hot, not only the top.
-With both heights set, each probe counts for the heated water nearest it; in a lying tank the
-slices near the top hold less water than those near the middle, so the top probe's 20% of the
-height is 69% of the heated water here:
+With both heights set, each probe counts for the heated water nearest it: the water above the
+element, split halfway between the probes. In a lying tank the slices near the top hold less
+water than those near the middle, so here the main probe's part, three quarters of the heated
+height, is 69% of the heated water, and the start uses 0.69 × main + 0.31 × second:
 
-<p align="center"><img src="docs/images/probes.svg" width="640" alt="A lying tank seen from its end, with the element at the middle, the main probe at 80% and the second probe at 45%. The heated water splits halfway between the probes at 62.5%: the main probe stands for 69% of it, the second for 31%."></p>
+<p align="center"><img src="docs/images/probes.svg" width="720" alt="A lying tank seen from its end, with the element at the middle, the main probe at 80% and the second probe at 45%. The heated water above the element splits halfway between the probes, at 62.5%: the main probe counts for the 69% above the split, the second for the 31% below it. The start uses 0.69 times the main probe plus 0.31 times the second."></p>
 
 The target temperature and the margin are on the card and as number entities. Heating stops at
 target plus margin and starts again at target minus margin; the water is *ready* at the target.

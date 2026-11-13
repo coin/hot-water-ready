@@ -1,36 +1,106 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" viewBox="0 0 720 360" font-family="Roboto, Arial, sans-serif" role="img" aria-label="A lying tank seen from its end: the element at the middle, the main probe at 80% and the second probe at 45% of the height. The heated water above the element splits halfway between the probes, at 62.5%: the main probe stands for 69% of it, the second for 31%.">
-  <rect width="720" height="360" rx="16" fill="#1c1c1c"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="420" viewBox="0 0 800 420" role="img" aria-label="A lying tank seen from its end. The element is at the middle (50% of the height), the main probe at 80% and the second probe at 45%. Only the water above the element heats. It is split halfway between the probes, at 62.5%: the main probe counts for the 69% above the split, the second probe for the 31% between the split and the element. The start is worked out from 0.69 times the main probe's reading plus 0.31 times the second probe's.">
+  <style>
+    .bg { fill: #ffffff; stroke: #e3e3e3; }
+    .ink { fill: #1c1c1c; }
+    .ink2 { fill: #5f6368; }
+    .faint { stroke: #9aa0a6; }
+    .wall { stroke: #6f7479; }
+    .cold { fill: #dfe9f3; }
+    .coldtext { fill: #4a6f94; }
+    .main { fill: #d4572a; }
+    .maintext { fill: #b8461d; }
+    .second { fill: #f0a35c; }
+    .secondtext { fill: #b56a1c; }
+    .element { stroke: #c99a1e; }
+    .elementtext { fill: #9a7412; }
+    .probe { stroke: #1c1c1c; }
+    .split { stroke: #1c1c1c; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #1c1c1c; stroke: #333333; }
+      .ink { fill: #f1f1f1; }
+      .ink2 { fill: #b0b4b8; }
+      .faint { stroke: #6f7479; }
+      .wall { stroke: #9e9e9e; }
+      .cold { fill: #29394b; }
+      .coldtext { fill: #9fb6cc; }
+      .main { fill: #c8602f; }
+      .maintext { fill: #f08a5d; }
+      .second { fill: #e8a46a; }
+      .secondtext { fill: #f3bd8a; }
+      .element { stroke: #f2c14e; }
+      .elementtext { fill: #f2c14e; }
+      .probe { stroke: #f1f1f1; }
+      .split { stroke: #ffffff; }
+    }
+    text { font-family: Roboto, "Segoe UI", Arial, sans-serif; }
+  </style>
   <defs>
-    <clipPath id="tank"><circle cx="190" cy="180" r="140"/></clipPath>
+    <clipPath id="tank"><circle cx="250" cy="200" r="150"/></clipPath>
   </defs>
-  <!-- water below the element: barely warms -->
+  <rect class="bg" x="0.5" y="0.5" width="799" height="419" rx="16"/>
+
+  <!-- Heights: y = 350 - 3 x percent. 100% 50, 80% 110, 62.5% 162.5, 50% 200, 45% 215, 0% 350. -->
   <g clip-path="url(#tank)">
-    <rect x="50" y="40" width="280" height="280" fill="#2b3f55"/>
-    <!-- heated water: above 50% (y 180); split at 62.5% (y 145) -->
-    <rect x="50" y="40" width="280" height="105" fill="#c8602f"/>
-    <rect x="50" y="145" width="280" height="35" fill="#e08a4f"/>
+    <rect class="cold" x="100" y="200" width="300" height="150"/>
+    <rect class="main" x="100" y="50" width="300" height="112.5"/>
+    <rect class="second" x="100" y="162.5" width="300" height="37.5"/>
   </g>
-  <circle cx="190" cy="180" r="140" fill="none" stroke="#9e9e9e" stroke-width="3"/>
-  <!-- the split halfway between the probes -->
-  <line x1="62" y1="145" x2="318" y2="145" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="4 5" opacity="0.7"/>
-  <!-- the element -->
-  <line x1="70" y1="180" x2="310" y2="180" stroke="#f2c14e" stroke-width="5" stroke-linecap="round"/>
-  <!-- probes -->
-  <circle cx="300" cy="96" r="8" fill="#ffffff"/>
-  <circle cx="290" cy="194" r="8" fill="#ffffff" stroke="#1c1c1c" stroke-width="2"/>
-  <!-- leader lines -->
-  <line x1="308" y1="96" x2="380" y2="96" stroke="#ffffff" stroke-width="1.5"/>
-  <line x1="298" y1="194" x2="380" y2="214" stroke="#ffffff" stroke-width="1.5"/>
-  <line x1="318" y1="145" x2="380" y2="150" stroke="#ffffff" stroke-width="1.5" opacity="0.7"/>
-  <line x1="310" y1="180" x2="380" y2="180" stroke="#f2c14e" stroke-width="1.5"/>
-  <line x1="300" y1="270" x2="380" y2="262" stroke="#9fb6cc" stroke-width="1.5"/>
-  <!-- labels -->
-  <text x="390" y="92" fill="#ffffff" font-size="17" font-weight="700">Main probe, 80%</text>
-  <text x="390" y="114" fill="#ffd2b5" font-size="14">stands for 69% of the heated water</text>
-  <text x="390" y="155" fill="#e1e1e1" font-size="14">split halfway between the probes, 62.5%</text>
-  <text x="390" y="185" fill="#f2c14e" font-size="14">element, in the middle (50%)</text>
-  <text x="390" y="212" fill="#ffffff" font-size="17" font-weight="700">Second probe, 45%</text>
-  <text x="390" y="234" fill="#ffd2b5" font-size="14">stands for the other 31%</text>
-  <text x="390" y="267" fill="#9fb6cc" font-size="14">below the element: barely warms</text>
-  <text x="40" y="346" fill="#9e9e9e" font-size="13">A lying tank seen from its end. Heights from the bottom (0%) to the top (100%).</text>
+  <line class="split" x1="104" y1="162.5" x2="396" y2="162.5" stroke-width="1.5" stroke-dasharray="5 5" opacity="0.75"/>
+  <circle class="wall" cx="250" cy="200" r="150" fill="none" stroke-width="3"/>
+  <line class="element" x1="118" y1="200" x2="382" y2="200" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- Height scale -->
+  <g class="ink2" font-size="12" text-anchor="end">
+    <text x="62" y="54">100%</text>
+    <text x="62" y="114">80%</text>
+    <text x="62" y="166">62.5%</text>
+    <text x="62" y="204">50%</text>
+    <text x="62" y="222">45%</text>
+    <text x="62" y="354">0%</text>
+  </g>
+  <g class="faint" stroke-width="1" stroke-dasharray="2 4">
+    <line x1="68" y1="50" x2="250" y2="50"/>
+    <line x1="68" y1="110" x2="160" y2="110"/>
+    <line x1="68" y1="162.5" x2="104" y2="162.5"/>
+    <line x1="68" y1="200" x2="118" y2="200"/>
+    <line x1="68" y1="215" x2="104" y2="215"/>
+    <line x1="68" y1="350" x2="250" y2="350"/>
+  </g>
+
+  <!-- Probes: a rod through the right-hand wall, the tip in the colour of the water it counts for -->
+  <line class="probe" x1="388" y1="110" x2="318" y2="110" stroke-width="3" stroke-linecap="round"/>
+  <circle class="main probe" cx="312" cy="110" r="9" stroke-width="2.5"/>
+  <line class="probe" x1="414" y1="215" x2="350" y2="215" stroke-width="3" stroke-linecap="round"/>
+  <circle class="second probe" cx="344" cy="215" r="9" stroke-width="2.5"/>
+  <!-- the second probe sits below the element but counts for the band just above it -->
+  <path class="probe" d="M 334 209 C 318 203, 306 196, 300 186" fill="none" stroke-width="1.5" stroke-dasharray="3 3"/>
+  <path class="probe" d="M 296 191 L 300 184 L 305 190" fill="none" stroke-width="1.5"/>
+
+  <!-- Brackets -->
+  <g fill="none" stroke-width="2">
+    <path class="probe" d="M 448 52 h 8 v 108.5 h -8" opacity="0.5"/>
+    <path class="probe" d="M 448 164.5 h 8 v 33.5 h -8" opacity="0.5"/>
+  </g>
+
+  <text class="maintext" x="470" y="92" font-size="18" font-weight="700">Main probe, at 80%</text>
+  <text class="ink" x="470" y="116" font-size="15">counts for <tspan font-weight="700">69%</tspan> of the heated water:</text>
+  <text class="ink2" x="470" y="136" font-size="13">everything above the split</text>
+
+  <text class="secondtext" x="470" y="178" font-size="18" font-weight="700">Second probe, at 45%</text>
+  <text class="ink" x="470" y="200" font-size="15">counts for the other <tspan font-weight="700">31%</tspan>:</text>
+  <text class="ink2" x="470" y="219" font-size="13">from the split down to the element</text>
+
+  <text x="470" y="252" font-size="13"><tspan class="elementtext" font-weight="700">Element at 50%.</tspan> <tspan class="coldtext">Below it the water barely warms.</tspan></text>
+  <text class="ink2" x="470" y="272" font-size="13">Split halfway between the probes, at 62.5%.</text>
+
+  <!-- The weighting -->
+  <text class="ink" x="470" y="310" font-size="13" font-weight="700">The water temperature the start uses</text>
+  <rect class="main" x="470" y="320" width="207" height="22" rx="4"/>
+  <rect class="second" x="677" y="320" width="93" height="22" rx="4"/>
+  <text x="482" y="336" font-size="13" font-weight="700" fill="#ffffff">69% main</text>
+  <text x="686" y="336" font-size="13" font-weight="700" fill="#1c1c1c">31% 2nd</text>
+  <text class="ink2" x="470" y="362" font-size="13">0.69 × main probe + 0.31 × second probe</text>
+
+  <text class="ink2" x="24" y="390" font-size="12">A lying tank seen from its end. Near the top the tank is narrower, so the main probe's part,</text>
+  <text class="ink2" x="24" y="406" font-size="12">three quarters of the heated height, holds 69% of the heated water.</text>
 </svg>
