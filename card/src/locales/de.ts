@@ -167,4 +167,7 @@ export const de: Record<TextKey, string> = {
   "visibility.hint_own": "Andere Mitglieder sehen diese Zeiten und deine Jetzt-heizen-Anfragen nicht; Administratoren schon.",
   "visibility.hint_virtual": "Nur Administratoren sehen diese Zeiten.",
   "settings.no_people": "In Home Assistant gibt es noch keine Personen zur Auswahl.",
+  "editor.heater": "Boiler",
+  "editor.compact": "Kompakt: nur Temperatur und Status, ohne Bedienelemente",
+  "editor.tap_action": "Aktion beim Tippen",
 };

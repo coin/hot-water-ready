@@ -160,9 +160,20 @@ export interface HeaterSummary {
   name: string;
 }
 
+/** Home Assistant's action config (`tap_action`), passed on to the frontend as it is. */
+export interface ActionConfig {
+  action: string;
+  navigation_path?: string;
+  [key: string]: unknown;
+}
+
 export interface CardConfig {
   type: string;
   entry_id?: string;
+  /** Only the top block, read-only: the ring, the name, the status and its lines. */
+  compact?: boolean;
+  /** What a tap on the compact card does; nothing unless set. */
+  tap_action?: ActionConfig;
 }
 
 /** The part of Home Assistant's `hass` object the card uses. */

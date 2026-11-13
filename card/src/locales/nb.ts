@@ -167,4 +167,7 @@ export const nb: Record<TextKey, string> = {
   "visibility.hint_own": "Andre medlemmer ser ikke disse tidene eller dine Varm nå-forespørsler; administratorer gjør det.",
   "visibility.hint_virtual": "Bare administratorer ser disse tidene.",
   "settings.no_people": "Det finnes ingen personer i Home Assistant å velge ennå.",
+  "editor.heater": "Varmtvannsbereder",
+  "editor.compact": "Kompakt: bare temperatur og status, uten knapper",
+  "editor.tap_action": "Handling ved trykk",
 };

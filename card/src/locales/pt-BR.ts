@@ -167,4 +167,7 @@ export const ptBR: Record<TextKey, string> = {
   "visibility.hint_own": "Os outros membros não veem estes horários nem seus pedidos de Aquecer agora; os administradores veem.",
   "visibility.hint_virtual": "Só os administradores veem estes horários.",
   "settings.no_people": "Ainda não há pessoas no Home Assistant para escolher.",
+  "editor.heater": "Aquecedor",
+  "editor.compact": "Compacto: só a temperatura e o status, sem controles",
+  "editor.tap_action": "Ação ao tocar",
 };

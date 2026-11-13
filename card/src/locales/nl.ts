@@ -167,4 +167,7 @@ export const nl: Record<TextKey, string> = {
   "visibility.hint_own": "Andere leden zien deze tijden en je Nu verwarmen-verzoeken niet; beheerders wel.",
   "visibility.hint_virtual": "Alleen beheerders zien deze tijden.",
   "settings.no_people": "Er zijn nog geen personen in Home Assistant om uit te kiezen.",
+  "editor.heater": "Boiler",
+  "editor.compact": "Compact: alleen temperatuur en status, zonder knoppen",
+  "editor.tap_action": "Actie bij tikken",
 };

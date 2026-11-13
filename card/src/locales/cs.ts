@@ -167,4 +167,7 @@ export const cs: Record<TextKey, string> = {
   "visibility.hint_own": "Ostatní členové tyto časy ani vaše požadavky Ohřát hned nevidí; správci ano.",
   "visibility.hint_virtual": "Tyto časy vidí jen správci.",
   "settings.no_people": "V Home Assistant zatím nejsou žádné osoby, ze kterých by šlo vybírat.",
+  "editor.heater": "Ohřívač",
+  "editor.compact": "Kompaktní: jen teplota a stav, bez ovládání",
+  "editor.tap_action": "Akce při klepnutí",
 };

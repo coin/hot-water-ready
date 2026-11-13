@@ -167,4 +167,7 @@ export const fr: Record<TextKey, string> = {
   "visibility.hint_own": "Les autres membres ne voient ni ces horaires ni vos demandes Chauffer maintenant ; les administrateurs les voient.",
   "visibility.hint_virtual": "Seuls les administrateurs voient ces horaires.",
   "settings.no_people": "Il n'y a encore aucune personne dans Home Assistant à choisir.",
+  "editor.heater": "Chauffe-eau",
+  "editor.compact": "Compacte : seulement la température et l'état, sans commandes",
+  "editor.tap_action": "Action au toucher",
 };

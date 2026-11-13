@@ -167,4 +167,7 @@ export const es: Record<TextKey, string> = {
   "visibility.hint_own": "Los demás miembros no ven estas horas ni tus peticiones de Calentar ahora; los administradores sí.",
   "visibility.hint_virtual": "Solo los administradores ven estas horas.",
   "settings.no_people": "Aún no hay personas en Home Assistant para elegir.",
+  "editor.heater": "Calentador",
+  "editor.compact": "Compacta: solo la temperatura y el estado, sin controles",
+  "editor.tap_action": "Acción al tocar",
 };

@@ -167,4 +167,7 @@ export const zhHans: Record<TextKey, string> = {
   "visibility.hint_own": "其他成员看不到这些时间和你的“立即加热”请求；管理员可以看到。",
   "visibility.hint_virtual": "只有管理员能看到这些时间。",
   "settings.no_people": "Home Assistant 中还没有可选择的人员。",
+  "editor.heater": "热水器",
+  "editor.compact": "紧凑：仅显示温度和状态，无控件",
+  "editor.tap_action": "点按操作",
 };

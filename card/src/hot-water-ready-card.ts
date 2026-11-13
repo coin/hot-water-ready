@@ -2,9 +2,9 @@
 
 import { LitElement, css, html, nothing, svg, type PropertyValues } from "lit";
 import { live } from "lit/directives/live.js";
-import { localeOf, localize, weekdayLetters } from "./i18n";
+import { localeOf, localize, weekdayLetters, type TextKey } from "./i18n";
 import { HeaterSubscription, fetchHeaters } from "./subscription";
-import type { CardConfig, Hass, HeaterSnapshot, MemberSnapshot } from "./types";
+import type { CardConfig, Hass, HeaterSnapshot, HeaterSummary, MemberSnapshot } from "./types";
 import {
   RATE_SEND_DELAY_MS,
   RECALCULATE_COMMAND,
@@ -19,7 +19,10 @@ import {
   greeting,
   heatNowActions,
   choosesKeepTime,
+  compactView,
   keepHotChoices,
+  TAP_ACTIONS,
+  tapActionOf,
   heatNowTargetField,
   heatNowTargetHint,
   heatNowTargetStart,
@@ -35,6 +38,7 @@ import {
   readyTimeRows,
   openClock,
   dialMarks,
+  editedConfig,
   dialMarkOn,
   dialHand,
   dialPick,
@@ -65,6 +69,7 @@ import {
   type Stepper,
   type ViewContext,
   type HeatNowAction,
+  type HeaterView,
   type WeekView,
 } from "./view";
 
@@ -73,6 +78,7 @@ const KEYBOARD_ICON = svg`<svg viewBox="0 0 24 24" width="24" height="24" aria-h
 const CLOCK_ICON = svg`<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>`;
 
 const TAG = "hot-water-ready-card";
+const EDITOR_TAG = "hot-water-ready-card-editor";
 
 type Tab = "people" | "week";
 const RING_RADIUS = 38;
@@ -151,7 +157,11 @@ export class HotWaterReadyCard extends LitElement {
   }
 
   getCardSize(): number {
-    return 6;
+    return this._config?.compact ? 2 : 6;
+  }
+
+  static getConfigElement(): HTMLElement {
+    return document.createElement(EDITOR_TAG);
   }
 
   private get _language(): string {
@@ -246,6 +256,7 @@ export class HotWaterReadyCard extends LitElement {
     if (!heater) {
       return html`<ha-card><div class="message">${localize(language, "card.loading")}</div></ha-card>`;
     }
+    if (this._config?.compact) return this._renderCompact(heater);
     const mode = viewMode(heater);
     const member = shownMember(heater, this._selected);
     const week = weekView(heater, this._context);
@@ -395,24 +406,79 @@ export class HotWaterReadyCard extends LitElement {
     window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
   }
 
+  /** The ring with the temperature and the target, and its animation while heating. */
+  private _renderGauge(view: Pick<HeaterView, "temperature" | "target" | "fill" | "tone">): unknown {
+    return html`
+      <div class="gauge ${view.tone === "heating" ? "glowing" : ""}">
+        <span class="pulse"></span>
+        <span class="orbit"></span>
+        <svg class="ring" viewBox="0 0 92 92" role="img" aria-label="${view.temperature} ${view.target}">
+          <circle class="track" cx="46" cy="46" r=${RING_RADIUS}></circle>
+          ${view.fill > 0
+            ? svg`<circle class="fill ${view.tone}" cx="46" cy="46" r=${RING_RADIUS}
+                stroke-dasharray="${view.fill * RING_LENGTH} ${RING_LENGTH}"
+                transform="rotate(-90 46 46)"></circle>`
+            : nothing}
+          <text class="temperature" x="46" y="44">${view.temperature}</text>
+          <text class="target" x="46" y="61">${view.target}</text>
+        </svg>
+      </div>
+    `;
+  }
+
+  /**
+   * The compact card: the top block alone, read-only, from the same per-viewer snapshot as the
+   * full card (decision 15). A tap goes to Home Assistant as a standard `hass-action`.
+   */
+  private _renderCompact(heater: HeaterSnapshot): unknown {
+    const view = compactView(heater, this._context);
+    const tappable = this._config ? tapActionOf(this._config).action !== "none" : false;
+    return html`
+      <ha-card
+        class="compact ${tappable ? "tappable" : ""}"
+        role=${tappable ? "button" : nothing}
+        tabindex=${tappable ? 0 : nothing}
+        @click=${this._tap}
+        @keydown=${(event: KeyboardEvent) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            this._tap();
+          }
+        }}
+      >
+        <div class="top">
+          ${this._renderGauge(view)}
+          <div class="text">
+            <div class="name-row">
+              <div class="name">${view.name}</div>
+              <span class="badge ${view.tone}">${view.badge}</span>
+            </div>
+            <div class="headline ${view.tone}">${view.headline}</div>
+            ${view.lines.map((line) => html`<div class="subline">${line}</div>`)}
+          </div>
+        </div>
+      </ha-card>
+    `;
+  }
+
+  private readonly _tap = (): void => {
+    if (!this._config) return;
+    const tapAction = tapActionOf(this._config);
+    if (tapAction.action === "none") return;
+    this.dispatchEvent(
+      new CustomEvent("hass-action", {
+        bubbles: true,
+        composed: true,
+        detail: { config: { ...this._config, tap_action: tapAction }, action: "tap" },
+      }),
+    );
+  };
+
   private _renderTop(heater: HeaterSnapshot): unknown {
     const view = heaterView(heater, this._context);
     return html`
       <div class="top">
-        <div class="gauge ${view.tone === "heating" ? "glowing" : ""}">
-          <span class="pulse"></span>
-          <span class="orbit"></span>
-          <svg class="ring" viewBox="0 0 92 92" role="img" aria-label="${view.temperature} ${view.target}">
-            <circle class="track" cx="46" cy="46" r=${RING_RADIUS}></circle>
-            ${view.fill > 0
-              ? svg`<circle class="fill ${view.tone}" cx="46" cy="46" r=${RING_RADIUS}
-                  stroke-dasharray="${view.fill * RING_LENGTH} ${RING_LENGTH}"
-                  transform="rotate(-90 46 46)"></circle>`
-              : nothing}
-            <text class="temperature" x="46" y="44">${view.temperature}</text>
-            <text class="target" x="46" y="61">${view.target}</text>
-          </svg>
-        </div>
+        ${this._renderGauge(view)}
         <div class="text">
           <div class="name-row">
             <div class="name">${heater.name}</div>
@@ -1276,6 +1342,17 @@ export class HotWaterReadyCard extends LitElement {
     ha-card {
       position: relative;
       overflow: hidden;
+    }
+    ha-card.tappable {
+      cursor: pointer;
+    }
+    ha-card.tappable:focus-visible {
+      outline: 2px solid var(--primary-color);
+      outline-offset: -2px;
+    }
+    /* The compact card needs no room under the ring for buttons. */
+    .compact .top {
+      padding: 8px 16px 8px 8px;
     }
     button {
       font: inherit;
@@ -2429,6 +2506,81 @@ export class HotWaterReadyCard extends LitElement {
     }
   `;
 }
+
+/**
+ * The visual editor: the heater, the compact option and, for the compact card, the tap action.
+ * Built on Home Assistant's own `ha-form`, so the tap action is its standard action picker.
+ */
+export class HotWaterReadyCardEditor extends LitElement {
+  static override properties = {
+    hass: { attribute: false },
+    _config: { state: true },
+    _heaters: { state: true },
+  };
+
+  hass?: Hass;
+  private _config?: CardConfig;
+  private _heaters: HeaterSummary[] = [];
+  private _asked = false;
+
+  setConfig(config: CardConfig): void {
+    this._config = config;
+  }
+
+  protected override updated(): void {
+    if (this.hass && !this._asked) {
+      this._asked = true;
+      void fetchHeaters(this.hass).then((heaters) => (this._heaters = heaters));
+    }
+  }
+
+  private get _language(): string {
+    return this.hass?.locale?.language ?? this.hass?.language ?? "en";
+  }
+
+  protected override render(): unknown {
+    if (!this.hass || !this._config) return nothing;
+    const language = this._language;
+    const schema = [
+      {
+        name: "entry_id",
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: this._heaters.map((heater) => ({ value: heater.entry_id, label: heater.name })),
+          },
+        },
+      },
+      { name: "compact", selector: { boolean: {} } },
+      ...(this._config.compact ? [{ name: "tap_action", selector: { ui_action: { actions: [...TAP_ACTIONS] } } }] : []),
+    ];
+    const labels: Record<string, TextKey> = {
+      entry_id: "editor.heater",
+      compact: "editor.compact",
+      tap_action: "editor.tap_action",
+    };
+    return html`<ha-form
+      .hass=${this.hass}
+      .data=${this._config}
+      .schema=${schema}
+      .computeLabel=${(item: { name: string }) => {
+        const key = labels[item.name];
+        return key ? localize(language, key) : item.name;
+      }}
+      @value-changed=${(event: CustomEvent<{ value: CardConfig }>) => {
+        this.dispatchEvent(
+          new CustomEvent("config-changed", {
+            detail: { config: editedConfig(event.detail.value) },
+            bubbles: true,
+            composed: true,
+          }),
+        );
+      }}
+    ></ha-form>`;
+  }
+}
+
+if (!customElements.get(EDITOR_TAG)) customElements.define(EDITOR_TAG, HotWaterReadyCardEditor);
 
 // The card is loaded both as a Lovelace resource and as an extra module (2026.10), so the
 // second load must not define the element again.

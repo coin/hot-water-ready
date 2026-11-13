@@ -167,4 +167,7 @@ export const uk: Record<TextKey, string> = {
   "visibility.hint_own": "Інші учасники не бачать ці часи та ваші запити «Нагріти зараз»; адміністратори бачать.",
   "visibility.hint_virtual": "Ці часи бачать лише адміністратори.",
   "settings.no_people": "У Home Assistant ще немає людей, яких можна вибрати.",
+  "editor.heater": "Водонагрівач",
+  "editor.compact": "Компактно: лише температура й стан, без керування",
+  "editor.tap_action": "Дія при натисканні",
 };

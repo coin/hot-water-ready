@@ -183,6 +183,9 @@ const en = {
   "visibility.hint_own": "Other members do not see these times or your Heat now requests; administrators do.",
   "visibility.hint_virtual": "Only administrators see these times.",
   "settings.no_people": "There are no people in Home Assistant to choose from yet.",
+  "editor.heater": "Heater",
+  "editor.compact": "Compact: only the temperature and status, read-only",
+  "editor.tap_action": "Tap action",
 };
 
 export type TextKey = keyof typeof en;
@@ -354,6 +357,9 @@ const pt: Record<TextKey, string> = {
   "visibility.hint_own": "Os outros membros não vêem estes horários nem os seus pedidos de Aquecer agora; os administradores vêem.",
   "visibility.hint_virtual": "Só os administradores vêem estes horários.",
   "settings.no_people": "Ainda não há pessoas no Home Assistant para escolher.",
+  "editor.heater": "Aquecedor",
+  "editor.compact": "Compacto: só a temperatura e o estado, sem controlos",
+  "editor.tap_action": "Acção ao tocar",
 };
 
 /** Home Assistant's language codes, each with the locale its numbers and dates are written in. */

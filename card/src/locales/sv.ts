@@ -167,4 +167,7 @@ export const sv: Record<TextKey, string> = {
   "visibility.hint_own": "Andra medlemmar ser inte de här tiderna eller dina Värm nu-förfrågningar; administratörer gör det.",
   "visibility.hint_virtual": "Bara administratörer ser de här tiderna.",
   "settings.no_people": "Det finns inga personer i Home Assistant att välja än.",
+  "editor.heater": "Varmvattenberedare",
+  "editor.compact": "Kompakt: bara temperatur och status, utan knappar",
+  "editor.tap_action": "Åtgärd vid tryck",
 };

@@ -1,0 +1,656 @@
+{
+  "heat_now": {
+    "admin": {
+      "automatic": true,
+      "can_ask_heat_now": true,
+      "can_choose_heat_now_target": true,
+      "can_switch_off": true,
+      "cluster_warning": null,
+      "element_on": true,
+      "entry_id": "entry",
+      "faults": [],
+      "heat_now": {
+        "asked": true,
+        "keep_until": null,
+        "requesters": [
+          "member_tiago"
+        ],
+        "target": 42.0,
+        "unnamed": false
+      },
+      "heat_now_blocked": false,
+      "heating_for": [],
+      "is_admin": true,
+      "keep_hot_minutes": 5.0,
+      "margin": 1.0,
+      "me": "member_tiago",
+      "members": [
+        {
+          "away": {
+            "on": false,
+            "until": null
+          },
+          "can_edit": true,
+          "can_set_visibility": true,
+          "colour": "blue",
+          "id": "member_tiago",
+          "name": "Tiago",
+          "next_ready": null,
+          "ready_times": [],
+          "virtual": false,
+          "visibility": "private"
+        },
+        {
+          "away": {
+            "on": false,
+            "until": null
+          },
+          "can_edit": true,
+          "can_set_visibility": false,
+          "colour": "green",
+          "id": "member_maria",
+          "name": "Maria",
+          "next_ready": null,
+          "ready_times": [],
+          "virtual": false,
+          "visibility": "public"
+        }
+      ],
+      "name": "Cylinder",
+      "next_heat_start": null,
+      "next_ready": null,
+      "not_rising_checked": true,
+      "power_w": 2739.0,
+      "ready_in_minutes": 28,
+      "settings": {
+        "rate": {
+          "default": 7.0,
+          "lead_cap_minutes": 240.0,
+          "lead_margin_minutes": 15.0,
+          "learned": null,
+          "manual": null,
+          "min_runs": 3,
+          "physics": null,
+          "physics_fast": null,
+          "runs": [],
+          "source": "default",
+          "tank_litres": null,
+          "used": 7.0,
+          "window_days": 7
+        },
+        "solar": {
+          "kwh": null,
+          "minutes_saved": 0,
+          "on_time": 0,
+          "solar_on_time": 0,
+          "solar_windows": 0,
+          "windows": 0
+        },
+        "solar_aware": false,
+        "switch_off_people": []
+      },
+      "solar_aware": false,
+      "status": "heating",
+      "target": 42.0,
+      "temperature": 38.0,
+      "today": [],
+      "viewer": "member_tiago",
+      "week": {
+        "monday": "2026-11-02",
+        "today": "2026-11-02",
+        "windows": []
+      }
+    },
+    "member": {
+      "automatic": true,
+      "can_ask_heat_now": true,
+      "can_choose_heat_now_target": false,
+      "can_switch_off": false,
+      "cluster_warning": null,
+      "element_on": null,
+      "entry_id": "entry",
+      "faults": [],
+      "heat_now": null,
+      "heat_now_blocked": false,
+      "heating_for": [],
+      "is_admin": false,
+      "keep_hot_minutes": 5.0,
+      "margin": 1.0,
+      "me": "member_maria",
+      "members": [
+        {
+          "away": {
+            "on": false,
+            "until": null
+          },
+          "can_edit": false,
+          "can_set_visibility": false,
+          "colour": "blue",
+          "id": "member_tiago",
+          "name": "Tiago",
+          "next_ready": null,
+          "ready_times": [],
+          "virtual": false,
+          "visibility": null
+        },
+        {
+          "away": {
+            "on": false,
+            "until": null
+          },
+          "can_edit": true,
+          "can_set_visibility": true,
+          "colour": "green",
+          "id": "member_maria",
+          "name": "Maria",
+          "next_ready": null,
+          "ready_times": [],
+          "virtual": false,
+          "visibility": "public"
+        }
+      ],
+      "name": "Cylinder",
+      "next_heat_start": null,
+      "next_ready": null,
+      "not_rising_checked": true,
+      "power_w": null,
+      "ready_in_minutes": null,
+      "settings": null,
+      "solar_aware": false,
+      "status": "waiting",
+      "target": 42.0,
+      "temperature": 38.0,
+      "today": [],
+      "viewer": "member_maria",
+      "week": null
+    }
+  },
+  "ready_time": {
+    "admin": {
+      "automatic": true,
+      "can_ask_heat_now": true,
+      "can_choose_heat_now_target": true,
+      "can_switch_off": true,
+      "cluster_warning": null,
+      "element_on": true,
+      "entry_id": "entry",
+      "faults": [],
+      "heat_now": null,
+      "heat_now_blocked": false,
+      "heating_for": [
+        {
+          "at": "2026-11-02T05:45:00+00:00",
+          "member": "member_tiago"
+        }
+      ],
+      "is_admin": true,
+      "keep_hot_minutes": 5.0,
+      "margin": 1.0,
+      "me": "member_tiago",
+      "members": [
+        {
+          "away": {
+            "on": false,
+            "until": null
+          },
+          "can_edit": true,
+          "can_set_visibility": true,
+          "colour": "blue",
+          "id": "member_tiago",
+          "name": "Tiago",
+          "next_ready": "2026-11-02T05:45:00+00:00",
+          "ready_times": [
+            {
+              "enabled": true,
+              "id": "member_tiago-0",
+              "time": "05:45",
+              "weekdays": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ]
+            }
+          ],
+          "virtual": false,
+          "visibility": "private"
+        },
+        {
+          "away": {
+            "on": false,
+            "until": null
+          },
+          "can_edit": true,
+          "can_set_visibility": false,
+          "colour": "green",
+          "id": "member_maria",
+          "name": "Maria",
+          "next_ready": null,
+          "ready_times": [],
+          "virtual": false,
+          "visibility": "public"
+        }
+      ],
+      "name": "Cylinder",
+      "next_heat_start": "2026-11-03T04:58:30+00:00",
+      "next_ready": {
+        "at": "2026-11-02T05:45:00+00:00",
+        "members": [
+          "member_tiago"
+        ]
+      },
+      "not_rising_checked": true,
+      "power_w": 2739.0,
+      "ready_in_minutes": 32,
+      "settings": {
+        "rate": {
+          "default": 7.0,
+          "lead_cap_minutes": 240.0,
+          "lead_margin_minutes": 15.0,
+          "learned": null,
+          "manual": null,
+          "min_runs": 3,
+          "physics": null,
+          "physics_fast": null,
+          "runs": [],
+          "source": "default",
+          "tank_litres": null,
+          "used": 7.0,
+          "window_days": 7
+        },
+        "solar": {
+          "kwh": null,
+          "minutes_saved": 0,
+          "on_time": 0,
+          "solar_on_time": 0,
+          "solar_windows": 0,
+          "windows": 0
+        },
+        "solar_aware": false,
+        "switch_off_people": []
+      },
+      "solar_aware": false,
+      "status": "heating",
+      "target": 42.0,
+      "temperature": 37.5,
+      "today": [
+        {
+          "at": "2026-11-02T05:45:00+00:00",
+          "member": "member_tiago"
+        }
+      ],
+      "viewer": "member_tiago",
+      "week": {
+        "monday": "2026-11-02",
+        "today": "2026-11-02",
+        "windows": [
+          {
+            "end": "2026-11-02T06:00:00+00:00",
+            "start": "2026-11-02T04:58:30+00:00"
+          },
+          {
+            "end": "2026-11-03T06:00:00+00:00",
+            "start": "2026-11-03T04:58:30+00:00"
+          },
+          {
+            "end": "2026-11-04T06:00:00+00:00",
+            "start": "2026-11-04T04:58:30+00:00"
+          },
+          {
+            "end": "2026-11-05T06:00:00+00:00",
+            "start": "2026-11-05T04:58:30+00:00"
+          },
+          {
+            "end": "2026-11-06T06:00:00+00:00",
+            "start": "2026-11-06T04:58:30+00:00"
+          },
+          {
+            "end": "2026-11-07T06:00:00+00:00",
+            "start": "2026-11-07T04:58:30+00:00"
+          },
+          {
+            "end": "2026-11-08T06:00:00+00:00",
+            "start": "2026-11-08T04:58:30+00:00"
+          }
+        ]
+      }
+    },
+    "member": {
+      "automatic": true,
+      "can_ask_heat_now": true,
+      "can_choose_heat_now_target": false,
+      "can_switch_off": false,
+      "cluster_warning": null,
+      "element_on": null,
+      "entry_id": "entry",
+      "faults": [],
+      "heat_now": null,
+      "heat_now_blocked": false,
+      "heating_for": [],
+      "is_admin": false,
+      "keep_hot_minutes": 5.0,
+      "margin": 1.0,
+      "me": "member_maria",
+      "members": [
+        {
+          "away": {
+            "on": false,
+            "until": null
+          },
+          "can_edit": false,
+          "can_set_visibility": false,
+          "colour": "blue",
+          "id": "member_tiago",
+          "name": "Tiago",
+          "next_ready": null,
+          "ready_times": [],
+          "virtual": false,
+          "visibility": null
+        },
+        {
+          "away": {
+            "on": false,
+            "until": null
+          },
+          "can_edit": true,
+          "can_set_visibility": true,
+          "colour": "green",
+          "id": "member_maria",
+          "name": "Maria",
+          "next_ready": null,
+          "ready_times": [],
+          "virtual": false,
+          "visibility": "public"
+        }
+      ],
+      "name": "Cylinder",
+      "next_heat_start": null,
+      "next_ready": null,
+      "not_rising_checked": true,
+      "power_w": null,
+      "ready_in_minutes": null,
+      "settings": null,
+      "solar_aware": false,
+      "status": "waiting",
+      "target": 42.0,
+      "temperature": 37.5,
+      "today": [],
+      "viewer": "member_maria",
+      "week": null
+    }
+  },
+  "shared": {
+    "admin": {
+      "automatic": true,
+      "can_ask_heat_now": true,
+      "can_choose_heat_now_target": true,
+      "can_switch_off": true,
+      "cluster_warning": null,
+      "element_on": true,
+      "entry_id": "entry",
+      "faults": [],
+      "heat_now": null,
+      "heat_now_blocked": false,
+      "heating_for": [
+        {
+          "at": "2026-11-02T05:45:00+00:00",
+          "member": "member_maria"
+        },
+        {
+          "at": "2026-11-02T05:45:00+00:00",
+          "member": "member_tiago"
+        }
+      ],
+      "is_admin": true,
+      "keep_hot_minutes": 5.0,
+      "margin": 1.0,
+      "me": "member_tiago",
+      "members": [
+        {
+          "away": {
+            "on": false,
+            "until": null
+          },
+          "can_edit": true,
+          "can_set_visibility": true,
+          "colour": "blue",
+          "id": "member_tiago",
+          "name": "Tiago",
+          "next_ready": "2026-11-02T05:45:00+00:00",
+          "ready_times": [
+            {
+              "enabled": true,
+              "id": "member_tiago-0",
+              "time": "05:45",
+              "weekdays": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ]
+            }
+          ],
+          "virtual": false,
+          "visibility": "private"
+        },
+        {
+          "away": {
+            "on": false,
+            "until": null
+          },
+          "can_edit": true,
+          "can_set_visibility": false,
+          "colour": "green",
+          "id": "member_maria",
+          "name": "Maria",
+          "next_ready": "2026-11-02T05:45:00+00:00",
+          "ready_times": [
+            {
+              "enabled": true,
+              "id": "member_maria-0",
+              "time": "05:45",
+              "weekdays": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ]
+            }
+          ],
+          "virtual": false,
+          "visibility": "public"
+        }
+      ],
+      "name": "Cylinder",
+      "next_heat_start": "2026-11-03T04:58:30+00:00",
+      "next_ready": {
+        "at": "2026-11-02T05:45:00+00:00",
+        "members": [
+          "member_maria",
+          "member_tiago"
+        ]
+      },
+      "not_rising_checked": true,
+      "power_w": 2739.0,
+      "ready_in_minutes": 32,
+      "settings": {
+        "rate": {
+          "default": 7.0,
+          "lead_cap_minutes": 240.0,
+          "lead_margin_minutes": 15.0,
+          "learned": null,
+          "manual": null,
+          "min_runs": 3,
+          "physics": null,
+          "physics_fast": null,
+          "runs": [],
+          "source": "default",
+          "tank_litres": null,
+          "used": 7.0,
+          "window_days": 7
+        },
+        "solar": {
+          "kwh": null,
+          "minutes_saved": 0,
+          "on_time": 0,
+          "solar_on_time": 0,
+          "solar_windows": 0,
+          "windows": 0
+        },
+        "solar_aware": false,
+        "switch_off_people": []
+      },
+      "solar_aware": false,
+      "status": "heating",
+      "target": 42.0,
+      "temperature": 37.5,
+      "today": [
+        {
+          "at": "2026-11-02T05:45:00+00:00",
+          "member": "member_maria"
+        },
+        {
+          "at": "2026-11-02T05:45:00+00:00",
+          "member": "member_tiago"
+        }
+      ],
+      "viewer": "member_tiago",
+      "week": {
+        "monday": "2026-11-02",
+        "today": "2026-11-02",
+        "windows": [
+          {
+            "end": "2026-11-02T06:00:00+00:00",
+            "start": "2026-11-02T04:58:30+00:00"
+          },
+          {
+            "end": "2026-11-03T06:00:00+00:00",
+            "start": "2026-11-03T04:58:30+00:00"
+          },
+          {
+            "end": "2026-11-04T06:00:00+00:00",
+            "start": "2026-11-04T04:58:30+00:00"
+          },
+          {
+            "end": "2026-11-05T06:00:00+00:00",
+            "start": "2026-11-05T04:58:30+00:00"
+          },
+          {
+            "end": "2026-11-06T06:00:00+00:00",
+            "start": "2026-11-06T04:58:30+00:00"
+          },
+          {
+            "end": "2026-11-07T06:00:00+00:00",
+            "start": "2026-11-07T04:58:30+00:00"
+          },
+          {
+            "end": "2026-11-08T06:00:00+00:00",
+            "start": "2026-11-08T04:58:30+00:00"
+          }
+        ]
+      }
+    },
+    "member": {
+      "automatic": true,
+      "can_ask_heat_now": true,
+      "can_choose_heat_now_target": false,
+      "can_switch_off": false,
+      "cluster_warning": null,
+      "element_on": null,
+      "entry_id": "entry",
+      "faults": [],
+      "heat_now": null,
+      "heat_now_blocked": false,
+      "heating_for": [
+        {
+          "at": "2026-11-02T05:45:00+00:00",
+          "member": "member_maria"
+        }
+      ],
+      "is_admin": false,
+      "keep_hot_minutes": 5.0,
+      "margin": 1.0,
+      "me": "member_maria",
+      "members": [
+        {
+          "away": {
+            "on": false,
+            "until": null
+          },
+          "can_edit": false,
+          "can_set_visibility": false,
+          "colour": "blue",
+          "id": "member_tiago",
+          "name": "Tiago",
+          "next_ready": null,
+          "ready_times": [],
+          "virtual": false,
+          "visibility": null
+        },
+        {
+          "away": {
+            "on": false,
+            "until": null
+          },
+          "can_edit": true,
+          "can_set_visibility": true,
+          "colour": "green",
+          "id": "member_maria",
+          "name": "Maria",
+          "next_ready": "2026-11-02T05:45:00+00:00",
+          "ready_times": [
+            {
+              "enabled": true,
+              "id": "member_maria-0",
+              "time": "05:45",
+              "weekdays": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ]
+            }
+          ],
+          "virtual": false,
+          "visibility": "public"
+        }
+      ],
+      "name": "Cylinder",
+      "next_heat_start": "2026-11-03T04:58:30+00:00",
+      "next_ready": {
+        "at": "2026-11-02T05:45:00+00:00",
+        "members": [
+          "member_maria"
+        ]
+      },
+      "not_rising_checked": true,
+      "power_w": null,
+      "ready_in_minutes": 32,
+      "settings": null,
+      "solar_aware": false,
+      "status": "heating",
+      "target": 42.0,
+      "temperature": 37.5,
+      "today": [
+        {
+          "at": "2026-11-02T05:45:00+00:00",
+          "member": "member_maria"
+        }
+      ],
+      "viewer": "member_maria",
+      "week": null
+    }
+  }
+}

@@ -1,7 +1,16 @@
 // What the card shows, worked out from a heater snapshot without touching the DOM.
 
 import { localeOf, localize, pickLanguage, weekdayLetters, type TextKey } from "./i18n";
-import type { AdminSettings, HeaterSnapshot, MemberSnapshot, RateInfo, Status, TimeSpan } from "./types";
+import type {
+  ActionConfig,
+  AdminSettings,
+  CardConfig,
+  HeaterSnapshot,
+  MemberSnapshot,
+  RateInfo,
+  Status,
+  TimeSpan,
+} from "./types";
 
 export interface ViewContext {
   language: string;
@@ -197,6 +206,58 @@ export function heaterView(heater: HeaterSnapshot, context: ViewContext): Heater
     keepHot: keepHotLine(heater, context),
     fill: temperature === null || target <= 0 ? 0 : Math.min(1, Math.max(0, temperature / target)),
     tone: heater.status,
+  };
+}
+
+/** A tap on the compact card does nothing unless `tap_action` says otherwise. */
+export const DEFAULT_TAP_ACTION: ActionConfig = { action: "none" };
+
+export function tapActionOf(config: CardConfig): ActionConfig {
+  return config.tap_action ?? DEFAULT_TAP_ACTION;
+}
+
+/** The config the editor saves: with compact off, neither it nor a tap action is kept. */
+export function editedConfig(config: CardConfig): CardConfig {
+  if (config.compact) return config;
+  const rest = { ...config };
+  delete rest.compact;
+  delete rest.tap_action;
+  return rest;
+}
+
+/**
+ * The actions the card editor offers for a tap. Not "more-info": the only entity it could open is
+ * the status sensor, which shows private members' heating to everyone (decision 15).
+ */
+export const TAP_ACTIONS = ["navigate", "url", "perform-action", "assist", "none"] as const;
+
+/**
+ * What the compact card shows: the full card's top block without its controls, from the same
+ * per-viewer snapshot, so it hides whatever the full card hides.
+ */
+export interface CompactView {
+  name: string;
+  temperature: string;
+  target: string;
+  badge: string;
+  headline: string;
+  /** The lines under the headline, in order, empty ones left out. */
+  lines: string[];
+  fill: number;
+  tone: Status;
+}
+
+export function compactView(heater: HeaterSnapshot, context: ViewContext): CompactView {
+  const view = heaterView(heater, context);
+  return {
+    name: heater.name,
+    temperature: view.temperature,
+    target: view.target,
+    badge: view.badge,
+    headline: view.headline,
+    lines: [view.subline, view.element, view.keepHot].filter((line) => line !== ""),
+    fill: view.fill,
+    tone: view.tone,
   };
 }
 

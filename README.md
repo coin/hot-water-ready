@@ -158,6 +158,26 @@ highest temperature allows.
   </tr>
 </table>
 
+### Compact card
+
+For a dashboard the whole house sees, `compact: true` shows only the top: the ring, the heater's
+name and status, the sentence and the lines under it, with no buttons. It hides from each viewer
+exactly what the full card hides (see [Members](#members)), so a private member's heating does
+not show to the others. A tap does nothing unless `tap_action` says otherwise; it takes Home
+Assistant's usual actions, for example going to the page with the full card:
+
+```yaml
+type: custom:hot-water-ready-card
+entry_id: <your heater's entry id>
+compact: true
+tap_action:
+  action: navigate
+  navigation_path: /dashboard-home/showers
+```
+
+The card editor has both options. It does not offer *more-info*: the only entity it could open is
+the status sensor, which shows everyone's heating.
+
 **Heating speed** (in the settings): the minutes per degree in use and where they come from
 (learned, the starting value, or fixed by hand), the clean heats behind it, how the start works
 out from the water now, and the range physics allows for the tank. *Fixed* steps it by hand,

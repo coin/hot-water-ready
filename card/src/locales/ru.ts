@@ -167,4 +167,7 @@ export const ru: Record<TextKey, string> = {
   "visibility.hint_own": "Другие участники не видят эти времена и ваши запросы «Нагреть сейчас»; администраторы видят.",
   "visibility.hint_virtual": "Эти времена видят только администраторы.",
   "settings.no_people": "В Home Assistant пока нет людей для выбора.",
+  "editor.heater": "Водонагреватель",
+  "editor.compact": "Компактно: только температура и состояние, без управления",
+  "editor.tap_action": "Действие при нажатии",
 };
