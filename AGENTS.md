@@ -1,8 +1,11 @@
 # Hot Water Ready
 
-- Spec, tickets and decisions live outside this repo, in the owner's vault:
-  `C:\Users\TAS\SynologyDrive\Drive\Synapse\work\hot-water-component\` (`spec.md`,
-  `build-tickets/`, `GLOSSARY.md`).
+- The behaviour contract is `docs/spec.md` ("spec 4.2" in the code) and `docs/decisions/`
+  ("decision 15"). A change in behaviour updates the spec, or adds a decision, in the same
+  commit, together with the README and the project page (`site/`).
+- The owner's working notes (discussions, build tickets, the household's own setup) stay outside
+  this repo, in his vault: `H:\Drive\Synapse\work\hot-water-component\`. Nothing from there that
+  names the household comes into the repo.
 - Python checks need Linux: on Windows run `powershell -File scripts\wsl-check.ps1 [lint|types|test ARGS]`
   (WSL Ubuntu, venv `~/venvs/hwr`). Calling `wsl.exe ... bash -c '$VAR'` expands variables too early;
   put commands in a script instead.

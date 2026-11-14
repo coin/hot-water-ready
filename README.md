@@ -301,6 +301,9 @@ integration's *Download diagnostics*, with names and people left out.
 
 ## Development
 
+- [docs/spec.md](docs/spec.md) is what the integration must do, cited in the code as "spec 4.2";
+  [docs/decisions/](docs/decisions/README.md) holds the decisions taken since, cited as
+  "decision 15". A change in behaviour updates them in the same commit.
 - `custom_components/hot_water_ready/core/` is the scheduling core, plain Python with no Home
   Assistant imports. The rest of the package is the Home Assistant layer.
 - `card/` is the dashboard card (TypeScript, Lit). `npm run build` writes the bundle the
